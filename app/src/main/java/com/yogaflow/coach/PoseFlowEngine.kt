@@ -15,7 +15,7 @@ class PoseFlowEngine {
     private var stepStartTime = System.currentTimeMillis()
     private var completedFlowId: String? = null
 
-    fun update(flow: YogaFlow, detectedState: CoachState): FlowEvent {
+    fun update(flow: YogaFlow, detectedState: CoachState, matched: Boolean): FlowEvent {
         resetIfFlowChanged(flow.id)
 
         if (flow.steps.isEmpty()) {
@@ -29,7 +29,7 @@ class PoseFlowEngine {
 
         val currentStep = flow.steps[currentStepIndex]
 
-        if (detectedState != currentStep.state) {
+        if (!matched || detectedState != currentStep.state) {
             stepStartTime = System.currentTimeMillis()
             return FlowEvent.Cue(currentStep.state, currentStep.correction.ifBlank { currentStep.cue })
         }
