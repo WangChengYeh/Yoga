@@ -5,51 +5,30 @@ import com.yogaflow.yoga.YogaPose
 
 object PoseDetectionRouter {
 
-    data class DetectionSpec(
-        val detect: String,
-        val params: Map<String, Double>
-    )
-
-    private fun parseSpec(raw: String): DetectionSpec {
-        val parts = raw.split("|")
-        val detect = parts.firstOrNull().orEmpty()
-
-        val params = parts.drop(1)
-            .mapNotNull {
-                val kv = it.split("=")
-                if (kv.size == 2) kv[0] to kv[1].toDoubleOrNull() else null
-            }
-            .filter { it.second != null }
-            .associate { it.first to it.second!! }
-
-        return DetectionSpec(detect, params)
-    }
-
     fun evaluate(
         poseId: String,
         detect: String,
+        params: Map<String, Double>,
         frame: PoseDetectionResult,
         fallback: PoseStateMachine,
         currentPose: YogaPose
     ): PoseDetectionMappingResult {
 
-        val spec = parseSpec(detect)
-
         return when (poseId) {
             "forward_fold" -> {
-                val r = ForwardFoldDetectionMapper.evaluate(spec.detect, frame, spec.params)
+                val r = ForwardFoldDetectionMapper.evaluate(detect, frame, params)
                 PoseDetectionMappingResult(r.matched, r.state, r.cue)
             }
             "twist" -> {
-                val r = TwistDetectionMapper.evaluate(spec.detect, frame, spec.params)
+                val r = TwistDetectionMapper.evaluate(detect, frame, params)
                 PoseDetectionMappingResult(r.matched, r.state, r.cue)
             }
             "squat" -> {
-                val r = SquatDetectionMapper.evaluate(spec.detect, frame, spec.params)
+                val r = SquatDetectionMapper.evaluate(detect, frame, params)
                 PoseDetectionMappingResult(r.matched, r.state, r.cue)
             }
             "bridge" -> {
-                val r = BridgeDetectionMapper.evaluate(spec.detect, frame, spec.params)
+                val r = BridgeDetectionMapper.evaluate(detect, frame, params)
                 PoseDetectionMappingResult(r.matched, r.state, r.cue)
             }
             else -> {
