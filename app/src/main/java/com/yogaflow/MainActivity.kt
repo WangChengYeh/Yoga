@@ -8,6 +8,7 @@ import android.view.View
 import android.view.animation.DecelerateInterpolator
 import android.widget.Button
 import android.widget.ProgressBar
+import android.widget.SeekBar
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.view.PreviewView
@@ -21,6 +22,7 @@ import com.yogaflow.coach.PoseDetectionRouter
 import com.yogaflow.coach.PoseFlowEngine
 import com.yogaflow.coach.PoseStateMachine
 import com.yogaflow.coach.SquatDetectionMapper
+import com.yogaflow.coach.ThresholdConfig
 import com.yogaflow.coach.TwistDetectionMapper
 import com.yogaflow.flow.FlowLoader
 import com.yogaflow.flow.FlowPlaylistEngine
@@ -57,6 +59,10 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private lateinit var countdownText: TextView
     private lateinit var llmStatus: TextView
     private lateinit var progressBar: ProgressBar
+    private lateinit var squatThresholdLabel: TextView
+    private lateinit var bridgeThresholdLabel: TextView
+    private lateinit var squatThresholdSeekBar: SeekBar
+    private lateinit var bridgeThresholdSeekBar: SeekBar
 
     private lateinit var startClassButton: Button
     private lateinit var startStretchButton: Button
@@ -92,6 +98,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
         bindViews()
         initRuntime()
+        setupThresholdControls()
         setupButtons()
         showHome()
 
@@ -127,12 +134,47 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         countdownText = findViewById(R.id.countdownText)
         llmStatus = findViewById(R.id.llmStatus)
         progressBar = findViewById(R.id.progressBar)
+        squatThresholdLabel = findViewById(R.id.squatThresholdLabel)
+        bridgeThresholdLabel = findViewById(R.id.bridgeThresholdLabel)
+        squatThresholdSeekBar = findViewById(R.id.squatThresholdSeekBar)
+        bridgeThresholdSeekBar = findViewById(R.id.bridgeThresholdSeekBar)
         startClassButton = findViewById(R.id.startClassButton)
         startStretchButton = findViewById(R.id.startStretchButton)
         startRecoveryButton = findViewById(R.id.startRecoveryButton)
         startButton = findViewById(R.id.startButton)
         pauseButton = findViewById(R.id.pauseButton)
         restartButton = findViewById(R.id.restartButton)
+    }
+
+    private fun setupThresholdControls() {
+        squatThresholdSeekBar.progress = (ThresholdConfig.squatHoldKneeMaxDegrees - SQUAT_THRESHOLD_MIN).toInt()
+        bridgeThresholdSeekBar.progress = (ThresholdConfig.bridgeLiftHipMaxDegrees - BRIDGE_THRESHOLD_MIN).toInt()
+        updateThresholdLabels()
+
+        squatThresholdSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                ThresholdConfig.squatHoldKneeMaxDegrees = SQUAT_THRESHOLD_MIN + progress
+                updateThresholdLabels()
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+            override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
+        })
+
+        bridgeThresholdSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                ThresholdConfig.bridgeLiftHipMaxDegrees = BRIDGE_THRESHOLD_MIN + progress
+                updateThresholdLabels()
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+            override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
+        })
+    }
+
+    private fun updateThresholdLabels() {
+        squatThresholdLabel.text = "Squat knee: ${ThresholdConfig.squatHoldKneeMaxDegrees.toInt()}°"
+        bridgeThresholdLabel.text = "Bridge hip: ${ThresholdConfig.bridgeLiftHipMaxDegrees.toInt()}°"
     }
 
     private fun initRuntime() {
@@ -559,5 +601,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         private const val MIN_CUE_INTERVAL_MS = 1200L
         private const val SAME_CUE_INTERVAL_MS = 2500L
         private const val DEBUG_OVERLAY_ENABLED = true
+        private const val SQUAT_THRESHOLD_MIN = 80.0
+        private const val BRIDGE_THRESHOLD_MIN = 120.0
     }
 }
