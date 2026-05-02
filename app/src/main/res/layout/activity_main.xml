@@ -3,9 +3,9 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <TextView
-        android:layout_gravity="center"
-        android:text="YogaFlow 3D Ready"
-        android:textSize="20sp"/>
+    <androidx.camera.view.PreviewView
+        android:id="@+id/previewView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
 
 </FrameLayout>
