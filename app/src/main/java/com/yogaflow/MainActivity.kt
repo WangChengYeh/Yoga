@@ -90,6 +90,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private lateinit var currentPose: YogaPose
     private var sessionState = SessionState.IDLE
     private var cameraReady = false
+    private var cameraReadySince = 0L
+    private var autoStartedCurrentSetup = false
     private var lastCountdownText = ""
     private var lastCoachCue = ""
     private var lastCoachAt = 0L
@@ -282,6 +284,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
         if (sessionState != SessionState.RUNNING) {
             updateCameraSetupPanel(ready, framing.message, orientation.message)
+            maybeAutoStartClass()
             updateDebugOverlay(frame, detect = "camera_setup", state = CoachState.SETUP, matched = ready)
             updateUi(animated = false)
             return
@@ -339,14 +342,28 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         framingMessage: String,
         orientationMessage: String
     ) {
+        val now = System.currentTimeMillis()
+        if (ready) {
+            if (!cameraReady) cameraReadySince = now
+        } else {
+            cameraReadySince = 0L
+            autoStartedCurrentSetup = false
+        }
+
         cameraReady = ready
         cameraSetupPanel.visibility = View.VISIBLE
         startButton.isEnabled = ready
         startButton.alpha = if (ready) 1.0f else 0.45f
 
         if (ready) {
-            cameraSetupStatus.text = "Ready ✔\nYour full body is visible and you are facing the camera. Press Start to begin."
-            coachText.text = "準備好了，按 Start 開始課程。"
+            val stableFor = now - cameraReadySince
+            val remaining = ((CAMERA_AUTO_START_STABLE_MS - stableFor).coerceAtLeast(0L) / 1000.0)
+            cameraSetupStatus.text = if (stableFor >= CAMERA_AUTO_START_STABLE_MS) {
+                "Ready ✔\nStarting class automatically..."
+            } else {
+                "Ready ✔\nHold still. Auto-start in %.1fs.".format(remaining)
+            }
+            coachText.text = "準備好了，請穩住，系統會自動開始。"
         } else {
             val message = when {
                 framingMessage.isNotBlank() -> framingMessage
@@ -356,6 +373,32 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             cameraSetupStatus.text = "Not Ready\n$message"
             coachText.text = "請先完成相機設定。"
         }
+    }
+
+    private fun maybeAutoStartClass() {
+        if (!AUTO_START_ENABLED) return
+        if (!cameraReady) return
+        if (autoStartedCurrentSetup) return
+        if (sessionState != SessionState.IDLE) return
+        if (cameraReadySince == 0L) return
+
+        val stableFor = System.currentTimeMillis() - cameraReadySince
+        if (stableFor < CAMERA_AUTO_START_STABLE_MS) return
+
+        autoStartedCurrentSetup = true
+        startRunningClass(auto = true)
+    }
+
+    private fun startRunningClass(auto: Boolean) {
+        if (!cameraReady) {
+            coachText.text = "請先完成相機設定。"
+            return
+        }
+        sessionState = SessionState.RUNNING
+        cameraSetupPanel.visibility = View.GONE
+        coachText.text = if (auto) "相機設定完成，自動開始練習。" else "開始練習，跟著我的節奏。"
+        speaker.speakIfNeeded(if (auto) "相機設定完成，開始練習。" else "開始練習，跟著我的節奏。")
+        updateUi(animated = true)
     }
 
     private fun updateDebugOverlay(
@@ -485,15 +528,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
 
         startButton.setOnClickListener {
-            if (!cameraReady) {
-                coachText.text = "請先完成相機設定。"
-                return@setOnClickListener
-            }
-            sessionState = SessionState.RUNNING
-            cameraSetupPanel.visibility = View.GONE
-            coachText.text = "開始練習，跟著我的節奏。"
-            speaker.speakIfNeeded("開始練習，跟著我的節奏。")
-            updateUi(animated = true)
+            startRunningClass(auto = false)
         }
 
         pauseButton.setOnClickListener {
@@ -543,6 +578,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         resetDetectionMappers()
         sessionState = SessionState.IDLE
         cameraReady = false
+        cameraReadySince = 0L
+        autoStartedCurrentSetup = false
         startButton.isEnabled = false
         startButton.alpha = 0.45f
         cameraSetupPanel.visibility = View.VISIBLE
@@ -574,6 +611,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         currentPose = resolvePose(currentFlow)
         sessionState = SessionState.IDLE
         cameraReady = false
+        cameraReadySince = 0L
+        autoStartedCurrentSetup = false
         startButton.isEnabled = false
         startButton.alpha = 0.45f
         cameraSetupPanel.visibility = View.VISIBLE
@@ -701,6 +740,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         private const val MIN_CUE_INTERVAL_MS = 1200L
         private const val SAME_CUE_INTERVAL_MS = 2500L
         private const val DEBUG_OVERLAY_ENABLED = true
+        private const val AUTO_START_ENABLED = true
+        private const val CAMERA_AUTO_START_STABLE_MS = 1500L
         private const val SQUAT_THRESHOLD_MIN = 80.0
         private const val BRIDGE_THRESHOLD_MIN = 120.0
         private const val SQUAT_THRESHOLD_RANGE = 70
