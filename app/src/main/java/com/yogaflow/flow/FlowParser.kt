@@ -6,10 +6,6 @@ import org.json.JSONObject
 object FlowParser {
 
     fun parse(text: String): YogaFlow {
-        return parseJson(text)
-    }
-
-    private fun parseJson(text: String): YogaFlow {
         val root = JSONObject(text)
         val flow = root.getJSONObject("flow")
         val stepsArray = root.getJSONArray("steps")
@@ -31,22 +27,17 @@ object FlowParser {
     }
 
     private fun buildStep(step: JSONObject): YogaFlowStep {
-        val runtimeParams = step.optJSONObject("runtime")
+        val params = step.optJSONObject("runtime")
             ?.let { flattenRuntimeParams(it) }
             .orEmpty()
-
-        val detect = encodeDetectSpec(
-            baseDetect = step.getString("detect"),
-            runtimeParams = runtimeParams
-        )
 
         return YogaFlowStep(
             state = CoachState.valueOf(step.getString("state")),
             durationMs = step.getLong("durationMs"),
             cue = step.getString("cue"),
-            detect = detect,
+            detect = step.getString("detect"),
             correction = step.optString("correction", ""),
-            angleParams = runtimeParams.filterKeys { it.startsWith("angle.") }
+            params = params
         )
     }
 
@@ -82,19 +73,5 @@ object FlowParser {
         }
 
         return params
-    }
-
-    private fun encodeDetectSpec(
-        baseDetect: String,
-        runtimeParams: Map<String, Double>
-    ): String {
-        if (runtimeParams.isEmpty()) return baseDetect
-
-        val encodedParams = runtimeParams
-            .toSortedMap()
-            .map { (key, value) -> "$key=$value" }
-            .joinToString(separator = "|")
-
-        return "$baseDetect|$encodedParams"
     }
 }
