@@ -2,6 +2,7 @@ package com.yogaflow.coach
 
 import com.yogaflow.pose.PoseDetectionResult
 import com.yogaflow.pose.PoseGeometry
+import kotlin.math.abs
 
 object ForwardFoldDetectionMapper {
 
@@ -11,6 +12,21 @@ object ForwardFoldDetectionMapper {
         val cue: String
     )
 
+    private data class SmoothedAngles(
+        val knee: Double,
+        val hip: Double
+    )
+
+    private var smoothedKnee: Double? = null
+    private var smoothedHip: Double? = null
+    private var lastFrameAt = 0L
+
+    fun reset() {
+        smoothedKnee = null
+        smoothedHip = null
+        lastFrameAt = 0L
+    }
+
     fun evaluate(detect: String, frame: PoseDetectionResult): Result {
         val leftKnee = PoseGeometry.angle(frame, 23, 25, 27)
         val rightKnee = PoseGeometry.angle(frame, 24, 26, 28)
@@ -19,6 +35,7 @@ object ForwardFoldDetectionMapper {
 
         val required = listOf(leftKnee, rightKnee, leftHip, rightHip)
         if (required.any { it.confidence == PoseGeometry.Confidence.INVALID }) {
+            reset()
             return Result(
                 matched = false,
                 state = CoachState.CORRECTION,
@@ -26,8 +43,9 @@ object ForwardFoldDetectionMapper {
             )
         }
 
-        val knee = minOf(leftKnee.degrees, rightKnee.degrees)
-        val hip = minOf(leftHip.degrees, rightHip.degrees)
+        val rawKnee = minOf(leftKnee.degrees, rightKnee.degrees)
+        val rawHip = minOf(leftHip.degrees, rightHip.degrees)
+        val smoothed = smoothAngles(rawKnee, rawHip)
         val confidence = required.map { it.confidence }.let { confidences ->
             if (confidences.any { it == PoseGeometry.Confidence.LOW_2D_FALLBACK }) {
                 PoseGeometry.Confidence.LOW_2D_FALLBACK
@@ -38,15 +56,38 @@ object ForwardFoldDetectionMapper {
         val prefix = confidencePrefix(confidence)
 
         return when (detect) {
-            "ready_forward_fold" -> readyForwardFold(knee, hip, prefix)
-            "tall_spine_setup" -> tallSpineSetup(knee, hip, prefix)
-            "hip_hinge" -> hipHinge(knee, hip, prefix)
-            "controlled_forward_fold" -> controlledForwardFold(knee, hip, prefix)
-            "forward_hold" -> forwardHold(knee, hip, prefix)
-            "return_standing" -> returnStanding(knee, hip, prefix)
-            "neutral_finish" -> neutralFinish(knee, hip, prefix)
+            "ready_forward_fold" -> readyForwardFold(smoothed.knee, smoothed.hip, prefix)
+            "tall_spine_setup" -> tallSpineSetup(smoothed.knee, smoothed.hip, prefix)
+            "hip_hinge" -> hipHinge(smoothed.knee, smoothed.hip, prefix)
+            "controlled_forward_fold" -> controlledForwardFold(smoothed.knee, smoothed.hip, prefix)
+            "forward_hold" -> forwardHold(smoothed.knee, smoothed.hip, prefix)
+            "return_standing" -> returnStanding(smoothed.knee, smoothed.hip, prefix)
+            "neutral_finish" -> neutralFinish(smoothed.knee, smoothed.hip, prefix)
             else -> Result(true, CoachState.HOLD, "維持姿勢")
         }
+    }
+
+    private fun smoothAngles(rawKnee: Double, rawHip: Double): SmoothedAngles {
+        val now = System.currentTimeMillis()
+        val resetSmoothing = lastFrameAt == 0L || now - lastFrameAt > SMOOTHING_RESET_GAP_MS
+        lastFrameAt = now
+
+        if (resetSmoothing || smoothedKnee == null || smoothedHip == null) {
+            smoothedKnee = rawKnee
+            smoothedHip = rawHip
+            return SmoothedAngles(rawKnee, rawHip)
+        }
+
+        val nextKnee = smoothValue(smoothedKnee!!, rawKnee)
+        val nextHip = smoothValue(smoothedHip!!, rawHip)
+        smoothedKnee = nextKnee
+        smoothedHip = nextHip
+        return SmoothedAngles(nextKnee, nextHip)
+    }
+
+    private fun smoothValue(previous: Double, raw: Double): Double {
+        if (abs(raw - previous) <= ANGLE_DEADBAND_DEGREES) return previous
+        return previous + ANGLE_EMA_ALPHA * (raw - previous)
     }
 
     private fun readyForwardFold(knee: Double, hip: Double, prefix: String): Result {
@@ -114,4 +155,8 @@ object ForwardFoldDetectionMapper {
             PoseGeometry.Confidence.INVALID -> ""
         }
     }
+
+    private const val ANGLE_EMA_ALPHA = 0.35
+    private const val ANGLE_DEADBAND_DEGREES = 2.0
+    private const val SMOOTHING_RESET_GAP_MS = 750L
 }
