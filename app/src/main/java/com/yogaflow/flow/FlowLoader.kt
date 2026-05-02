@@ -13,7 +13,7 @@ object FlowLoader {
 
     fun loadAllFromAssets(context: Context): List<YogaFlow> {
         val flowFiles = context.assets.list(FLOW_ASSET_DIR)
-            ?.filter { it.endsWith(".flow.txt") }
+            ?.filter { it.endsWith(".flow.json") }
             ?.sorted()
             .orEmpty()
 
