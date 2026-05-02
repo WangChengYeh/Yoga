@@ -2,7 +2,7 @@
 
 > **自己的資訊，自己掌控。數據零離機，專業不妥協。**
 
-YogaFlow 3D 是一款高階 Android 手機限定的 on-device AI 瑜伽教練 App。整合 CameraX、MediaPipe Pose、Flow Engine、本地 Gemma LLM 與 TTS，提供即時姿勢分析與語音教練。
+YogaFlow 3D 是一款高階 Android 手機限定的 on-device AI 瑜伽教練 App。整合 CameraX、MediaPipe Pose、3D Pose Geometry、Camera Coaching、Flow Engine、本地 Gemma LLM 與 TTS，提供即時站位、面向、姿勢與語音教練。
 
 ---
 
@@ -19,7 +19,11 @@ CameraPosePipeline
         ↓
 PoseHelper / MediaPipe Pose
         ↓
-Pose Detection + Flow Engine
+PoseDetectionResult (2D image landmarks + 3D world landmarks + image size)
+        ↓
+CameraFramingCoach + ViewOrientation + PoseGeometry
+        ↓
+PoseStateMachine + Flow Engine
         ↓
 LLM Coach / Fallback
         ↓
@@ -44,6 +48,7 @@ Voice Coaching
 - Session lifecycle: IDLE / RUNNING / PAUSED / COMPLETED
 - Playlist reset / restart / transition handling
 - Camera lifecycle delegated to `CameraPosePipeline`
+- Full MainActivity wiring for 3D pose, framing, orientation, flow, LLM, and TTS
 
 ### Camera / Pose Pipeline
 - Reusable `CameraPosePipeline.kt`
@@ -51,7 +56,15 @@ Voice Coaching
 - `STRATEGY_KEEP_ONLY_LATEST` backpressure control
 - Bitmap-based rotation before MediaPipe inference
 - `PoseHelper` owns `ImageProxy.close()`
+- `PoseHelper` emits `PoseDetectionResult`
 - `ImageProcessingOptions` removed from pose input path
+
+### Geometry / Camera Coaching
+- `PoseGeometry`: 3D world-landmark joint angle calculation
+- 2D fallback with image width / height scaling and low confidence marking
+- `ViewOrientation`: detects whether the body is facing the camera using 3D depth ratio
+- `CameraFramingCoach`: detects full-body framing, too close / too far, left / right offset, top / bottom crop
+- Coaching priority: framing → orientation → pose correction
 
 ### UI / UX
 - Multi-course home screen
@@ -65,24 +78,10 @@ Voice Coaching
 
 ### AI
 - MediaPipe Pose (33 keypoints)
+- 3D world-landmark pose reasoning
 - LLM Coach (Gemma via MediaPipe)
 - Fallback coach
 - TTS voice coaching
-
----
-
-## Known Engineering Correctness Issue
-
-### P0: 2D angle projection distortion
-
-`PoseStateMachine` currently computes knee and hip angles from `NormalizedLandmark.x/y` image coordinates. This is a 2D projected angle, not a true body-space 3D joint angle.
-
-When the user turns sideways or the camera is off-axis, perspective projection can significantly distort the measured angle. This can cause false corrections for poses such as forward fold and squat.
-
-Required fix:
-- Use MediaPipe world landmarks for 3D joint angles when available.
-- Add a `PoseGeometry` layer for 3D angle calculation.
-- Fall back to 2D only when 3D landmarks are unavailable, and mark the result as low confidence.
 
 ---
 
@@ -96,8 +95,9 @@ Required fix:
 
 ## Remaining Product Work
 
-- Fix P0 2D angle projection distortion with 3D/world-landmark geometry
 - Replace cover drawable with real generated images (#13)
+- Optional: visual body framing box overlay
+- Optional: voice pacing rules for production polish
 
 ---
 
@@ -110,4 +110,4 @@ Required fix:
 
 ## Tags
 
-`#Android15` `#MediaPipe` `#LocalLLM` `#OnDeviceAI`
+`#Android15` `#MediaPipe` `#LocalLLM` `#OnDeviceAI` `#3DPose` `#CameraCoaching`
