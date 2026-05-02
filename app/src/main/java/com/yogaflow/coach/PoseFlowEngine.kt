@@ -45,7 +45,17 @@ class PoseFlowEngine {
         return flow.steps.isNotEmpty() && currentStepIndex >= flow.steps.lastIndex
     }
 
+    fun isCurrentStepSatisfied(flow: YogaFlow, detectedState: CoachState): Boolean {
+        if (flow.steps.isEmpty()) return false
+        return detectedState == flow.steps[currentStepIndex].state
+    }
+
     fun reset() {
+        currentFlowId = null
+        resetStepState()
+    }
+
+    private fun resetStepState() {
         currentStepIndex = 0
         stepStartTime = System.currentTimeMillis()
     }
@@ -53,7 +63,7 @@ class PoseFlowEngine {
     private fun resetIfFlowChanged(flowId: String) {
         if (currentFlowId != flowId) {
             currentFlowId = flowId
-            reset()
+            resetStepState()
         }
     }
 }
