@@ -1,0 +1,43 @@
+# YogaFlow Live Coach Flow
+# Flow ID: 05_bridge
+# Pose: Bridge
+# Role: Recovery / Core
+# Version: 1.0
+
+[FLOW]
+id = 05_bridge
+name = 橋式 · Bridge
+pose = bridge
+language = zh-TW
+level = beginner
+
+[STEP 1]
+state = SETUP
+duration_ms = 3000
+cue = 平躺，雙腳踩地，膝蓋彎曲，腳掌與髖同寬。
+detect = bridge_setup
+correction = 請讓髖部與膝蓋清楚進入畫面。
+
+[STEP 2]
+state = MOVEMENT
+duration_ms = 5000
+cue = 吐氣，慢慢抬起臀部，從骨盆帶動。
+detect = bridge_lift
+correction = 慢慢抬起，不要用力過猛。
+
+[STEP 3]
+state = HOLD
+duration_ms = 7000
+cue = 維持橋式，膝蓋穩定，核心收緊，保持呼吸。
+detect = bridge_hold
+correction = 不要抬太高或塌下來，找到穩定高度。
+
+[STEP 4]
+state = TRANSITION
+duration_ms = 4000
+cue = 慢慢放下臀部，一節一節回到地面。
+detect = bridge_return
+correction = 慢慢回到地面，不要突然放掉。
+
+[END]
+cue = 橋式完成，很好，核心和臀部都有啟動。
