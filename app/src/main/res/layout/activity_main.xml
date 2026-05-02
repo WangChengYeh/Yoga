@@ -19,6 +19,44 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
 
+        <LinearLayout
+            android:id="@+id/cameraSetupPanel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_margin="24dp"
+            android:orientation="vertical"
+            android:background="#CC000000"
+            android:padding="18dp">
+
+            <TextView
+                android:id="@+id/cameraSetupTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Camera Setup"
+                android:textColor="#FFFFFFFF"
+                android:textSize="22sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/cameraSetupStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Checking body framing..."
+                android:textColor="#FFFFFFFF"
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/cameraSetupGuide"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="1. Stand where your full body is visible\n2. Face the camera directly\n3. Keep enough space around your arms and legs\n4. Wait until the status says Ready"
+                android:textColor="#DDDDDD"
+                android:textSize="14sp" />
+        </LinearLayout>
+
         <TextView
             android:id="@+id/debugText"
             android:layout_width="wrap_content"
