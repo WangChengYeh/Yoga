@@ -37,10 +37,10 @@ object BridgeDetectionMapper {
         val hip = smooth(rawHip)
 
         val rawResult = when (detect) {
-            "bridge_setup" -> setup(hip)
+            "bridge_setup" -> setup()
             "bridge_lift" -> lift(hip)
             "bridge_hold" -> hold(hip)
-            "bridge_return" -> ret(hip)
+            "bridge_return" -> ret()
             else -> Result(true, CoachState.HOLD, "維持姿勢")
         }
 
@@ -76,36 +76,28 @@ object BridgeDetectionMapper {
         return next
     }
 
-    private fun setup(hip: Double): Result {
-        return if (hip < 120) {
-            Result(false, CoachState.SETUP, "躺平，腳踩穩，準備抬髖。")
-        } else {
-            Result(true, CoachState.SETUP, "很好，準備抬起臀部。")
-        }
+    private fun setup(): Result {
+        return Result(true, CoachState.SETUP, "很好，腳踩穩，準備慢慢抬起臀部。")
     }
 
     private fun lift(hip: Double): Result {
         return when {
-            hip > 150 -> Result(false, CoachState.MOVEMENT, "慢慢抬起臀部。")
-            hip < 90 -> Result(false, CoachState.CORRECTION, "不要抬太高，保持控制。")
-            else -> Result(true, CoachState.MOVEMENT, "很好，持續抬起。")
+            hip > 155 -> Result(false, CoachState.MOVEMENT, "慢慢抬起臀部，從骨盆帶動。")
+            hip < 75 -> Result(false, CoachState.CORRECTION, "不要抬太高，稍微放低一點，避免壓腰。")
+            else -> Result(true, CoachState.MOVEMENT, "很好，持續抬起，保持控制。")
         }
     }
 
     private fun hold(hip: Double): Result {
         return when {
-            hip > 140 -> Result(false, CoachState.MOVEMENT, "再抬高一點臀部。")
-            hip < 85 -> Result(false, CoachState.CORRECTION, "稍微放低一點。")
+            hip > 150 -> Result(false, CoachState.MOVEMENT, "再抬高一點臀部，但不要拱腰。")
+            hip < 75 -> Result(false, CoachState.CORRECTION, "稍微放低一點，讓腰保持舒服。")
             else -> Result(true, CoachState.HOLD, "很好，維持橋式，保持呼吸。")
         }
     }
 
-    private fun ret(hip: Double): Result {
-        return if (hip < 120) {
-            Result(false, CoachState.TRANSITION, "慢慢放下臀部。")
-        } else {
-            Result(true, CoachState.TRANSITION, "很好，回到地面。")
-        }
+    private fun ret(): Result {
+        return Result(true, CoachState.TRANSITION, "很好，慢慢回到地面。")
     }
 
     private const val HIP_EMA_ALPHA = 0.35
