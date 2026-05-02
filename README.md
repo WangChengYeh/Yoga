@@ -2,11 +2,13 @@
 
 > **自己的資訊，自己掌控。數據零離機，專業不妥協。**
 
-YogaFlow 3D is a demo-ready on-device AI yoga coach for Android. It turns live camera frames into 3D pose geometry, maps the user’s body state to structured yoga flow steps, and gives real-time voice coaching through local LLM + TTS.
+YogaFlow 3D is a production-oriented on-device AI yoga coach for Android. It turns live camera frames into 3D pose geometry, maps the user’s body state to structured yoga flow steps, and gives real-time voice coaching through local LLM + TTS.
+
+This is not a prototype. It is a real product foundation: an on-device perception, coaching, tuning, and calibration system built for live user interaction.
 
 ---
 
-## Release Milestone
+## Product Milestone
 
 ```text
 v0.2-threshold-ui
@@ -21,7 +23,7 @@ Debug Overlay → Threshold UI → ThresholdConfig → Pose Mapper → FlowEngin
 
 ---
 
-## Demo
+## Product Experience
 
 ```text
 Beginner Class
@@ -126,10 +128,11 @@ The runtime supports:
 - live debug overlay for threshold tuning
 - runtime threshold sliders for Squat and Bridge
 - persisted threshold calibration across app restarts
+- clamped threshold safety to prevent invalid calibration values from reaching mappers
 
 ---
 
-## Implemented Features
+## Product Capabilities
 
 ### Core Runtime
 
@@ -190,6 +193,7 @@ The runtime supports:
 - Bridge hip threshold slider
 - mapper-driven dynamic threshold updates
 - persisted threshold values with SharedPreferences
+- clamped preference loading and SeekBar initialization
 - closed tuning loop with debug overlay feedback
 
 ### AI + Voice
@@ -250,7 +254,7 @@ Squat knee: 105°
 Bridge hip: 155°
 ```
 
-The tuning panel updates `ThresholdConfig` at runtime. Squat and Bridge mappers read the current values immediately, and the selected values are persisted across app restarts.
+The tuning panel updates `ThresholdConfig` at runtime. Squat and Bridge mappers read the current values immediately, and the selected values are persisted across app restarts. Persisted values are clamped before reaching runtime mappers.
 
 ---
 
