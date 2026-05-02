@@ -97,6 +97,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         setContentView(R.layout.activity_main)
 
         bindViews()
+        loadThresholdPreferences()
         initRuntime()
         setupThresholdControls()
         setupButtons()
@@ -155,6 +156,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 ThresholdConfig.squatHoldKneeMaxDegrees = SQUAT_THRESHOLD_MIN + progress
                 updateThresholdLabels()
+                saveThresholdPreferences()
             }
 
             override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
@@ -165,11 +167,32 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 ThresholdConfig.bridgeLiftHipMaxDegrees = BRIDGE_THRESHOLD_MIN + progress
                 updateThresholdLabels()
+                saveThresholdPreferences()
             }
 
             override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
             override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
         })
+    }
+
+    private fun loadThresholdPreferences() {
+        val prefs = getSharedPreferences(THRESHOLD_PREFS, MODE_PRIVATE)
+        ThresholdConfig.squatHoldKneeMaxDegrees = prefs.getFloat(
+            KEY_SQUAT_HOLD_KNEE_MAX,
+            ThresholdConfig.squatHoldKneeMaxDegrees.toFloat()
+        ).toDouble()
+        ThresholdConfig.bridgeLiftHipMaxDegrees = prefs.getFloat(
+            KEY_BRIDGE_LIFT_HIP_MAX,
+            ThresholdConfig.bridgeLiftHipMaxDegrees.toFloat()
+        ).toDouble()
+    }
+
+    private fun saveThresholdPreferences() {
+        getSharedPreferences(THRESHOLD_PREFS, MODE_PRIVATE)
+            .edit()
+            .putFloat(KEY_SQUAT_HOLD_KNEE_MAX, ThresholdConfig.squatHoldKneeMaxDegrees.toFloat())
+            .putFloat(KEY_BRIDGE_LIFT_HIP_MAX, ThresholdConfig.bridgeLiftHipMaxDegrees.toFloat())
+            .apply()
     }
 
     private fun updateThresholdLabels() {
@@ -603,5 +626,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         private const val DEBUG_OVERLAY_ENABLED = true
         private const val SQUAT_THRESHOLD_MIN = 80.0
         private const val BRIDGE_THRESHOLD_MIN = 120.0
+        private const val THRESHOLD_PREFS = "threshold_prefs"
+        private const val KEY_SQUAT_HOLD_KNEE_MAX = "squat_hold_knee_max"
+        private const val KEY_BRIDGE_LIFT_HIP_MAX = "bridge_lift_hip_max"
     }
 }
