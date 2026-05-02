@@ -46,13 +46,23 @@
         android:textColor="#FFFFFF"
         android:textSize="12sp" />
 
+    <ProgressBar
+        android:id="@+id/progressBar"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="220dp"
+        android:layout_height="8dp"
+        android:layout_gravity="top|center_horizontal"
+        android:layout_marginTop="84dp"
+        android:max="100"
+        android:progress="0" />
+
     <TextView
         android:id="@+id/countdownText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="top|center_horizontal"
-        android:layout_marginTop="84dp"
-        android:text="3"
+        android:layout_marginTop="100dp"
+        android:text="Ready"
         android:textColor="#FFFFFF"
         android:textSize="20sp" />
 
@@ -68,15 +78,48 @@
         android:textColor="#FFFFFFFF"
         android:textSize="12sp" />
 
-    <TextView
-        android:id="@+id/coachText"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
-        android:padding="16dp"
+        android:orientation="vertical"
         android:background="#99000000"
-        android:text="Loading demo flow..."
-        android:textColor="#FFFFFFFF"
-        android:textSize="18sp" />
+        android:padding="12dp">
+
+        <TextView
+            android:id="@+id/coachText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Press Start to begin"
+            android:textColor="#FFFFFFFF"
+            android:textSize="18sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/startButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Start" />
+
+            <Button
+                android:id="@+id/pauseButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Pause" />
+
+            <Button
+                android:id="@+id/restartButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Restart" />
+        </LinearLayout>
+    </LinearLayout>
 
 </FrameLayout>
