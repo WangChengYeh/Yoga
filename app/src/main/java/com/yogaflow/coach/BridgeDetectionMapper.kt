@@ -81,17 +81,19 @@ object BridgeDetectionMapper {
     }
 
     private fun lift(hip: Double): Result {
+        val liftMax = ThresholdConfig.bridgeLiftHipMaxDegrees
         return when {
-            hip > 155 -> Result(false, CoachState.MOVEMENT, "慢慢抬起臀部，從骨盆帶動。")
-            hip < 75 -> Result(false, CoachState.CORRECTION, "不要抬太高，稍微放低一點，避免壓腰。")
+            hip > liftMax -> Result(false, CoachState.MOVEMENT, "慢慢抬起臀部，從骨盆帶動。")
+            hip < BRIDGE_MIN_HIP_DEGREES -> Result(false, CoachState.CORRECTION, "不要抬太高，稍微放低一點，避免壓腰。")
             else -> Result(true, CoachState.MOVEMENT, "很好，持續抬起，保持控制。")
         }
     }
 
     private fun hold(hip: Double): Result {
+        val holdMax = ThresholdConfig.bridgeLiftHipMaxDegrees
         return when {
-            hip > 150 -> Result(false, CoachState.MOVEMENT, "再抬高一點臀部，但不要拱腰。")
-            hip < 75 -> Result(false, CoachState.CORRECTION, "稍微放低一點，讓腰保持舒服。")
+            hip > holdMax -> Result(false, CoachState.MOVEMENT, "再抬高一點臀部，但不要拱腰。")
+            hip < BRIDGE_MIN_HIP_DEGREES -> Result(false, CoachState.CORRECTION, "稍微放低一點，讓腰保持舒服。")
             else -> Result(true, CoachState.HOLD, "很好，維持橋式，保持呼吸。")
         }
     }
@@ -100,6 +102,7 @@ object BridgeDetectionMapper {
         return Result(true, CoachState.TRANSITION, "很好，慢慢回到地面。")
     }
 
+    private const val BRIDGE_MIN_HIP_DEGREES = 75.0
     private const val HIP_EMA_ALPHA = 0.35
     private const val ANGLE_DEADBAND_DEGREES = 2.0
     private const val STABILITY_WINDOW_MS = 300L
