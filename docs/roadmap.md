@@ -10,6 +10,12 @@
 - Flow playlist (multi-flow class)
 - Auto flow discovery
 
+### Architecture Upgrade
+- CameraPosePipeline (modular camera layer)
+- PoseHelper refactor (bitmap pipeline + ownership fix)
+- MainActivity orchestration layer completed
+- Deterministic RGBA pipeline
+
 ### App
 - Multi-course home UI
 - Course selection
@@ -36,3 +42,4 @@
 - AI-generated flows
 - YouTube alignment
 - 100+ flows library
+- Multi-model (Pose + Hand + Face)
