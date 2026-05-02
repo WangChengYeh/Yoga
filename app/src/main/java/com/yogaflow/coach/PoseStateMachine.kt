@@ -7,16 +7,28 @@ import com.yogaflow.yoga.YogaPose
 class PoseStateMachine {
 
     fun update(pose: YogaPose, frame: PoseDetectionResult): Pair<CoachState, String> {
-        val knee = PoseGeometry.angle(frame, 23, 25, 27)
-        val hip = PoseGeometry.angle(frame, 11, 23, 25)
-
-        if (knee.confidence == PoseGeometry.Confidence.INVALID || hip.confidence == PoseGeometry.Confidence.INVALID) {
-            return CoachState.CORRECTION to "我目前看不清楚你的身體角度，請讓全身進入畫面。"
-        }
-
         return when (pose.id) {
-            "forward_fold" -> handleForwardFold(knee.degrees, hip.degrees, knee.confidence)
-            "squat" -> handleSquat(knee.degrees, knee.confidence)
+            "forward_fold" -> {
+                val knee = PoseGeometry.angle(frame, 23, 25, 27)
+                val hip = PoseGeometry.angle(frame, 11, 23, 25)
+
+                if (knee.confidence == PoseGeometry.Confidence.INVALID || hip.confidence == PoseGeometry.Confidence.INVALID) {
+                    CoachState.CORRECTION to "我目前看不清楚你的膝蓋和髖部角度，請讓全身進入畫面。"
+                } else {
+                    handleForwardFold(knee.degrees, hip.degrees, knee.confidence)
+                }
+            }
+
+            "squat" -> {
+                val knee = PoseGeometry.angle(frame, 23, 25, 27)
+
+                if (knee.confidence == PoseGeometry.Confidence.INVALID) {
+                    CoachState.CORRECTION to "我目前看不清楚你的膝蓋角度，請讓雙腿進入畫面。"
+                } else {
+                    handleSquat(knee.degrees, knee.confidence)
+                }
+            }
+
             else -> CoachState.HOLD to "維持姿勢"
         }
     }
