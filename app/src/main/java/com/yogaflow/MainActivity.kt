@@ -52,6 +52,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private lateinit var classView: View
     private lateinit var previewView: PreviewView
     private lateinit var overlayView: PoseOverlayView
+    private lateinit var cameraSetupPanel: View
+    private lateinit var cameraSetupStatus: TextView
     private lateinit var debugText: TextView
     private lateinit var coachText: TextView
     private lateinit var flowName: TextView
@@ -87,6 +89,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private lateinit var currentFlow: YogaFlow
     private lateinit var currentPose: YogaPose
     private var sessionState = SessionState.IDLE
+    private var cameraReady = false
     private var lastCountdownText = ""
     private var lastCoachCue = ""
     private var lastCoachAt = 0L
@@ -128,6 +131,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         classView = findViewById(R.id.classView)
         previewView = findViewById(R.id.previewView)
         overlayView = findViewById(R.id.overlayView)
+        cameraSetupPanel = findViewById(R.id.cameraSetupPanel)
+        cameraSetupStatus = findViewById(R.id.cameraSetupStatus)
         debugText = findViewById(R.id.debugText)
         coachText = findViewById(R.id.coachText)
         flowName = findViewById(R.id.flowName)
@@ -272,21 +277,19 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
         val framing = CameraFramingCoach.analyze(frame)
         val orientation = ViewOrientation.analyze(frame)
+        val ready = framing.status == CameraFramingStatus.GOOD &&
+            orientation.status == ViewOrientationStatus.GOOD
 
         if (sessionState != SessionState.RUNNING) {
-            val setupCue = cameraSetupCue(framing, orientation)
-            if (setupCue.isNotBlank()) {
-                coachText.text = setupCue
-            }
-            updateDebugOverlay(frame, detect = "camera_setup", state = CoachState.SETUP, matched = false)
+            updateCameraSetupPanel(ready, framing.message, orientation.message)
+            updateDebugOverlay(frame, detect = "camera_setup", state = CoachState.SETUP, matched = ready)
             updateUi(animated = false)
             return
         }
 
-        val allowPoseCoaching = framing.status == CameraFramingStatus.GOOD &&
-            orientation.status == ViewOrientationStatus.GOOD
+        cameraSetupPanel.visibility = View.GONE
 
-        if (!allowPoseCoaching) {
+        if (!ready) {
             val setupCue = cameraSetupCue(framing, orientation)
             speakCoachCue(CoachState.CORRECTION, setupCue)
             updateDebugOverlay(frame, detect = "camera_setup", state = CoachState.CORRECTION, matched = false)
@@ -329,6 +332,30 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
 
         updateUi(animated = true)
+    }
+
+    private fun updateCameraSetupPanel(
+        ready: Boolean,
+        framingMessage: String,
+        orientationMessage: String
+    ) {
+        cameraReady = ready
+        cameraSetupPanel.visibility = View.VISIBLE
+        startButton.isEnabled = ready
+        startButton.alpha = if (ready) 1.0f else 0.45f
+
+        if (ready) {
+            cameraSetupStatus.text = "Ready ✔\nYour full body is visible and you are facing the camera. Press Start to begin."
+            coachText.text = "準備好了，按 Start 開始課程。"
+        } else {
+            val message = when {
+                framingMessage.isNotBlank() -> framingMessage
+                orientationMessage.isNotBlank() -> orientationMessage
+                else -> "Adjust your position until your full body is visible."
+            }
+            cameraSetupStatus.text = "Not Ready\n$message"
+            coachText.text = "請先完成相機設定。"
+        }
     }
 
     private fun updateDebugOverlay(
@@ -458,7 +485,12 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
 
         startButton.setOnClickListener {
+            if (!cameraReady) {
+                coachText.text = "請先完成相機設定。"
+                return@setOnClickListener
+            }
             sessionState = SessionState.RUNNING
+            cameraSetupPanel.visibility = View.GONE
             coachText.text = "開始練習，跟著我的節奏。"
             speaker.speakIfNeeded("開始練習，跟著我的節奏。")
             updateUi(animated = true)
@@ -510,11 +542,16 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         flowEngine.reset()
         resetDetectionMappers()
         sessionState = SessionState.IDLE
+        cameraReady = false
+        startButton.isEnabled = false
+        startButton.alpha = 0.45f
+        cameraSetupPanel.visibility = View.VISIBLE
+        cameraSetupStatus.text = "Checking body framing..."
         lastCountdownText = ""
         lastCoachCue = ""
         lastCoachAt = 0L
         coachRequestId++
-        coachText.text = "按 Start 開始課程。"
+        coachText.text = "請先完成相機設定。"
         llmStatus.text = "LLM: OFF"
 
         if (openClassView) showClass()
@@ -536,11 +573,16 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         currentFlow = flow
         currentPose = resolvePose(currentFlow)
         sessionState = SessionState.IDLE
+        cameraReady = false
+        startButton.isEnabled = false
+        startButton.alpha = 0.45f
+        cameraSetupPanel.visibility = View.VISIBLE
+        cameraSetupStatus.text = "Checking body framing..."
         lastCountdownText = ""
         lastCoachCue = ""
         lastCoachAt = 0L
         coachRequestId++
-        coachText.text = "已重新開始，按 Start 開始課程。"
+        coachText.text = "已重新開始。請先完成相機設定。"
         updateUi(animated = false)
     }
 
@@ -569,7 +611,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         if (animated) animateProgress(progress) else progressBar.progress = progress
 
         val countdown = when (sessionState) {
-            SessionState.IDLE -> "Ready"
+            SessionState.IDLE -> if (cameraReady) "Ready" else "Setup"
             SessionState.PAUSED -> "Paused"
             SessionState.COMPLETED -> "Done"
             SessionState.RUNNING -> flowEngine.remainingSeconds(currentFlow).toString()
