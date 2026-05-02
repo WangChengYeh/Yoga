@@ -1,16 +1,17 @@
 # YogaFlow Flow DSL
 
-YogaFlow uses `.flow.txt` files to define yoga class content, step progression, coaching cues, and runtime detection behavior.
+YogaFlow Flow DSL is the runtime language for class content, step progression, coaching cues, and pose detection behavior.
 
-DSL v2 is the only supported format.
+The current DSL is **JSON-only DSL v2**.
 
 ```text
-Flow DSL
-→ FlowParser
-→ PoseDetectionRouter
-→ Detection Mapper
-→ Stability Layer
-→ PoseFlowEngine
+.flow.json
+→ FlowJsonValidator        # JSON shape / type validation
+→ FlowParser               # JSON → YogaFlow / YogaFlowStep
+→ FlowValidator            # semantic DSL validation
+→ PoseDetectionRouter      # typed detect + params dispatch
+→ Detection Mapper         # pose-specific evaluation
+→ PoseFlowEngine           # step progression
 ```
 
 ---
@@ -18,153 +19,323 @@ Flow DSL
 ## Core Principle
 
 ```text
-Flow defines WHAT to detect.
-Code defines HOW to execute detection.
-Flow fully controls behavior.
+Flow = source of truth
+Code = execution engine
 ```
+
+Flow defines what to detect and which runtime parameters to use. Kotlin code only executes the detection engine.
 
 ---
 
 ## DSL v2 Only
 
 ```text
-No fallback.
-No legacy keys.
-No ambiguity.
+No .flow.txt
+No fallback
+No legacy flat angle keys
+No detect string encoding
+No ambiguity
 ```
 
-All parameters must use structured, phase-aware keys.
-
----
-
-## Basic Flow Structure
+All flow files must use:
 
 ```text
-[FLOW]
-id = 04_squat
-name = 深蹲 · Squat
-pose = squat
-language = zh-TW
-level = beginner
-
-[STEP 1]
-state = SETUP
-duration_ms = 3000
-cue = 雙腳站穩，腳尖自然朝前或微微外開，膝蓋對齊腳尖。
-detect = squat_setup
-correction = 先站穩，讓髖部、膝蓋和腳踝都進入畫面。
-
-[END]
-cue = 深蹲完成，很好。
+app/src/main/assets/flows/*.flow.json
 ```
 
 ---
 
-## DSL v2 Key Format
+## Runtime Contract
+
+A flow step is parsed into:
+
+```kotlin
+data class YogaFlowStep(
+    val state: CoachState,
+    val durationMs: Long,
+    val cue: String,
+    val detect: String,
+    val correction: String,
+    val params: Map<String, Double> = emptyMap()
+)
+```
+
+The runtime dispatch path is typed:
+
+```text
+currentStep.detect
+currentStep.params
+→ PoseDetectionRouter.evaluate(...)
+→ Mapper.evaluate(detect, frame, params)
+```
+
+The old string format is removed:
+
+```text
+detect|angle.hip.hold.min=50    # removed
+```
+
+---
+
+## Basic JSON Flow Structure
+
+```json
+{
+  "version": "dsl-v2",
+  "flow": {
+    "id": "02_forward_fold_main",
+    "name": "前屈 · Forward Fold",
+    "pose": "forward_fold",
+    "language": "zh-TW",
+    "level": "beginner"
+  },
+  "steps": [
+    {
+      "state": "MOVEMENT",
+      "durationMs": 5000,
+      "cue": "維持膝蓋伸長，身體只到舒服的位置。",
+      "detect": "controlled_forward_fold",
+      "correction": "如果膝蓋彎了，先減少前傾深度，把腿重新伸長。",
+      "runtime": {
+        "angles": {
+          "knee": {
+            "fold": { "min": 150 }
+          },
+          "hip": {
+            "fold": { "min": 55, "max": 135 }
+          }
+        },
+        "stabilityMs": 300,
+        "emaAlpha": 0.4,
+        "deadbandDegrees": 3
+      }
+    }
+  ],
+  "end": {
+    "cue": "完成，回到穩定呼吸。"
+  }
+}
+```
+
+---
+
+## Step Fields
+
+| JSON field | Kotlin field | Required | Description |
+|---|---|---:|---|
+| `state` | `state` | Yes | `SETUP`, `MOVEMENT`, `HOLD`, `TRANSITION`, `CORRECTION` |
+| `durationMs` | `durationMs` | Yes | Step duration in milliseconds |
+| `cue` | `cue` | Yes | Coaching cue |
+| `detect` | `detect` | Yes | Detection key routed to mapper |
+| `correction` | `correction` | Recommended | Correction cue |
+| `runtime` | `params` | Required for validated detect keys | Detection thresholds and stability behavior |
+
+---
+
+## Runtime JSON → Runtime Params
+
+The parser flattens JSON runtime values into typed params.
+
+| JSON | Runtime param |
+|---|---|
+| `runtime.stabilityMs` | `stability.ms` |
+| `runtime.emaAlpha` | `ema.alpha` |
+| `runtime.deadbandDegrees` | `deadband.degrees` |
+| `runtime.angles.hip.hold.min` | `angle.hip.hold.min` |
+| `runtime.angles.knee.fold.min` | `angle.knee.fold.min` |
+
+Example:
+
+```json
+{
+  "runtime": {
+    "angles": {
+      "hip": {
+        "hold": { "min": 50, "max": 130 }
+      }
+    },
+    "stabilityMs": 650
+  }
+}
+```
+
+Becomes:
+
+```text
+params["angle.hip.hold.min"] = 50
+params["angle.hip.hold.max"] = 130
+params["stability.ms"] = 650
+```
+
+---
+
+## Angle Key Model
+
+JSON structure:
+
+```text
+runtime.angles.<joint>.<phase>.<bound>
+```
+
+Runtime param:
 
 ```text
 angle.<joint>.<phase>.<bound>
 ```
 
-| Segment | Example |
+| Segment | Supported values |
 |---|---|
-| joint | knee / hip / twist |
-| phase | ready / setup / hinge / fold / hold / return / neutral |
-| bound | min / max |
+| joint | `knee`, `hip`, `twist` |
+| phase | `ready`, `setup`, `hinge`, `fold`, `hold`, `return`, `neutral`, `start`, `center`, `descent`, `lift` |
+| bound | `min`, `max` |
 
 ---
 
 ## Forward Fold Phase Table
 
-| detect | phase |
-|---|---|
-| ready_forward_fold | ready |
-| tall_spine_setup | setup |
-| hip_hinge | hinge |
-| controlled_forward_fold | fold |
-| forward_hold | hold |
-| return_standing | return |
-| neutral_finish | neutral |
+| detect | phase | Required runtime angles |
+|---|---|---|
+| `ready_forward_fold` | `ready` | `knee.ready.min`, `hip.ready.min` |
+| `tall_spine_setup` | `setup` | `knee.setup.min`, `hip.setup.min` |
+| `hip_hinge` | `hinge` | `knee.hinge.min`, `hip.hinge.max` |
+| `controlled_forward_fold` | `fold` | `knee.fold.min`, `hip.fold.min`, `hip.fold.max` |
+| `forward_hold` | `hold` | `knee.hold.min`, `hip.hold.min`, `hip.hold.max` |
+| `return_standing` | `return` | `knee.return.min`, `hip.return.min` |
+| `neutral_finish` | `neutral` | `knee.neutral.min`, `hip.neutral.min` |
 
 ---
 
-## Example — Forward Fold DSL v2
+## Runtime Controls
 
-```text
-[STEP 4]
-state = MOVEMENT
-detect = controlled_forward_fold
+### Stability
 
-angle.knee.fold.min = 150
-angle.hip.fold.min = 55
-angle.hip.fold.max = 135
+```json
+"stabilityMs": 500
+```
 
-stability.ms = 300
-ema.alpha = 0.4
-deadband.degrees = 3
+Controls how long a matched state must remain stable before the mapper accepts it.
+
+### Smoothing
+
+```json
+"emaAlpha": 0.35
+```
+
+Controls angle smoothing.
+
+| Value | Behavior |
+|---:|---|
+| `0.2` | More stable, slower response |
+| `0.35` | Balanced |
+| `0.6` | More responsive, more jitter-sensitive |
+
+### Deadband
+
+```json
+"deadbandDegrees": 3
+```
+
+Ignores tiny angle changes below the configured degree threshold.
+
+---
+
+## Validation Pipeline
+
+YogaFlow uses two validators.
+
+### 1. FlowJsonValidator
+
+Checks JSON shape, type, enum, and numeric ranges before parsing.
+
+Examples it catches:
+
+```json
+"min": "abc"
 ```
 
 ```text
-[STEP 5]
-state = HOLD
-detect = forward_hold
+steps[3].runtime.angles.hip.fold.min must be a number
+```
 
-angle.knee.hold.min = 145
-angle.hip.hold.min = 50
-angle.hip.hold.max = 130
+```json
+"state": "MOVE"
+```
 
-stability.ms = 650
-ema.alpha = 0.25
-deadband.degrees = 3
+```text
+expected one of SETUP, MOVEMENT, HOLD, TRANSITION, CORRECTION
+```
+
+```json
+"angles": { "hips": {} }
+```
+
+```text
+angles.hips is not a supported joint
+```
+
+### 2. FlowValidator
+
+Checks semantic requirements after parsing.
+
+Example:
+
+```json
+{
+  "detect": "forward_hold",
+  "runtime": {
+    "angles": {
+      "hip": {
+        "hold": { "min": 50 }
+      }
+    }
+  }
+}
+```
+
+Fails because `forward_hold` also requires:
+
+```text
+angle.knee.hold.min
+angle.hip.hold.max
 ```
 
 ---
 
-## Runtime Parameters
+## Failure Policy
+
+Invalid DSL should fail fast.
 
 ```text
-angle.*
-stability.ms
-ema.alpha
-deadband.degrees
+Invalid JSON shape → FlowJsonValidator error
+Invalid DSL semantics → FlowValidator error
 ```
+
+No silent fallback is allowed.
 
 ---
 
-## Stability
+## Flow Editor Schema
+
+The strongly typed schema lives at:
 
 ```text
-stability.ms = 500
+schemas/flow-editor.schema.json
 ```
 
----
-
-## Smoothing
+Use this schema for:
 
 ```text
-ema.alpha = 0.35
-```
-
----
-
-## Deadband
-
-```text
-deadband.degrees = 3
-```
-
----
-
-## Design Principle
-
-```text
-Flow = source of truth
-Code = execution engine
+Flow Editor form generation
+LLM-generated flow validation
+pre-commit validation
+CI validation
 ```
 
 ---
 
 ## Roadmap
+
+Potential DSL v3 syntax:
 
 ```text
 angle.hip.hold.range = 50..130
