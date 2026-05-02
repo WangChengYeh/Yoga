@@ -13,7 +13,7 @@ Home (Multi-course)
         ↓
 Course Selection (Beginner / Stretch / Recovery)
         ↓
-Camera Class
+MainActivity Orchestration
         ↓
 CameraPosePipeline
         ↓
@@ -37,6 +37,13 @@ Voice Coaching
 - Flow runtime engine
 - Flow playlist (multi-flow class)
 - Auto flow discovery (`assets/flows`)
+
+### App Orchestration
+- Complete `MainActivity` orchestration layer
+- Course selection wiring
+- Session lifecycle: IDLE / RUNNING / PAUSED / COMPLETED
+- Playlist reset / restart / transition handling
+- Camera lifecycle delegated to `CameraPosePipeline`
 
 ### Camera / Pose Pipeline
 - Reusable `CameraPosePipeline.kt`
@@ -69,12 +76,6 @@ Voice Coaching
 - Beginner Flow (Mountain → Forward Fold → Twist)
 - Stretch Class (Forward Fold)
 - Recovery Class (Twist)
-
----
-
-## Known Engineering Follow-up
-
-- Restore full `MainActivity` UI / flow methods after the camera pipeline extraction. Current camera pipeline work is complete, but `MainActivity` must retain `setupButtons`, `showHome`, `loadDiscoveredPlaylist`, `updateUi`, and related class-session helpers to compile.
 
 ---
 
