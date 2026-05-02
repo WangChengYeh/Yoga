@@ -16,6 +16,7 @@ Mountain → Forward Fold → Twist → Squat → Bridge
 - Platform: Android
 - Runtime: On-device camera + pose + coach loop
 - Coaching mode: live correction + flow progression
+- Debug mode: live pose angle / state / matched overlay
 - Privacy: no camera frames or pose landmarks need to leave the device
 
 ---
@@ -52,6 +53,8 @@ flowchart TD
 
     Coach --> Voice2[TTS]
     Coach --> UI[UI Feedback]
+    Geometry --> Debug[Debug Overlay\nangles + state + matched]
+    Mapper --> Debug
 ```
 
 Full system architecture: [`docs/architecture.md`](docs/architecture.md)
@@ -99,6 +102,7 @@ The runtime supports:
 - local LLM coaching on a background executor
 - TTS voice coaching
 - stability-aware multi-pose detection
+- live debug overlay for threshold tuning
 
 ---
 
@@ -112,6 +116,7 @@ The runtime supports:
 - Flow playlist for multi-flow classes
 - Auto flow discovery from `assets/flows`
 - Flow step-level `detect` mapping
+- `PoseDetectionRouter` for mapper dispatch
 
 ### Camera + Pose Pipeline
 
@@ -127,6 +132,7 @@ The runtime supports:
 - `CameraFramingCoach`
 - `ViewOrientation`
 - `PoseGeometry`
+- `PoseDetectionRouter`
 - `ForwardFoldDetectionMapper`
 - `TwistDetectionMapper`
 - `SquatDetectionMapper`
@@ -141,6 +147,18 @@ The runtime supports:
 - coach cue throttle
 - LLM generation off UI thread
 - safe flow loading with `runCatching`
+
+### Debugging + Observability
+
+- `DebugPoseInfo`
+- live `debugText` overlay
+- current pose id
+- current `detect`
+- mapper state
+- `matched` result
+- left/right knee angle
+- left/right hip angle
+- torso twist estimate
 
 ### AI + Voice
 
@@ -177,6 +195,22 @@ A flow file defines the class content. A detection mapper decides whether the us
 
 ---
 
+## Debug Overlay Example
+
+```text
+DEBUG
+pose=squat
+detect=squat_hold
+state=HOLD matched=true
+L knee=91.2° R knee=89.8°
+L hip=110.3° R hip=108.7°
+twist=2.1°
+```
+
+The overlay is used for threshold tuning, jitter observation, and validating why a step is or is not matched.
+
+---
+
 ## Privacy Model
 
 YogaFlow is designed for on-device execution.
@@ -206,7 +240,6 @@ No camera frames or pose landmarks are required to leave the device for the core
 
 - Extract mapper interface (`PoseDetectionMapper`)
 - Add visual body framing box overlay
-- Add angle / state debug overlay
 - Add variance-based stability scoring
 - Add more pose families
 - Replace cover drawable with real generated images (#13)
