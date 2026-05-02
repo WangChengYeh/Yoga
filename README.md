@@ -36,7 +36,7 @@ TTS Voice Coaching
 
 ## Current Product State
 
-YogaFlow 3D is now a demo-ready on-device live yoga coach prototype.
+YogaFlow 3D is a demo-ready on-device live yoga coach prototype with a complete beginner class.
 
 The current runtime supports:
 
@@ -46,6 +46,7 @@ The current runtime supports:
 - event-driven flow runtime
 - local LLM coaching on a background executor
 - TTS voice coaching
+- multi-pose class chaining
 
 ---
 
@@ -68,6 +69,8 @@ The current runtime supports:
 - `PoseGeometry`
 - `ForwardFoldDetectionMapper`
 - `TwistDetectionMapper`
+- `SquatDetectionMapper`
+- `BridgeDetectionMapper`
 - `LlmCoach`
 - `CoachSpeaker`
 
@@ -85,11 +88,21 @@ The current runtime supports:
   - `twist_start`
   - `twist_hold`
   - `return_center`
+- Squat mapping:
+  - `squat_setup`
+  - `squat_descent`
+  - `squat_hold`
+  - `squat_return`
+- Bridge mapping:
+  - `bridge_setup`
+  - `bridge_lift`
+  - `bridge_hold`
+  - `bridge_return`
 
 ### Runtime Stability
 - EMA angle smoothing
 - Angle deadband
-- Forward Fold stability window
+- Stability window before matched state is accepted
 - Mapper reset on playlist restart / flow transition
 - Coach cue throttle
 - LLM generation off UI thread
@@ -100,7 +113,7 @@ The current runtime supports:
 
 ## Demo Courses
 
-- Beginner Flow (Mountain → Forward Fold → Twist)
+- Beginner Flow (Mountain → Forward Fold → Twist → Squat → Bridge)
 - Stretch Class (Forward Fold)
 - Recovery Class (Twist)
 
@@ -132,6 +145,7 @@ Safety priorities:
 flow step.detect
 → TwistDetectionMapper
 → torso twist estimate
+→ smoothing + stability window
 → FlowEvent
 → LLM/TTS cue
 ```
@@ -142,6 +156,42 @@ Safety priorities:
 - gentle twist start
 - no excessive rotation
 - slow return to center
+
+### Squat
+
+```text
+flow step.detect
+→ SquatDetectionMapper
+→ bilateral knee geometry
+→ smoothing + stability window
+→ FlowEvent
+→ LLM/TTS cue
+```
+
+Safety priorities:
+
+- knees track with toes
+- controlled descent
+- avoid excessive depth
+- slow return to standing
+
+### Bridge
+
+```text
+flow step.detect
+→ BridgeDetectionMapper
+→ bilateral hip geometry
+→ smoothing + stability window
+→ FlowEvent
+→ LLM/TTS cue
+```
+
+Safety priorities:
+
+- controlled hip lift
+- stable knees
+- avoid over-arching
+- slow return to floor
 
 ---
 
@@ -154,10 +204,10 @@ Safety priorities:
 
 ## Remaining Product Work
 
-- Apply stability window to Twist mapping
 - Extract mapper interface (`PoseDetectionMapper`)
 - Add visual body framing box overlay
 - Add angle / state debug overlay
+- Add variance-based stability scoring
 - Replace cover drawable with real generated images (#13)
 
 ---
