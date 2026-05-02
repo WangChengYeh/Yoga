@@ -64,6 +64,13 @@ class PoseOverlayView @JvmOverloads constructor(
         0 to 12
     )
 
+    private val coreBodyIndices = listOf(
+        11, 12, // shoulders
+        23, 24, // hips
+        25, 26, // knees
+        27, 28  // ankles
+    )
+
     fun setLandmarks(newLandmarks: List<NormalizedLandmark>) {
         landmarks = newLandmarks
         invalidate()
@@ -90,9 +97,12 @@ class PoseOverlayView @JvmOverloads constructor(
     }
 
     private fun drawBodyFramingBox(canvas: Canvas) {
-        val visibleLandmarks = landmarks.filter { point ->
-            point.x() in 0f..1f && point.y() in 0f..1f
+        val visibleLandmarks = coreBodyIndices.mapNotNull { index ->
+            landmarks.getOrNull(index)?.takeIf {
+                it.x() in 0f..1f && it.y() in 0f..1f
+            }
         }
+
         if (visibleLandmarks.isEmpty()) return
 
         val minX = visibleLandmarks.minOf { it.x() } * width
