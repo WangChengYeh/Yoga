@@ -29,6 +29,22 @@ class PoseFlowEngine {
         return step.state to step.cue
     }
 
+    fun currentStepNumber(): Int = currentStepIndex + 1
+
+    fun totalSteps(flow: YogaFlow): Int = flow.steps.size.coerceAtLeast(1)
+
+    fun remainingSeconds(flow: YogaFlow): Long {
+        if (flow.steps.isEmpty()) return 0
+        val step = flow.steps[currentStepIndex]
+        val elapsed = System.currentTimeMillis() - stepStartTime
+        val remainingMs = (step.durationMs - elapsed).coerceAtLeast(0)
+        return (remainingMs + 999) / 1000
+    }
+
+    fun isLastStep(flow: YogaFlow): Boolean {
+        return flow.steps.isNotEmpty() && currentStepIndex >= flow.steps.lastIndex
+    }
+
     fun reset() {
         currentStepIndex = 0
         stepStartTime = System.currentTimeMillis()
