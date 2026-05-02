@@ -40,6 +40,7 @@ Voice Coaching
 - Flow index + step index
 - Progress bar animation
 - Countdown animation
+- Countdown voice cue (3,2,1)
 - Flow transition animation
 - Start / Pause / Restart controls
 
