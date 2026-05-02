@@ -310,13 +310,16 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         val providerFuture = ProcessCameraProvider.getInstance(this)
         providerFuture.addListener({
             val provider = providerFuture.get()
-            val preview = Preview.Builder().build().also { it.setSurfaceProvider(previewView.surfaceProvider) }
-            val analyzer = ImageAnalysis.Builder().build().also {
-                it.setAnalyzer(cameraExecutor) { image ->
-                    poseHelper.detect(image)
-                    image.close()
-                }
+
+            val preview = Preview.Builder().build()
+            preview.setSurfaceProvider(previewView.surfaceProvider)
+
+            val analyzer = ImageAnalysis.Builder().build()
+            analyzer.setAnalyzer(cameraExecutor) { image ->
+                poseHelper.detect(image)
+                image.close()
             }
+
             provider.unbindAll()
             provider.bindToLifecycle(this, CameraSelector.DEFAULT_BACK_CAMERA, preview, analyzer)
         }, mainExecutor)
