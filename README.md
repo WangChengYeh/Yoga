@@ -6,6 +6,21 @@ YogaFlow 3D is a demo-ready on-device AI yoga coach for Android. It turns live c
 
 ---
 
+## Release Milestone
+
+```text
+v0.2-threshold-ui
+Runtime threshold tuning + persistent user calibration
+```
+
+This milestone adds a complete tuning loop:
+
+```text
+Debug Overlay → Threshold UI → ThresholdConfig → Pose Mapper → FlowEngine
+```
+
+---
+
 ## Demo
 
 ```text
@@ -17,6 +32,8 @@ Mountain → Forward Fold → Twist → Squat → Bridge
 - Runtime: On-device camera + pose + coach loop
 - Coaching mode: live correction + flow progression
 - Debug mode: live pose angle / state / matched overlay
+- Tuning mode: runtime Squat / Bridge threshold sliders
+- Calibration: persisted user thresholds via SharedPreferences
 - Privacy: no camera frames or pose landmarks need to leave the device
 
 ---
@@ -55,6 +72,9 @@ flowchart TD
     Coach --> UI[UI Feedback]
     Geometry --> Debug[Debug Overlay\nangles + state + matched]
     Mapper --> Debug
+    Debug --> ThresholdUI[Threshold UI\nSquat + Bridge sliders]
+    ThresholdUI --> ThresholdConfig[ThresholdConfig\nPersistent calibration]
+    ThresholdConfig --> Mapper
 ```
 
 Full system architecture: [`docs/architecture.md`](docs/architecture.md)
@@ -69,6 +89,7 @@ Real-time AI coaching is harder than pose detection alone.
 - Yoga coaching needs step-level context, not only a final pose label.
 - Flow transitions must avoid skipped steps, repeated triggers, and timer bugs.
 - Coaching must prioritize camera setup before body correction.
+- Thresholds need to be tunable because body proportions, camera angle, and movement range vary across users.
 - The system must feel human while running fully on-device.
 
 YogaFlow solves this with a deterministic runtime core:
@@ -103,6 +124,8 @@ The runtime supports:
 - TTS voice coaching
 - stability-aware multi-pose detection
 - live debug overlay for threshold tuning
+- runtime threshold sliders for Squat and Bridge
+- persisted threshold calibration across app restarts
 
 ---
 
@@ -160,6 +183,15 @@ The runtime supports:
 - left/right hip angle
 - torso twist estimate
 
+### Runtime Tuning + Calibration
+
+- `ThresholdConfig`
+- Squat knee threshold slider
+- Bridge hip threshold slider
+- mapper-driven dynamic threshold updates
+- persisted threshold values with SharedPreferences
+- closed tuning loop with debug overlay feedback
+
 ### AI + Voice
 
 - Local LLM coach / fallback coach
@@ -171,12 +203,12 @@ The runtime supports:
 
 ## Supported Live-Coached Poses
 
-| Pose | Mapper | Primary geometry | Flow detects |
-|---|---|---|---|
-| Forward Fold | `ForwardFoldDetectionMapper` | bilateral knee + hip angles | `ready_forward_fold`, `tall_spine_setup`, `hip_hinge`, `controlled_forward_fold`, `forward_hold`, `return_standing`, `neutral_finish` |
-| Twist | `TwistDetectionMapper` | torso twist estimate | `stable_base`, `twist_start`, `twist_hold`, `return_center` |
-| Squat | `SquatDetectionMapper` | bilateral knee angles | `squat_setup`, `squat_descent`, `squat_hold`, `squat_return` |
-| Bridge | `BridgeDetectionMapper` | bilateral hip angles | `bridge_setup`, `bridge_lift`, `bridge_hold`, `bridge_return` |
+| Pose | Mapper | Primary geometry | Flow detects | Runtime tuning |
+|---|---|---|---|---|
+| Forward Fold | `ForwardFoldDetectionMapper` | bilateral knee + hip angles | `ready_forward_fold`, `tall_spine_setup`, `hip_hinge`, `controlled_forward_fold`, `forward_hold`, `return_standing`, `neutral_finish` | — |
+| Twist | `TwistDetectionMapper` | torso twist estimate | `stable_base`, `twist_start`, `twist_hold`, `return_center` | — |
+| Squat | `SquatDetectionMapper` | bilateral knee angles | `squat_setup`, `squat_descent`, `squat_hold`, `squat_return` | knee hold max threshold |
+| Bridge | `BridgeDetectionMapper` | bilateral hip angles | `bridge_setup`, `bridge_lift`, `bridge_hold`, `bridge_return` | hip lift / hold max threshold |
 
 ---
 
@@ -211,6 +243,17 @@ The overlay is used for threshold tuning, jitter observation, and validating why
 
 ---
 
+## Threshold Tuning Example
+
+```text
+Squat knee: 105°
+Bridge hip: 155°
+```
+
+The tuning panel updates `ThresholdConfig` at runtime. Squat and Bridge mappers read the current values immediately, and the selected values are persisted across app restarts.
+
+---
+
 ## Privacy Model
 
 YogaFlow is designed for on-device execution.
@@ -241,6 +284,8 @@ No camera frames or pose landmarks are required to leave the device for the core
 - Extract mapper interface (`PoseDetectionMapper`)
 - Add visual body framing box overlay
 - Add variance-based stability scoring
+- Add threshold reset button
+- Add auto calibration
 - Add more pose families
 - Replace cover drawable with real generated images (#13)
 
@@ -248,4 +293,4 @@ No camera frames or pose landmarks are required to leave the device for the core
 
 ## Tags
 
-`#Android15` `#MediaPipe` `#LocalLLM` `#OnDeviceAI` `#3DPose` `#CameraCoaching` `#OnDeviceYogaCoach`
+`#Android15` `#MediaPipe` `#LocalLLM` `#OnDeviceAI` `#3DPose` `#CameraCoaching` `#RuntimeTuning` `#OnDeviceYogaCoach`
