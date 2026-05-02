@@ -137,6 +137,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
                 if (flowEngine.isLastStep(currentFlow) && flowEngine.remainingSeconds(currentFlow) == 0L) {
                     advanceFlowOrComplete()
+                    updateUi(animated = true)
+                    return@runOnUiThread
                 }
 
                 val generated = llmCoach.generate(currentPose, flowState, flowCue)
