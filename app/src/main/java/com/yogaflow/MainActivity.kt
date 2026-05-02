@@ -105,14 +105,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun initRuntime() {
-        loadPlaylist(
-            listOf(
-                "flows/01_mountain_warmup.flow.txt",
-                "flows/02_forward_fold_main.flow.txt",
-                "flows/03_twist_cooldown.flow.txt"
-            ),
-            openClassView = false
-        )
+        loadDiscoveredPlaylist(openClassView = false)
 
         poseHelper = PoseHelper(this)
         tts = TextToSpeech(this, this)
@@ -157,13 +150,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     private fun setupButtons() {
         startClassButton.setOnClickListener {
-            loadPlaylist(
-                listOf(
-                    "flows/01_mountain_warmup.flow.txt",
-                    "flows/02_forward_fold_main.flow.txt",
-                    "flows/03_twist_cooldown.flow.txt"
-                )
-            )
+            loadDiscoveredPlaylist()
         }
 
         startStretchButton.setOnClickListener {
@@ -198,8 +185,21 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
     }
 
+    private fun loadDiscoveredPlaylist(openClassView: Boolean = true) {
+        val flows = FlowLoader.loadAllFromAssets(this)
+        applyPlaylist(flows, openClassView)
+    }
+
     private fun loadPlaylist(paths: List<String>, openClassView: Boolean = true) {
         val flows = paths.map { FlowLoader.loadFromAssets(this, it) }
+        applyPlaylist(flows, openClassView)
+    }
+
+    private fun applyPlaylist(flows: List<YogaFlow>, openClassView: Boolean) {
+        if (flows.isEmpty()) {
+            coachText.text = "No yoga flows found in assets/flows."
+            return
+        }
         playlist.setPlaylist(flows)
         currentFlow = playlist.current()!!
         currentPose = resolvePose(currentFlow)
@@ -262,6 +262,13 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         if (text == lastCountdownText) return
         countdownText.text = text
         lastCountdownText = text
+
+        if (sessionState == SessionState.RUNNING) {
+            val number = text.toIntOrNull()
+            if (number != null && number in 1..3) {
+                speaker.speakIfNeeded(number.toString())
+            }
+        }
 
         countdownText.scaleX = 1.35f
         countdownText.scaleY = 1.35f
