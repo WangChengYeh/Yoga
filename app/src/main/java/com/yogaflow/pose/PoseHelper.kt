@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.camera.core.ImageProxy
 import com.google.mediapipe.framework.image.MediaImageBuilder
 import com.google.mediapipe.tasks.core.BaseOptions
+import com.google.mediapipe.tasks.vision.core.ImageProcessingOptions
 import com.google.mediapipe.tasks.vision.core.RunningMode
 import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarker
 import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarkerResult
@@ -47,10 +48,16 @@ class PoseHelper(context: Context) {
     fun detect(imageProxy: ImageProxy) {
         if (!isReady) return
         val image = imageProxy.image ?: return
+
         val mpImage = MediaImageBuilder(image).build()
 
+        val rotation = imageProxy.imageInfo.rotationDegrees
+        val processingOptions = ImageProcessingOptions.builder()
+            .setRotationDegrees(rotation)
+            .build()
+
         frameTimestampMs += FRAME_TIMESTAMP_STEP_MS
-        detector?.detectAsync(mpImage, frameTimestampMs)
+        detector?.detectAsync(mpImage, processingOptions, frameTimestampMs)
     }
 
     companion object {
