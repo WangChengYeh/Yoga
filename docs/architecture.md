@@ -1,86 +1,113 @@
-# Architecture
+# Architecture (Product-Level)
 
-YogaFlow 3D 是一個高階 Android 手機限定的 on-device AI yoga coach。核心原則是：影像不離機、判斷在本地完成、LLM 只負責教練語氣轉換。
+YogaFlow 3D 已從技術 demo 演進為完整 App Prototype。本文件描述「產品級架構」，包含 UI、Session 控制、Flow Runtime 與本地 AI。
 
-## Target Device Policy
+---
 
-本專案只支援高階 Android 手機，不追求低階裝置相容性。
-
-建議條件：
-- Android 15 優先
-- 旗艦級 SoC / NPU
-- RAM 12GB 以上建議
-- 可穩定執行 CameraX + MediaPipe Pose + Gemma LLM + TTS
-
-## Runtime Pipeline
+## Full Product Pipeline
 
 ```text
-CameraX Preview / ImageAnalysis
+Home Course Page
+        ↓
+Course Selection (Card UI)
+        ↓
+Class Session Controller
+(Start / Pause / Restart)
+        ↓
+CameraX (Preview + Frame)
         ↓
 MediaPipe Pose Landmarker
         ↓
-33 keypoints + skeleton overlay
-        ↓
-YogaPose selection
+33 Keypoints + Skeleton Overlay
         ↓
 PoseStateMachine
         ↓
-PoseFlowEngine
+PoseFlowEngine (Flow Runtime)
         ↓
-PromptBuilder
+LLM Coach (Gemma) / Fallback
         ↓
-Gemma LLM via MediaPipe GenAI
+CoachPhrasePolisher
         ↓
-CoachSpeaker / TTS
+TTS Speaker
+        ↓
+User Feedback (Voice + UI)
 ```
 
-## Layers
+---
 
-### 1. Camera Layer
+## System Layers
+
+### 1. Presentation Layer (UI)
+- Home screen (course selection)
+- Course cover image
+- Class screen (camera + overlay)
+- Progress bar / step indicator
+- Countdown timer
+- LLM status indicator
+- Control buttons (Start / Pause / Restart)
+
+### 2. Session Layer
+- SessionState: IDLE / RUNNING / PAUSED / COMPLETED
+- Controls lifecycle of a yoga class
+- Blocks processing when paused
+
+### 3. Camera Layer
 - CameraX PreviewView
-- ImageAnalysis frame callback
+- ImageAnalysis pipeline
 - Back camera default
 
-### 2. Perception Layer
+### 4. Perception Layer
 - MediaPipe Pose Landmarker
-- 33 normalized landmarks
-- Skeleton overlay rendering
+- 33 landmarks detection
+- PoseOverlayView rendering
 
-### 3. Yoga Domain Layer
-- `YogaPose`
-- `YogaPoseCatalog`
-- 可擴充姿勢選單
+### 5. Yoga Domain Layer
+- YogaPose
+- YogaPoseCatalog
 
-### 4. State Layer
-- `CoachState`
-- `PoseStateMachine`
-- 支援 SETUP / MOVEMENT / HOLD / CORRECTION / TRANSITION
+### 6. State Machine Layer
+- PoseStateMachine
+- SETUP / MOVEMENT / HOLD / TRANSITION / CORRECTION
 
-### 5. Flow Layer
-- `PoseFlowStep`
-- `PoseFlowEngine`
-- 將單幀判斷升級為完整動作流程
+### 7. Flow Runtime Layer
+- PoseFlowEngine
+- Multi-step yoga instruction
+- Time-based transitions
 
-### 6. LLM Layer
-- `PromptBuilder`
-- `LlmCoach`
-- MediaPipe GenAI `LlmInference`
-- Gemma `.task` 模型路徑：`/data/local/tmp/llm/gemma.task`
-- 若模型不存在，fallback 到 deterministic coaching
+### 8. LLM Layer
+- LlmCoach
+- MediaPipe Gemma
+- Fallback mode
 
-### 7. Output Layer
-- On-screen coach text
-- TTS voice coach
-- Debounced speech output via `CoachSpeaker`
+### 9. Voice Layer
+- CoachPhrasePolisher
+- CoachSpeaker (TTS)
 
-## Design Principle
+---
 
-LLM 不負責判斷姿勢。姿勢判斷由 state machine 與 rule-based analyzer 完成；LLM 只將系統判斷轉成自然、短句、可朗讀的教練語句。
+## Design Principles
+
+### Deterministic Core + LLM Enhancement
 
 ```text
-Correct:
 Pose → State Machine → Flow → LLM phrasing
-
-Avoid:
-Pose → LLM decides everything
 ```
+
+### On-Device First
+- No cloud
+- Full local inference
+
+### Flow-Driven System
+- `.flow.txt` = behavior definition
+
+### High-End Only
+- Optimized for flagship devices
+
+---
+
+## Future Extensions
+
+- Flow Playlist (multi-flow class)
+- Multi-course system
+- Personalized coaching
+- AI-generated flows
