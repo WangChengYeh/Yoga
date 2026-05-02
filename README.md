@@ -2,6 +2,22 @@
 
 > **自己的資訊，自己掌控。數據零離機，專業不妥協。**
 
+YogaFlow 3D is a demo-ready on-device AI yoga coach for Android. It turns live camera frames into 3D pose geometry, maps the user’s body state to structured yoga flow steps, and gives real-time voice coaching through local LLM + TTS.
+
+---
+
+## Demo
+
+```text
+Beginner Class
+Mountain → Forward Fold → Twist → Squat → Bridge
+```
+
+- Platform: Android
+- Runtime: On-device camera + pose + coach loop
+- Coaching mode: live correction + flow progression
+- Privacy: no camera frames or pose landmarks need to leave the device
+
 ---
 
 ## System Architecture
@@ -30,7 +46,7 @@ flowchart TD
 
     Mapper --> Stability[Stability Layer\nEMA + Deadband + Window]
 
-    Stability --> Engine[Flow Engine\n(Event Driven)]
+    Stability --> Engine[Flow Engine\nEvent-driven]
 
     Engine --> Coach[LLM Coach / Rule-based]
 
@@ -38,45 +54,43 @@ flowchart TD
     Coach --> UI[UI Feedback]
 ```
 
----
-
-YogaFlow 3D 是一款高階 Android 手機限定的 on-device AI 瑜伽教練 App。整合 CameraX、MediaPipe Pose、3D Pose Geometry、Camera Coaching、Flow Engine、本地 Gemma LLM 與 TTS，提供即時站位、面向、姿勢與語音教練。
-
----
-
-## Architecture
-
 Full system architecture: [`docs/architecture.md`](docs/architecture.md)
 
+---
+
+## Why this is hard
+
+Real-time AI coaching is harder than pose detection alone.
+
+- Live pose landmarks are noisy and jitter frame by frame.
+- Yoga coaching needs step-level context, not only a final pose label.
+- Flow transitions must avoid skipped steps, repeated triggers, and timer bugs.
+- Coaching must prioritize camera setup before body correction.
+- The system must feel human while running fully on-device.
+
+YogaFlow solves this with a deterministic runtime core:
+
 ```text
-CameraX
-  ↓
-MediaPipe Pose
-  ↓
-PoseDetectionResult
-  ↓
-Framing / Orientation Gate
-  ↓
 Flow step.detect
-  ↓
-Detection Mapper
-  ↓
-Smoothing / Stability
-  ↓
-PoseFlowEngine FlowEvent
-  ↓
-LLM Coach / Fallback
-  ↓
-TTS Voice Coaching
+→ Detection Mapper
+→ Smoothing + Stability Window
+→ FlowEvent
+→ LLM/TTS Coaching
 ```
+
+The deterministic system decides **what** to say. The LLM decides **how** to say it.
 
 ---
 
 ## Current Product State
 
-YogaFlow 3D is a demo-ready on-device live yoga coach prototype with a complete beginner class.
+YogaFlow 3D currently supports a full beginner class with multi-pose chaining:
 
-The current runtime supports:
+```text
+Mountain → Forward Fold → Twist → Squat → Bridge
+```
+
+The runtime supports:
 
 - camera setup coaching before pose correction
 - flow-driven class progression
@@ -84,24 +98,32 @@ The current runtime supports:
 - event-driven flow runtime
 - local LLM coaching on a background executor
 - TTS voice coaching
-- multi-pose class chaining
+- stability-aware multi-pose detection
 
 ---
 
 ## Implemented Features
 
-### Core System
+### Core Runtime
+
 - Flow DSL (`.flow.txt`)
 - Flow parser
 - Event-driven `PoseFlowEngine`
-- Flow playlist (multi-flow class)
-- Auto flow discovery (`assets/flows`)
+- Flow playlist for multi-flow classes
+- Auto flow discovery from `assets/flows`
 - Flow step-level `detect` mapping
 
-### Runtime Pipeline
+### Camera + Pose Pipeline
+
 - `CameraPosePipeline`
 - `PoseHelper` / MediaPipe Pose
 - `PoseDetectionResult`
+- 2D image landmarks for overlay
+- 3D world landmarks for geometry
+- Camera start error callback
+
+### Perception + Mapping
+
 - `CameraFramingCoach`
 - `ViewOrientation`
 - `PoseGeometry`
@@ -109,115 +131,84 @@ The current runtime supports:
 - `TwistDetectionMapper`
 - `SquatDetectionMapper`
 - `BridgeDetectionMapper`
-- `LlmCoach`
-- `CoachSpeaker`
-
-### Detection Mapping
-- Forward Fold mapping:
-  - `ready_forward_fold`
-  - `tall_spine_setup`
-  - `hip_hinge`
-  - `controlled_forward_fold`
-  - `forward_hold`
-  - `return_standing`
-  - `neutral_finish`
-- Twist mapping:
-  - `stable_base`
-  - `twist_start`
-  - `twist_hold`
-  - `return_center`
-- Squat mapping:
-  - `squat_setup`
-  - `squat_descent`
-  - `squat_hold`
-  - `squat_return`
-- Bridge mapping:
-  - `bridge_setup`
-  - `bridge_lift`
-  - `bridge_hold`
-  - `bridge_return`
 
 ### Runtime Stability
+
 - EMA angle smoothing
-- Angle deadband
-- Stability window before matched state is accepted
-- Mapper reset on playlist restart / flow transition
-- Coach cue throttle
+- angle deadband
+- stability window before accepting matched state
+- mapper reset on playlist restart / flow transition
+- coach cue throttle
 - LLM generation off UI thread
-- Camera startup error callback
-- Safe flow loading with `runCatching`
+- safe flow loading with `runCatching`
 
----
+### AI + Voice
 
-## Demo Courses
-
-- Beginner Flow (Mountain → Forward Fold → Twist → Squat → Bridge)
-- Stretch Class (Forward Fold)
-- Recovery Class (Twist)
+- Local LLM coach / fallback coach
+- Coach phrase polishing
+- TTS voice coaching
+- UI text separated from spoken text
 
 ---
 
 ## Supported Live-Coached Poses
 
-### Forward Fold
+| Pose | Mapper | Primary geometry | Flow detects |
+|---|---|---|---|
+| Forward Fold | `ForwardFoldDetectionMapper` | bilateral knee + hip angles | `ready_forward_fold`, `tall_spine_setup`, `hip_hinge`, `controlled_forward_fold`, `forward_hold`, `return_standing`, `neutral_finish` |
+| Twist | `TwistDetectionMapper` | torso twist estimate | `stable_base`, `twist_start`, `twist_hold`, `return_center` |
+| Squat | `SquatDetectionMapper` | bilateral knee angles | `squat_setup`, `squat_descent`, `squat_hold`, `squat_return` |
+| Bridge | `BridgeDetectionMapper` | bilateral hip angles | `bridge_setup`, `bridge_lift`, `bridge_hold`, `bridge_return` |
+
+---
+
+## Flow DSL Example
 
 ```text
-flow step.detect
-→ ForwardFoldDetectionMapper
-→ bilateral knee / hip geometry
-→ smoothing + stability window
-→ FlowEvent
-→ LLM/TTS cue
+[STEP 3]
+state = HOLD
+duration_ms = 7000
+cue = 停在穩定深蹲位置，胸口打開，保持呼吸。
+detect = squat_hold
+correction = 如果太低，往上回一點；如果太高，再慢慢下去一點。
 ```
 
-### Twist
+A flow file defines the class content. A detection mapper decides whether the user actually satisfies the current step.
+
+---
+
+## Privacy Model
+
+YogaFlow is designed for on-device execution.
 
 ```text
-flow step.detect
-→ TwistDetectionMapper
-→ torso twist estimate
-→ smoothing + stability window
-→ FlowEvent
-→ LLM/TTS cue
+Camera frame
+→ on-device pose inference
+→ on-device geometry
+→ on-device flow state
+→ on-device coach cue
+→ local TTS
 ```
 
-### Squat
-
-```text
-flow step.detect
-→ SquatDetectionMapper
-→ bilateral knee geometry
-→ smoothing + stability window
-→ FlowEvent
-→ LLM/TTS cue
-```
-
-### Bridge
-
-```text
-flow step.detect
-→ BridgeDetectionMapper
-→ bilateral hip geometry
-→ smoothing + stability window
-→ FlowEvent
-→ LLM/TTS cue
-```
+No camera frames or pose landmarks are required to leave the device for the core coaching loop.
 
 ---
 
 ## Requirements
 
 - Android 15+
-- High-end device (NPU / 12GB RAM recommended)
+- High-end Android device recommended
+- NPU / 12GB RAM recommended for local LLM use
 
 ---
 
-## Remaining Product Work
+## Roadmap
 
 - Extract mapper interface (`PoseDetectionMapper`)
 - Add visual body framing box overlay
 - Add angle / state debug overlay
 - Add variance-based stability scoring
+- Add more pose families
 - Replace cover drawable with real generated images (#13)
 
 ---
