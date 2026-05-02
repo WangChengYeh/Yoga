@@ -13,12 +13,24 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
+    <TextView
+        android:id="@+id/demoTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:padding="12dp"
+        android:background="#99000000"
+        android:text="YogaFlow 3D Demo Mode"
+        android:textColor="#FFFFFFFF"
+        android:textSize="16sp" />
+
     <Spinner
         android:id="@+id/poseSelector"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="top|center_horizontal"
-        android:background="#99000000" />
+        android:layout_marginTop="48dp"
+        android:background="#CCFFFFFF" />
 
     <TextView
         android:id="@+id/coachText"
@@ -27,7 +39,7 @@
         android:layout_gravity="bottom"
         android:padding="16dp"
         android:background="#99000000"
-        android:text="Coach ready"
+        android:text="Loading demo flow..."
         android:textColor="#FFFFFFFF"
         android:textSize="18sp" />
 
