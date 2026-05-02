@@ -45,7 +45,7 @@ level = beginner
 每個 step 包含：
 
 ```text
-state = SETUP / MOVEMENT / HOLD / TRANSITION
+state = SETUP / MOVEMENT / HOLD / TRANSITION / CORRECTION
 duration_ms = 建議停留時間
 cue = 教練語句（給 LLM 使用）
 detect = 對應姿勢條件（未來 mapping）
