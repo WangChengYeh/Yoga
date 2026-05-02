@@ -12,12 +12,14 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.view.PreviewView
 import androidx.core.app.ActivityCompat
+import com.yogaflow.coach.BridgeDetectionMapper
 import com.yogaflow.coach.CoachPhrasePolisher
 import com.yogaflow.coach.CoachSpeaker
 import com.yogaflow.coach.CoachState
 import com.yogaflow.coach.ForwardFoldDetectionMapper
 import com.yogaflow.coach.PoseFlowEngine
 import com.yogaflow.coach.PoseStateMachine
+import com.yogaflow.coach.SquatDetectionMapper
 import com.yogaflow.coach.TwistDetectionMapper
 import com.yogaflow.flow.FlowLoader
 import com.yogaflow.flow.FlowPlaylistEngine
@@ -222,6 +224,14 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 val result = TwistDetectionMapper.evaluate(detect, frame)
                 ForwardFoldDetectionMapper.Result(result.matched, result.state, result.cue)
             }
+            "squat" -> {
+                val result = SquatDetectionMapper.evaluate(detect, frame)
+                ForwardFoldDetectionMapper.Result(result.matched, result.state, result.cue)
+            }
+            "bridge" -> {
+                val result = BridgeDetectionMapper.evaluate(detect, frame)
+                ForwardFoldDetectionMapper.Result(result.matched, result.state, result.cue)
+            }
             else -> {
                 val (state, cue) = stateMachine.update(currentPose, frame)
                 ForwardFoldDetectionMapper.Result(
@@ -394,6 +404,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private fun resetDetectionMappers() {
         ForwardFoldDetectionMapper.reset()
         TwistDetectionMapper.reset()
+        SquatDetectionMapper.reset()
+        BridgeDetectionMapper.reset()
     }
 
     private fun resolvePose(flow: YogaFlow): YogaPose {
