@@ -6,11 +6,7 @@ import kotlin.math.abs
 
 object TwistDetectionMapper {
 
-    data class Result(
-        val matched: Boolean,
-        val state: CoachState,
-        val cue: String
-    )
+    data class Result(val matched: Boolean, val state: CoachState, val cue: String)
 
     private var smoothedTwist: Double? = null
     private var stableDetect: String? = null
@@ -22,24 +18,16 @@ object TwistDetectionMapper {
         stableSince = 0L
     }
 
-    fun evaluate(
-        detect: String,
-        frame: PoseDetectionResult,
-        params: Map<String, Double> = emptyMap()
-    ): Result {
+    fun evaluate(detect: String, frame: PoseDetectionResult, params: Map<String, Double> = emptyMap()): Result {
         val leftShoulder = PoseGeometry.angle(frame, 11, 23, 25)
         val rightShoulder = PoseGeometry.angle(frame, 12, 24, 26)
 
-        if (leftShoulder.confidence == PoseGeometry.Confidence.INVALID ||
-            rightShoulder.confidence == PoseGeometry.Confidence.INVALID
-        ) {
+        if (leftShoulder.confidence == PoseGeometry.Confidence.INVALID || rightShoulder.confidence == PoseGeometry.Confidence.INVALID) {
             reset()
             return Result(false, CoachState.CORRECTION, "請讓上半身完整進入畫面，保持肩膀可見。")
         }
 
-        val rawTwist = abs(leftShoulder.degrees - rightShoulder.degrees)
-        val twist = smooth(rawTwist, params)
-
+        val twist = smooth(abs(leftShoulder.degrees - rightShoulder.degrees), params)
         val rawResult = when (detect) {
             "stable_base" -> stableBase(twist, params)
             "twist_start" -> twistStart(twist, params)
@@ -47,37 +35,22 @@ object TwistDetectionMapper {
             "return_center" -> returnCenter(twist, params)
             else -> Result(true, CoachState.HOLD, "維持姿勢")
         }
-
         return applyStabilityWindow(detect, rawResult, params)
     }
 
-    private fun applyStabilityWindow(
-        detect: String,
-        result: Result,
-        params: Map<String, Double>
-    ): Result {
+    private fun applyStabilityWindow(detect: String, result: Result, params: Map<String, Double>): Result {
         if (!result.matched) {
             stableDetect = null
             stableSince = 0L
             return result
         }
-
         val now = System.currentTimeMillis()
         if (stableDetect != detect) {
             stableDetect = detect
             stableSince = now
         }
-
-        val stableFor = now - stableSince
         val stabilityMs = params["stability.ms"]?.toLong() ?: STABILITY_WINDOW_MS
-        return if (stableFor >= stabilityMs) {
-            result
-        } else {
-            result.copy(
-                matched = false,
-                cue = "穩住這個扭轉位置，再保持一下。"
-            )
-        }
+        return if (now - stableSince >= stabilityMs) result else result.copy(matched = false, cue = "穩住這個扭轉位置，再保持一下。")
     }
 
     private fun smooth(raw: Double, params: Map<String, Double>): Double {
@@ -91,17 +64,13 @@ object TwistDetectionMapper {
     }
 
     private fun stableBase(twist: Double, params: Map<String, Double>): Result {
-        val centerMax = params["angle.twist.max"] ?: STABLE_BASE_TWIST_MAX_DEGREES
-        return if (twist > centerMax) {
-            Result(false, CoachState.CORRECTION, "先回到正中間，讓身體穩定再開始。")
-        } else {
-            Result(true, CoachState.SETUP, "很好，身體穩定，準備開始扭轉。")
-        }
+        val centerMax = params["angle.twist.center.max"] ?: STABLE_BASE_TWIST_MAX_DEGREES
+        return if (twist > centerMax) Result(false, CoachState.CORRECTION, "先回到正中間，讓身體穩定再開始。") else Result(true, CoachState.SETUP, "很好，身體穩定，準備開始扭轉。")
     }
 
     private fun twistStart(twist: Double, params: Map<String, Double>): Result {
-        val startMin = params["angle.twist.min"] ?: TWIST_START_MIN_DEGREES
-        val startMax = params["angle.twist.max"] ?: TWIST_START_MAX_DEGREES
+        val startMin = params["angle.twist.start.min"] ?: TWIST_START_MIN_DEGREES
+        val startMax = params["angle.twist.start.max"] ?: TWIST_START_MAX_DEGREES
         return when {
             twist < startMin -> Result(false, CoachState.MOVEMENT, "慢慢開始扭轉，從脊椎帶動。")
             twist > startMax -> Result(false, CoachState.CORRECTION, "不要用力過猛，輕柔一點。")
@@ -110,8 +79,8 @@ object TwistDetectionMapper {
     }
 
     private fun twistHold(twist: Double, params: Map<String, Double>): Result {
-        val holdMin = params["angle.twist.min"] ?: TWIST_HOLD_MIN_DEGREES
-        val holdMax = params["angle.twist.max"] ?: TWIST_HOLD_MAX_DEGREES
+        val holdMin = params["angle.twist.hold.min"] ?: TWIST_HOLD_MIN_DEGREES
+        val holdMax = params["angle.twist.hold.max"] ?: TWIST_HOLD_MAX_DEGREES
         return when {
             twist < holdMin -> Result(false, CoachState.MOVEMENT, "再多一點扭轉，但保持舒適。")
             twist > holdMax -> Result(false, CoachState.CORRECTION, "稍微退回一點，避免過度拉扯。")
@@ -120,12 +89,8 @@ object TwistDetectionMapper {
     }
 
     private fun returnCenter(twist: Double, params: Map<String, Double>): Result {
-        val centerMax = params["angle.twist.max"] ?: RETURN_CENTER_TWIST_MAX_DEGREES
-        return if (twist > centerMax) {
-            Result(false, CoachState.TRANSITION, "慢慢回到中間，不要急。")
-        } else {
-            Result(true, CoachState.TRANSITION, "很好，已回到中間。")
-        }
+        val centerMax = params["angle.twist.center.max"] ?: RETURN_CENTER_TWIST_MAX_DEGREES
+        return if (twist > centerMax) Result(false, CoachState.TRANSITION, "慢慢回到中間，不要急。") else Result(true, CoachState.TRANSITION, "很好，已回到中間。")
     }
 
     private const val STABLE_BASE_TWIST_MAX_DEGREES = 20.0
