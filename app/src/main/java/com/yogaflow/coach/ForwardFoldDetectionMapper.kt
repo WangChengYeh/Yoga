@@ -142,13 +142,8 @@ object ForwardFoldDetectionMapper {
         return previous + alpha * (raw - previous)
     }
 
-    private fun readyForwardFold(
-        knee: Double,
-        hip: Double,
-        prefix: String,
-        params: Map<String, Double>
-    ): Result {
-        val range = range(params, DEFAULT_READY_KNEE_MIN, null, DEFAULT_READY_HIP_MIN, null)
+    private fun readyForwardFold(knee: Double, hip: Double, prefix: String, params: Map<String, Double>): Result {
+        val range = range(params, "ready", DEFAULT_READY_KNEE_MIN, null, DEFAULT_READY_HIP_MIN, null)
         return when {
             knee < range.kneeMin -> Result(false, CoachState.CORRECTION, "${prefix}先把膝蓋伸長，但不要鎖死。")
             hipBelowMin(hip, range) -> Result(false, CoachState.CORRECTION, "${prefix}先回到比較直立的位置，再準備前傾。")
@@ -156,13 +151,8 @@ object ForwardFoldDetectionMapper {
         }
     }
 
-    private fun tallSpineSetup(
-        knee: Double,
-        hip: Double,
-        prefix: String,
-        params: Map<String, Double>
-    ): Result {
-        val range = range(params, DEFAULT_TALL_SPINE_KNEE_MIN, null, DEFAULT_TALL_SPINE_HIP_MIN, null)
+    private fun tallSpineSetup(knee: Double, hip: Double, prefix: String, params: Map<String, Double>): Result {
+        val range = range(params, "setup", DEFAULT_TALL_SPINE_KNEE_MIN, null, DEFAULT_TALL_SPINE_HIP_MIN, null)
         return when {
             knee < range.kneeMin -> Result(false, CoachState.CORRECTION, "${prefix}膝蓋再伸長一點，先建立穩定的腿。")
             hipBelowMin(hip, range) -> Result(false, CoachState.CORRECTION, "${prefix}你已經太早往前了，先把背拉長一點。")
@@ -170,13 +160,8 @@ object ForwardFoldDetectionMapper {
         }
     }
 
-    private fun hipHinge(
-        knee: Double,
-        hip: Double,
-        prefix: String,
-        params: Map<String, Double>
-    ): Result {
-        val range = range(params, DEFAULT_HIP_HINGE_KNEE_MIN, null, null, DEFAULT_HIP_HINGE_HIP_MAX)
+    private fun hipHinge(knee: Double, hip: Double, prefix: String, params: Map<String, Double>): Result {
+        val range = range(params, "hinge", DEFAULT_HIP_HINGE_KNEE_MIN, null, null, DEFAULT_HIP_HINGE_HIP_MAX)
         return when {
             knee < range.kneeMin -> Result(false, CoachState.CORRECTION, "${prefix}膝蓋彎太多了，先減少深度，讓腿重新伸長。")
             hipAboveMax(hip, range) -> Result(false, CoachState.MOVEMENT, "${prefix}從髖部再往前一點，不要只低頭。")
@@ -184,19 +169,8 @@ object ForwardFoldDetectionMapper {
         }
     }
 
-    private fun controlledForwardFold(
-        knee: Double,
-        hip: Double,
-        prefix: String,
-        params: Map<String, Double>
-    ): Result {
-        val range = range(
-            params,
-            DEFAULT_CONTROLLED_KNEE_MIN,
-            null,
-            DEFAULT_CONTROLLED_HIP_MIN,
-            DEFAULT_CONTROLLED_HIP_MAX
-        )
+    private fun controlledForwardFold(knee: Double, hip: Double, prefix: String, params: Map<String, Double>): Result {
+        val range = range(params, "fold", DEFAULT_CONTROLLED_KNEE_MIN, null, DEFAULT_CONTROLLED_HIP_MIN, DEFAULT_CONTROLLED_HIP_MAX)
         return when {
             knee < range.kneeMin -> Result(false, CoachState.CORRECTION, "${prefix}膝蓋開始彎了，退回一點，保持腿伸長。")
             hipAboveMax(hip, range) -> Result(false, CoachState.MOVEMENT, "${prefix}再從髖部往前一點，到舒服的位置就好。")
@@ -205,19 +179,8 @@ object ForwardFoldDetectionMapper {
         }
     }
 
-    private fun forwardHold(
-        knee: Double,
-        hip: Double,
-        prefix: String,
-        params: Map<String, Double>
-    ): Result {
-        val range = range(
-            params,
-            DEFAULT_HOLD_KNEE_MIN,
-            null,
-            DEFAULT_HOLD_HIP_MIN,
-            DEFAULT_HOLD_HIP_MAX
-        )
+    private fun forwardHold(knee: Double, hip: Double, prefix: String, params: Map<String, Double>): Result {
+        val range = range(params, "hold", DEFAULT_HOLD_KNEE_MIN, null, DEFAULT_HOLD_HIP_MIN, DEFAULT_HOLD_HIP_MAX)
         return when {
             knee < range.kneeMin -> Result(false, CoachState.CORRECTION, "${prefix}膝蓋彎太多，退回一點，讓大腿後側慢慢伸展。")
             hipAboveMax(hip, range) -> Result(false, CoachState.MOVEMENT, "${prefix}如果身體還很高，從髖部再往前一點。")
@@ -226,13 +189,8 @@ object ForwardFoldDetectionMapper {
         }
     }
 
-    private fun returnStanding(
-        knee: Double,
-        hip: Double,
-        prefix: String,
-        params: Map<String, Double>
-    ): Result {
-        val range = range(params, DEFAULT_RETURN_KNEE_MIN, null, DEFAULT_RETURN_HIP_MIN, null)
+    private fun returnStanding(knee: Double, hip: Double, prefix: String, params: Map<String, Double>): Result {
+        val range = range(params, "return", DEFAULT_RETURN_KNEE_MIN, null, DEFAULT_RETURN_HIP_MIN, null)
         return when {
             knee < range.kneeMin -> Result(false, CoachState.CORRECTION, "${prefix}回來時膝蓋也保持穩定，不要突然彎掉。")
             hipBelowMin(hip, range) -> Result(false, CoachState.TRANSITION, "${prefix}慢慢回到中間，先不要急著抬頭。")
@@ -240,13 +198,8 @@ object ForwardFoldDetectionMapper {
         }
     }
 
-    private fun neutralFinish(
-        knee: Double,
-        hip: Double,
-        prefix: String,
-        params: Map<String, Double>
-    ): Result {
-        val range = range(params, DEFAULT_NEUTRAL_KNEE_MIN, null, DEFAULT_NEUTRAL_HIP_MIN, null)
+    private fun neutralFinish(knee: Double, hip: Double, prefix: String, params: Map<String, Double>): Result {
+        val range = range(params, "neutral", DEFAULT_NEUTRAL_KNEE_MIN, null, DEFAULT_NEUTRAL_HIP_MIN, null)
         return when {
             knee < range.kneeMin -> Result(false, CoachState.CORRECTION, "${prefix}最後把雙腿伸長，回到穩定位置。")
             hipBelowMin(hip, range) -> Result(false, CoachState.TRANSITION, "${prefix}再慢慢回正一點。")
@@ -256,17 +209,26 @@ object ForwardFoldDetectionMapper {
 
     private fun range(
         params: Map<String, Double>,
+        phase: String,
         defaultKneeMin: Double,
         defaultKneeMax: Double?,
         defaultHipMin: Double?,
         defaultHipMax: Double?
     ): AngleRange {
         return AngleRange(
-            kneeMin = params["angle.knee.min"] ?: defaultKneeMin,
-            kneeMax = params["angle.knee.max"] ?: defaultKneeMax,
-            hipMin = params["angle.hip.min"] ?: defaultHipMin,
-            hipMax = params["angle.hip.max"] ?: defaultHipMax
+            kneeMin = param(params, "angle.knee.$phase.min", "angle.knee.min", defaultKneeMin),
+            kneeMax = param(params, "angle.knee.$phase.max", "angle.knee.max", defaultKneeMax),
+            hipMin = param(params, "angle.hip.$phase.min", "angle.hip.min", defaultHipMin),
+            hipMax = param(params, "angle.hip.$phase.max", "angle.hip.max", defaultHipMax)
         )
+    }
+
+    private fun param(params: Map<String, Double>, primaryKey: String, legacyKey: String, defaultValue: Double): Double {
+        return params[primaryKey] ?: params[legacyKey] ?: defaultValue
+    }
+
+    private fun param(params: Map<String, Double>, primaryKey: String, legacyKey: String, defaultValue: Double?): Double? {
+        return params[primaryKey] ?: params[legacyKey] ?: defaultValue
     }
 
     private fun hipBelowMin(hip: Double, range: AngleRange): Boolean {
