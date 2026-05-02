@@ -22,7 +22,11 @@ object SquatDetectionMapper {
         stableSince = 0L
     }
 
-    fun evaluate(detect: String, frame: PoseDetectionResult): Result {
+    fun evaluate(
+        detect: String,
+        frame: PoseDetectionResult,
+        params: Map<String, Double> = emptyMap()
+    ): Result {
         val leftKnee = PoseGeometry.angle(frame, 23, 25, 27)
         val rightKnee = PoseGeometry.angle(frame, 24, 26, 28)
         val leftHip = PoseGeometry.angle(frame, 11, 23, 25)
@@ -35,20 +39,24 @@ object SquatDetectionMapper {
         }
 
         val rawKnee = minOf(leftKnee.degrees, rightKnee.degrees)
-        val knee = smooth(rawKnee)
+        val knee = smooth(rawKnee, params)
 
         val rawResult = when (detect) {
-            "squat_setup" -> squatSetup(knee)
-            "squat_descent" -> squatDescent(knee)
-            "squat_hold" -> squatHold(knee)
-            "squat_return" -> squatReturn(knee)
+            "squat_setup" -> squatSetup(knee, params)
+            "squat_descent" -> squatDescent(knee, params)
+            "squat_hold" -> squatHold(knee, params)
+            "squat_return" -> squatReturn(knee, params)
             else -> Result(true, CoachState.HOLD, "維持姿勢")
         }
 
-        return applyStabilityWindow(detect, rawResult)
+        return applyStabilityWindow(detect, rawResult, params)
     }
 
-    private fun applyStabilityWindow(detect: String, result: Result): Result {
+    private fun applyStabilityWindow(
+        detect: String,
+        result: Result,
+        params: Map<String, Double>
+    ): Result {
         if (!result.matched) {
             stableDetect = null
             stableSince = 0L
@@ -62,54 +70,65 @@ object SquatDetectionMapper {
         }
 
         val stableFor = now - stableSince
-        return if (stableFor >= STABILITY_WINDOW_MS) {
+        val stabilityMs = params["stability.ms"]?.toLong() ?: STABILITY_WINDOW_MS
+        return if (stableFor >= stabilityMs) {
             result
         } else {
             result.copy(matched = false, cue = "穩住這個深蹲位置，再保持一下。")
         }
     }
 
-    private fun smooth(raw: Double): Double {
+    private fun smooth(raw: Double, params: Map<String, Double>): Double {
         val prev = smoothedKnee
-        if (prev != null && abs(raw - prev) <= ANGLE_DEADBAND_DEGREES) return prev
-        val next = if (prev == null) raw else prev + KNEE_EMA_ALPHA * (raw - prev)
+        val deadband = params["deadband.degrees"] ?: ANGLE_DEADBAND_DEGREES
+        val alpha = params["ema.alpha"] ?: KNEE_EMA_ALPHA
+        if (prev != null && abs(raw - prev) <= deadband) return prev
+        val next = if (prev == null) raw else prev + alpha * (raw - prev)
         smoothedKnee = next
         return next
     }
 
-    private fun squatSetup(knee: Double): Result {
-        return if (knee < 155) {
+    private fun squatSetup(knee: Double, params: Map<String, Double>): Result {
+        val setupMin = params["angle.knee.min"] ?: SQUAT_SETUP_KNEE_MIN_DEGREES
+        return if (knee < setupMin) {
             Result(false, CoachState.CORRECTION, "先站穩，膝蓋伸長，準備下蹲。")
         } else {
             Result(true, CoachState.SETUP, "很好，雙腳穩定，準備慢慢下蹲。")
         }
     }
 
-    private fun squatDescent(knee: Double): Result {
+    private fun squatDescent(knee: Double, params: Map<String, Double>): Result {
+        val descentStartMax = params["angle.knee.max"] ?: SQUAT_DESCENT_START_MAX_DEGREES
+        val minKnee = params["angle.knee.min"] ?: SQUAT_MIN_KNEE_DEGREES
         return when {
-            knee > 150 -> Result(false, CoachState.MOVEMENT, "慢慢往下蹲，膝蓋跟腳尖方向一致。")
-            knee < SQUAT_MIN_KNEE_DEGREES -> Result(false, CoachState.CORRECTION, "不要蹲太低，先往上回一點。")
+            knee > descentStartMax -> Result(false, CoachState.MOVEMENT, "慢慢往下蹲，膝蓋跟腳尖方向一致。")
+            knee < minKnee -> Result(false, CoachState.CORRECTION, "不要蹲太低，先往上回一點。")
             else -> Result(true, CoachState.MOVEMENT, "很好，深度可以，保持控制。")
         }
     }
 
-    private fun squatHold(knee: Double): Result {
-        val holdMax = ThresholdConfig.squatHoldKneeMaxDegrees
+    private fun squatHold(knee: Double, params: Map<String, Double>): Result {
+        val minKnee = params["angle.knee.min"] ?: SQUAT_MIN_KNEE_DEGREES
+        val holdMax = params["angle.knee.max"] ?: ThresholdConfig.squatHoldKneeMaxDegrees
         return when {
             knee > holdMax -> Result(false, CoachState.MOVEMENT, "再往下一點，找到穩定深蹲位置。")
-            knee < SQUAT_MIN_KNEE_DEGREES -> Result(false, CoachState.CORRECTION, "深度太多了，往上回一點。")
+            knee < minKnee -> Result(false, CoachState.CORRECTION, "深度太多了，往上回一點。")
             else -> Result(true, CoachState.HOLD, "很好，穩住，保持呼吸。")
         }
     }
 
-    private fun squatReturn(knee: Double): Result {
-        return if (knee < 150) {
+    private fun squatReturn(knee: Double, params: Map<String, Double>): Result {
+        val returnMin = params["angle.knee.min"] ?: SQUAT_RETURN_KNEE_MIN_DEGREES
+        return if (knee < returnMin) {
             Result(false, CoachState.TRANSITION, "慢慢站起來，不要突然彈起。")
         } else {
             Result(true, CoachState.TRANSITION, "很好，回到站姿。")
         }
     }
 
+    private const val SQUAT_SETUP_KNEE_MIN_DEGREES = 155.0
+    private const val SQUAT_DESCENT_START_MAX_DEGREES = 150.0
+    private const val SQUAT_RETURN_KNEE_MIN_DEGREES = 150.0
     private const val SQUAT_MIN_KNEE_DEGREES = 80.0
     private const val KNEE_EMA_ALPHA = 0.35
     private const val ANGLE_DEADBAND_DEGREES = 2.0
