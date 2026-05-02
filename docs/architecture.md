@@ -1,8 +1,8 @@
-# YogaFlow 3D Architecture (v3)
+# YogaFlow 3D Architecture (v4)
 
 YogaFlow 3D 是一個 on-device AI 瑜伽教練系統。
 
-系統核心不是單純做 pose detection，而是：
+核心概念：
 
 ```text
 Camera → Perception → Detection Mapping → Flow → Coaching
@@ -40,96 +40,39 @@ TTS Voice
 
 ---
 
-## Key Architecture Shift
-
-### Before (legacy)
-
-```text
-PoseStateMachine → FlowEngine → Cue
-```
-
-Problems:
-- ambiguous step detection
-- unstable behavior near thresholds
-- hard to scale to multiple poses
-
----
-
-### Now (current)
-
-```text
-Flow step.detect
-→ Detection Mapper
-→ Stable match
-→ FlowEvent
-→ Coach
-```
-
-This separates:
-
-- content (flow)
-- perception (pose geometry)
-- decision (mapping)
-- runtime (flow engine)
-
----
-
 ## Detection Mapping Layer
 
-### ForwardFoldDetectionMapper
+Current supported mappers:
 
-Uses:
-- bilateral knee angles
-- bilateral hip angles
+```text
+ForwardFoldDetectionMapper
+TwistDetectionMapper
+SquatDetectionMapper
+BridgeDetectionMapper
+```
 
-Handles:
-- setup
-- hip hinge
-- controlled fold
-- hold
-- return
+Each mapper:
 
----
-
-### TwistDetectionMapper
-
-Uses:
-- left/right torso angle difference
-
-Handles:
-- stable base
-- twist start
-- hold
-- return center
+- converts geometry → semantic state
+- applies threshold rules
+- applies smoothing + stability window
+- outputs (matched, state, cue)
 
 ---
 
 ## Runtime Stability Layer
 
-To avoid jitter from pose detection:
+All poses use:
 
-### 1. EMA Smoothing
+- EMA smoothing
+- deadband filtering
+- stability window (~300ms)
+- cue throttling
 
-```text
-smooth = prev + α * (raw - prev)
-```
-
-### 2. Deadband
-
-```text
-small changes ignored
-```
-
-### 3. Stability Window
+Purpose:
 
 ```text
-must stay stable ~300ms before accepted
-```
-
-### 4. Cue Throttling
-
-```text
-avoid repeated voice spam
+avoid jitter → produce human-like coaching
 ```
 
 ---
@@ -144,11 +87,11 @@ StepCompleted
 FlowCompleted
 ```
 
-This avoids:
+This ensures:
 
-- double trigger
-- skipped steps
-- timing bugs
+- no duplicate triggers
+- correct step transitions
+- stable timing behavior
 
 ---
 
@@ -172,24 +115,14 @@ LLM decides HOW
 
 ---
 
-## Privacy Model
-
-```text
-All processing is on-device
-```
-
-- no camera upload
-- no pose upload
-- no cloud dependency for core loop
-
----
-
 ## Current Capability
 
 ```text
-✔ Forward Fold live coaching
-✔ Twist live coaching
-✔ Multi-flow playlist
+✔ Forward Fold
+✔ Twist
+✔ Squat
+✔ Bridge
+✔ Full beginner class (5 poses)
 ✔ Event-driven runtime
 ✔ Stability-aware detection
 ✔ LLM + TTS coaching
@@ -199,8 +132,20 @@ All processing is on-device
 
 ## Next Steps
 
-- Apply stability window to Twist
 - Extract mapper interface
-- Add more poses (squat / bridge)
-- UI debug overlay
-- Full class flow (5+ poses)
+- Add variance-based stability scoring
+- Add UI debug overlay
+- Add more pose families
+- Improve coaching personalization
+
+---
+
+## Privacy Model
+
+```text
+All processing is on-device
+```
+
+- no camera upload
+- no pose upload
+- no cloud dependency
