@@ -2,6 +2,44 @@
 
 > **自己的資訊，自己掌控。數據零離機，專業不妥協。**
 
+---
+
+## System Architecture
+
+```mermaid
+flowchart TD
+    User[User] --> Camera[CameraX]
+    Camera --> Pose[MediaPipe Pose]
+
+    Pose --> Landmarks[2D + 3D Landmarks]
+
+    Landmarks --> Framing[Framing Check]
+    Landmarks --> Orientation[Orientation Check]
+    Landmarks --> Geometry[Pose Geometry]
+
+    Framing --> Gate{Ready?}
+    Orientation --> Gate
+
+    Gate -- No --> Setup[Camera Coaching]
+    Setup --> Voice1[TTS]
+
+    Gate -- Yes --> Flow[Flow Step]
+
+    Flow --> Mapper[Detection Mapper]
+    Geometry --> Mapper
+
+    Mapper --> Stability[Stability Layer\nEMA + Deadband + Window]
+
+    Stability --> Engine[Flow Engine\n(Event Driven)]
+
+    Engine --> Coach[LLM Coach / Rule-based]
+
+    Coach --> Voice2[TTS]
+    Coach --> UI[UI Feedback]
+```
+
+---
+
 YogaFlow 3D 是一款高階 Android 手機限定的 on-device AI 瑜伽教練 App。整合 CameraX、MediaPipe Pose、3D Pose Geometry、Camera Coaching、Flow Engine、本地 Gemma LLM 與 TTS，提供即時站位、面向、姿勢與語音教練。
 
 ---
@@ -132,13 +170,6 @@ flow step.detect
 → LLM/TTS cue
 ```
 
-Safety priorities:
-
-- knees long but not locked
-- movement from hip hinge
-- no forced depth
-- controlled return to neutral
-
 ### Twist
 
 ```text
@@ -149,13 +180,6 @@ flow step.detect
 → FlowEvent
 → LLM/TTS cue
 ```
-
-Safety priorities:
-
-- stable base first
-- gentle twist start
-- no excessive rotation
-- slow return to center
 
 ### Squat
 
@@ -168,13 +192,6 @@ flow step.detect
 → LLM/TTS cue
 ```
 
-Safety priorities:
-
-- knees track with toes
-- controlled descent
-- avoid excessive depth
-- slow return to standing
-
 ### Bridge
 
 ```text
@@ -185,13 +202,6 @@ flow step.detect
 → FlowEvent
 → LLM/TTS cue
 ```
-
-Safety priorities:
-
-- controlled hip lift
-- stable knees
-- avoid over-arching
-- slow return to floor
 
 ---
 
