@@ -1,0 +1,59 @@
+{
+  "version": "dsl-v2",
+  "flow": {
+    "id": "03_twist_cooldown",
+    "name": "扭轉放鬆 · Twist",
+    "pose": "twist",
+    "language": "zh-TW",
+    "level": "beginner"
+  },
+  "steps": [
+    {
+      "state": "SETUP",
+      "durationMs": 4000,
+      "cue": "坐穩或站穩，身體回到正中間。",
+      "detect": "stable_base",
+      "runtime": {
+        "angles": {
+          "twist": { "center": { "max": 20 } }
+        }
+      }
+    },
+    {
+      "state": "MOVEMENT",
+      "durationMs": 5000,
+      "cue": "慢慢開始扭轉，從脊椎帶動。",
+      "detect": "twist_start",
+      "runtime": {
+        "angles": {
+          "twist": { "start": { "min": 15, "max": 60 } }
+        }
+      }
+    },
+    {
+      "state": "HOLD",
+      "durationMs": 8000,
+      "cue": "維持扭轉，保持呼吸。",
+      "detect": "twist_hold",
+      "runtime": {
+        "angles": {
+          "twist": { "hold": { "min": 20, "max": 70 } }
+        }
+      }
+    },
+    {
+      "state": "TRANSITION",
+      "durationMs": 4000,
+      "cue": "慢慢回到中間。",
+      "detect": "return_center",
+      "runtime": {
+        "angles": {
+          "twist": { "center": { "max": 20 } }
+        }
+      }
+    }
+  ],
+  "end": {
+    "cue": "扭轉完成。"
+  }
+}
