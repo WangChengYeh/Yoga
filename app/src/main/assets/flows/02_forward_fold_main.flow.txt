@@ -1,0 +1,43 @@
+# YogaFlow Class Demo Flow
+# Flow ID: 02_forward_fold_main
+# Pose: Forward Fold
+# Role: Main
+# Version: 0.1
+
+[FLOW]
+id = 02_forward_fold_main
+name = 02 Forward Fold Main
+pose = forward_fold
+language = zh-TW
+level = beginner
+
+[STEP 1]
+state = SETUP
+duration_ms = 3000
+cue = 雙腳打開，膝蓋伸直，準備前彎。
+detect = ready_forward_fold
+correction = 如果膝蓋彎曲，提醒慢慢伸直但不要鎖死。
+
+[STEP 2]
+state = MOVEMENT
+duration_ms = 5000
+cue = 吸氣延伸，吐氣時從髖部慢慢往前折。
+detect = hip_hinge
+correction = 如果用背彎，提醒從髖部折。
+
+[STEP 3]
+state = HOLD
+duration_ms = 10000
+cue = 停在前彎位置，讓背部放鬆，維持呼吸。
+detect = forward_hold
+correction = 如果重心太後，提醒重心往前。
+
+[STEP 4]
+state = TRANSITION
+duration_ms = 4000
+cue = 吸氣慢慢起身，回到站姿。
+detect = return_standing
+correction = 如果起身太快，提醒放慢。
+
+[END]
+cue = 前彎完成，身體已被伸展。
