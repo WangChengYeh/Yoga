@@ -1,58 +1,56 @@
 package com.yogaflow.coach
 
-import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
+import com.yogaflow.pose.PoseDetectionResult
+import com.yogaflow.pose.PoseGeometry
 import com.yogaflow.yoga.YogaPose
-import kotlin.math.abs
 
 class PoseStateMachine {
 
-    private var state = CoachState.SETUP
+    fun update(pose: YogaPose, frame: PoseDetectionResult): Pair<CoachState, String> {
+        val knee = PoseGeometry.angle(frame, 23, 25, 27)
+        val hip = PoseGeometry.angle(frame, 11, 23, 25)
 
-    fun update(pose: YogaPose, landmarks: List<NormalizedLandmark>): Pair<CoachState, String> {
-
-        val knee = angle(landmarks, 23, 25, 27)
-        val hip = angle(landmarks, 11, 23, 25)
+        if (knee.confidence == PoseGeometry.Confidence.INVALID || hip.confidence == PoseGeometry.Confidence.INVALID) {
+            return CoachState.CORRECTION to "我目前看不清楚你的身體角度，請讓全身進入畫面。"
+        }
 
         return when (pose.id) {
-
-            "forward_fold" -> handleForwardFold(knee, hip)
-
-            "squat" -> handleSquat(knee)
-
+            "forward_fold" -> handleForwardFold(knee.degrees, hip.degrees, knee.confidence)
+            "squat" -> handleSquat(knee.degrees, knee.confidence)
             else -> CoachState.HOLD to "維持姿勢"
         }
     }
 
-    private fun handleForwardFold(knee: Double, hip: Double): Pair<CoachState, String> {
+    private fun handleForwardFold(
+        knee: Double,
+        hip: Double,
+        confidence: PoseGeometry.Confidence
+    ): Pair<CoachState, String> {
+        val prefix = confidencePrefix(confidence)
         return when {
-            knee < 150 -> CoachState.CORRECTION to "膝蓋再伸直一點"
-            hip > 140 -> CoachState.MOVEMENT to "從髖部往前折"
-            else -> CoachState.HOLD to "很好，保持呼吸"
+            knee < 150 -> CoachState.CORRECTION to "${prefix}膝蓋再伸直一點"
+            hip > 140 -> CoachState.MOVEMENT to "${prefix}從髖部往前折"
+            else -> CoachState.HOLD to "${prefix}很好，保持呼吸"
         }
     }
 
-    private fun handleSquat(knee: Double): Pair<CoachState, String> {
+    private fun handleSquat(
+        knee: Double,
+        confidence: PoseGeometry.Confidence
+    ): Pair<CoachState, String> {
+        val prefix = confidencePrefix(confidence)
         return when {
-            knee > 160 -> CoachState.MOVEMENT to "再往下蹲"
-            knee < 120 -> CoachState.CORRECTION to "不要蹲太低，穩住"
-            else -> CoachState.HOLD to "穩住這個位置"
+            knee > 160 -> CoachState.MOVEMENT to "${prefix}再往下蹲"
+            knee < 120 -> CoachState.CORRECTION to "${prefix}不要蹲太低，穩住"
+            else -> CoachState.HOLD to "${prefix}穩住這個位置"
         }
     }
 
-    private fun angle(l: List<NormalizedLandmark>, a: Int, b: Int, c: Int): Double {
-        val ab = floatArrayOf(
-            l[a].x() - l[b].x(),
-            l[a].y() - l[b].y()
-        )
-        val cb = floatArrayOf(
-            l[c].x() - l[b].x(),
-            l[c].y() - l[b].y()
-        )
-
-        val dot = ab[0]*cb[0] + ab[1]*cb[1]
-        val magA = kotlin.math.sqrt((ab[0]*ab[0] + ab[1]*ab[1]).toDouble())
-        val magB = kotlin.math.sqrt((cb[0]*cb[0] + cb[1]*cb[1]).toDouble())
-
-        return Math.toDegrees(kotlin.math.acos((dot / (magA*magB)).coerceIn(-1.0,1.0)))
+    private fun confidencePrefix(confidence: PoseGeometry.Confidence): String {
+        return when (confidence) {
+            PoseGeometry.Confidence.HIGH_3D -> ""
+            PoseGeometry.Confidence.LOW_2D_FALLBACK -> "我先用畫面估算，"
+            PoseGeometry.Confidence.INVALID -> ""
+        }
     }
 }
