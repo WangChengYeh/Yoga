@@ -26,7 +26,7 @@
             android:layout_gravity="top"
             android:padding="12dp"
             android:background="#99000000"
-            android:text="YogaFlow 3D Demo Class"
+            android:text="YogaFlow 3D Class"
             android:textColor="#FFFFFFFF"
             android:textSize="16sp" />
 
@@ -129,74 +129,96 @@
         </LinearLayout>
     </FrameLayout>
 
-    <LinearLayout
+    <ScrollView
         android:id="@+id/homeView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:gravity="center"
-        android:padding="24dp"
         android:background="#101010">
 
-        <TextView
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="YogaFlow 3D"
-            android:textColor="#FFFFFF"
-            android:textSize="32sp"
-            android:textStyle="bold" />
+            android:orientation="vertical"
+            android:padding="24dp">
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="On-device AI yoga coach"
-            android:textColor="#CCCCCC"
-            android:textSize="16sp" />
-
-        <FrameLayout
-            android:layout_width="match_parent"
-            android:layout_height="200dp"
-            android:layout_marginTop="32dp">
-
-            <ImageView
+            <TextView
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:scaleType="centerCrop"
-                android:src="@drawable/cover_beginner" />
+                android:layout_height="wrap_content"
+                android:text="YogaFlow 3D"
+                android:textColor="#FFFFFF"
+                android:textSize="32sp"
+                android:textStyle="bold" />
 
-            <View
+            <TextView
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:background="#66000000" />
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="On-device AI yoga coach"
+                android:textColor="#CCCCCC"
+                android:textSize="16sp" />
 
-            <LinearLayout
+            <FrameLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:orientation="vertical"
-                android:gravity="bottom"
-                android:padding="16dp">
+                android:layout_height="200dp"
+                android:layout_marginTop="32dp">
 
-                <TextView
-                    android:text="Beginner Flow"
-                    android:textColor="#FFFFFF"
-                    android:textSize="22sp"
-                    android:textStyle="bold"/>
+                <ImageView
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="centerCrop"
+                    android:src="@drawable/cover_beginner" />
 
-                <TextView
-                    android:text="3 min · AI Coach"
-                    android:textColor="#DDDDDD"
-                    android:textSize="14sp"
-                    android:layout_marginTop="4dp"/>
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="#66000000" />
 
-                <Button
-                    android:id="@+id/startClassButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Start"
-                    android:layout_marginTop="12dp"/>
-            </LinearLayout>
-        </FrameLayout>
-    </LinearLayout>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:gravity="bottom"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Beginner Flow"
+                        android:textColor="#FFFFFF"
+                        android:textSize="22sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Mountain → Forward Fold → Twist"
+                        android:textColor="#DDDDDD"
+                        android:textSize="14sp" />
+
+                    <Button
+                        android:id="@+id/startClassButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:text="Start" />
+                </LinearLayout>
+            </FrameLayout>
+
+            <Button
+                android:id="@+id/startStretchButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:text="Stretch Class · Forward Fold" />
+
+            <Button
+                android:id="@+id/startRecoveryButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="Recovery Class · Twist" />
+        </LinearLayout>
+    </ScrollView>
 
 </FrameLayout>
