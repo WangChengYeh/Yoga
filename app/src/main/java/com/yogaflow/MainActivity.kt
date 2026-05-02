@@ -12,6 +12,7 @@ import androidx.core.app.ActivityCompat
 import com.yogaflow.pose.PoseHelper
 import com.yogaflow.pose.PostureAnalyzer
 import com.yogaflow.pose.PoseOverlayView
+import com.yogaflow.coach.CoachSpeaker
 import java.util.*
 import java.util.concurrent.Executors
 
@@ -24,8 +25,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private val cameraExecutor = Executors.newSingleThreadExecutor()
     private lateinit var poseHelper: PoseHelper
     private lateinit var tts: TextToSpeech
-
-    private var lastSpoken = ""
+    private lateinit var speaker: CoachSpeaker
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,6 +37,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
         poseHelper = PoseHelper(this)
         tts = TextToSpeech(this, this)
+        speaker = CoachSpeaker(tts)
 
         poseHelper.onResult = { landmarks ->
             runOnUiThread {
@@ -45,10 +46,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 val result = PostureAnalyzer.analyze(landmarks)
                 coachText.text = result
 
-                if (result != lastSpoken) {
-                    speak(result)
-                    lastSpoken = result
-                }
+                speaker.speakIfNeeded(result)
             }
         }
 
@@ -59,10 +57,6 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             ActivityCompat.requestPermissions(this,
                 arrayOf(android.Manifest.permission.CAMERA), 100)
         }
-    }
-
-    private fun speak(text: String) {
-        tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
     }
 
     override fun onInit(status: Int) {
