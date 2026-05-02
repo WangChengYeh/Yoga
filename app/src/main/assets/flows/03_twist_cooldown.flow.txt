@@ -1,0 +1,43 @@
+# YogaFlow Class Demo Flow
+# Flow ID: 03_twist_cooldown
+# Pose: Twist
+# Role: Cooldown
+# Version: 0.1
+
+[FLOW]
+id = 03_twist_cooldown
+name = 03 Twist Cooldown
+pose = twist
+language = zh-TW
+level = beginner
+
+[STEP 1]
+state = SETUP
+duration_ms = 3000
+cue = 坐下或站穩，準備做扭轉。
+detect = stable_base
+correction = 如果身體不穩，提醒先穩定基礎。
+
+[STEP 2]
+state = MOVEMENT
+duration_ms = 4000
+cue = 吸氣延伸脊椎，吐氣慢慢往一側扭轉。
+detect = twist_start
+correction = 如果用力過猛，提醒輕柔轉動。
+
+[STEP 3]
+state = HOLD
+duration_ms = 8000
+cue = 停在扭轉位置，感覺脊椎延伸。
+detect = twist_hold
+correction = 如果聳肩，提醒放鬆肩膀。
+
+[STEP 4]
+state = TRANSITION
+duration_ms = 4000
+cue = 慢慢回到中間，換邊或放鬆。
+detect = return_center
+correction = 如果動作太快，提醒慢一點。
+
+[END]
+cue = 收操完成，身體恢復平衡。
