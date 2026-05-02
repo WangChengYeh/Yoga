@@ -1,11 +1,13 @@
-# YogaFlow 3D Architecture (v6)
+# YogaFlow 3D Architecture (v7)
 
-YogaFlow 3D 是一個 on-device AI 瑜伽教練系統。
+YogaFlow 3D 是一個 production-oriented on-device AI 瑜伽教練系統。
 
 核心概念：
 
 ```text
-Camera → Perception → Detection Mapping → Flow → Coaching
+Camera → Perception → Onboarding Gate → Detection Mapping → Flow → Coaching
+                         ↓
+                  Visual Feedback
                          ↓
                     Observability
                          ↓
@@ -26,14 +28,20 @@ MediaPipe Pose
 PoseDetectionResult
   ↓
 CameraFramingCoach + ViewOrientation
-  ↓ (Gate)
+  ↓
+Camera Setup Panel
+  ↓
+Ready Stability Window (~1500ms)
+  ↓
+Auto-start Gate
+  ↓
 Flow step.detect
   ↓
 Detection Mapper
   ↓
 Smoothing (EMA + Deadband)
   ↓
-Stability Window
+Stability Window (~300ms)
   ↓
 PoseFlowEngine (Event)
   ↓
@@ -41,6 +49,66 @@ LLM Coach / Fallback
   ↓
 TTS Voice
 ```
+
+---
+
+## Camera Onboarding Pipeline
+
+Before class flow starts, YogaFlow runs a perception-driven onboarding gate:
+
+```text
+PoseDetectionResult
+  ↓
+CameraFramingCoach
+  ↓
+ViewOrientation
+  ↓
+Ready Gate
+  ↓
+Ready Stability Window
+  ↓
+Auto-start
+  ↓
+FlowEngine
+```
+
+The onboarding layer prevents users from entering a class until the system has reliable camera framing and view orientation.
+
+Current onboarding behavior:
+
+```text
+Not Ready
+→ show setup guidance
+→ draw body framing box + fixed guide frame
+→ wait for body framing + orientation Ready
+→ hold Ready for ~1500ms
+→ auto-start class
+```
+
+---
+
+## Visual Feedback Pipeline
+
+The runtime visualizes perception state directly in the camera view:
+
+```text
+PoseDetectionResult.imageLandmarks
+  ↓
+PoseOverlayView
+  ↓
+Skeleton overlay
+  ↓
+Dynamic body framing box
+  ↓
+Fixed guide frame
+```
+
+Purpose:
+
+- make camera setup understandable
+- show the user how the system sees their body
+- reduce trial-and-error before class start
+- make perception behavior explainable
 
 ---
 
@@ -132,7 +200,24 @@ This keeps `MainActivity` focused on session orchestration and UI, while mapper 
 
 ## Runtime Stability Layer
 
-All poses use:
+The runtime uses stability windows at two levels:
+
+### Camera onboarding stability
+
+```text
+Ready = framing GOOD + orientation GOOD
+Ready must stay stable for ~1500ms before auto-start
+```
+
+Purpose:
+
+```text
+avoid accidental class start from one good frame
+```
+
+### Pose detection stability
+
+All pose mappers use:
 
 - EMA smoothing
 - deadband filtering
@@ -178,7 +263,8 @@ This ensures:
 Priority:
 
 ```text
-Framing
+Camera Setup
+→ Framing
 → Orientation
 → Pose Mapping
 → Flow Cue
@@ -201,6 +287,11 @@ LLM decides HOW
 ✔ Squat
 ✔ Bridge
 ✔ Full beginner class (5 poses)
+✔ Camera setup panel before class start
+✔ Ready gating from framing + orientation
+✔ Stable auto-start after sustained Ready state
+✔ Visual body framing box
+✔ Fixed framing guide frame
 ✔ Event-driven runtime
 ✔ Stability-aware detection
 ✔ PoseDetectionRouter mapper dispatch
@@ -216,9 +307,9 @@ LLM decides HOW
 
 ### Near-term
 
+- Add color-coded ready / not-ready visual states
+- Add direction-aware framing hints
 - Add threshold reset button
-- Add calibration profiles
-- Add visual body framing box overlay
 - Extract mapper interface (`PoseDetectionMapper`)
 
 ### Perception Quality
@@ -232,7 +323,7 @@ LLM decides HOW
 
 - Add more pose families
 - Improve coaching personalization
-- Add per-user calibration presets
+- Add calibration profiles / per-user presets
 - Replace cover drawable with real generated images (#13)
 
 ---
@@ -248,3 +339,4 @@ All processing is on-device
 - no cloud dependency
 - debug overlay uses local pose geometry only
 - threshold calibration is stored locally
+- camera onboarding uses local landmarks only
