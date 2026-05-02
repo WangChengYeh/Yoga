@@ -28,6 +28,11 @@ object PoseGeometry {
         }
     }
 
+    fun angleDegreesOrNull(frame: PoseDetectionResult, a: Int, b: Int, c: Int): Double? {
+        val result = angle(frame, a, b, c)
+        return if (result.confidence == Confidence.INVALID) null else result.degrees
+    }
+
     private fun angle3D(frame: PoseDetectionResult, a: Int, b: Int, c: Int): Angle {
         val l = frame.worldLandmarks
 
