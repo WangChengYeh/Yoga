@@ -1,0 +1,59 @@
+{
+  "version": "dsl-v2",
+  "flow": {
+    "id": "04_squat",
+    "name": "深蹲 · Squat",
+    "pose": "squat",
+    "language": "zh-TW",
+    "level": "beginner"
+  },
+  "steps": [
+    {
+      "state": "SETUP",
+      "durationMs": 4000,
+      "cue": "站穩，雙腳與肩同寬。",
+      "detect": "squat_setup",
+      "runtime": {
+        "angles": {
+          "knee": { "setup": { "min": 155 } }
+        }
+      }
+    },
+    {
+      "state": "MOVEMENT",
+      "durationMs": 5000,
+      "cue": "慢慢下蹲。",
+      "detect": "squat_descent",
+      "runtime": {
+        "angles": {
+          "knee": { "descent": { "min": 80, "max": 150 } }
+        }
+      }
+    },
+    {
+      "state": "HOLD",
+      "durationMs": 8000,
+      "cue": "維持深蹲。",
+      "detect": "squat_hold",
+      "runtime": {
+        "angles": {
+          "knee": { "hold": { "min": 80, "max": 120 } }
+        }
+      }
+    },
+    {
+      "state": "TRANSITION",
+      "durationMs": 4000,
+      "cue": "慢慢站起來。",
+      "detect": "squat_return",
+      "runtime": {
+        "angles": {
+          "knee": { "return": { "min": 150 } }
+        }
+      }
+    }
+  ],
+  "end": {
+    "cue": "深蹲完成。"
+  }
+}
