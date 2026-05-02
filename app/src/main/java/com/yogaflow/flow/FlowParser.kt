@@ -1,103 +1,87 @@
 package com.yogaflow.flow
 
 import com.yogaflow.coach.CoachState
+import org.json.JSONObject
 
 object FlowParser {
 
-    private enum class Section {
-        NONE,
-        FLOW,
-        STEP,
-        END
+    fun parse(text: String): YogaFlow {
+        return parseJson(text)
     }
 
-    fun parse(text: String): YogaFlow {
-        val lines = text.lines().map { it.trim() }
-
-        val metadata = mutableMapOf<String, String>()
+    private fun parseJson(text: String): YogaFlow {
+        val root = JSONObject(text)
+        val flow = root.getJSONObject("flow")
+        val stepsArray = root.getJSONArray("steps")
         val steps = mutableListOf<YogaFlowStep>()
-        var currentStep = mutableMapOf<String, String>()
-        var section = Section.NONE
-        var endCue = ""
 
-        fun flushStep() {
-            if (currentStep.isNotEmpty()) {
-                steps.add(buildStep(currentStep))
-                currentStep = mutableMapOf()
-            }
+        for (i in 0 until stepsArray.length()) {
+            steps.add(buildStep(stepsArray.getJSONObject(i)))
         }
-
-        for (line in lines) {
-            if (line.isBlank() || line.startsWith("#")) continue
-
-            when {
-                line == "[FLOW]" -> {
-                    flushStep()
-                    section = Section.FLOW
-                }
-
-                line.startsWith("[STEP") -> {
-                    flushStep()
-                    section = Section.STEP
-                }
-
-                line == "[END]" -> {
-                    flushStep()
-                    section = Section.END
-                }
-
-                line.contains("=") -> {
-                    val (key, parsedValue) = parseKeyValue(line)
-                    when (section) {
-                        Section.FLOW -> metadata[key] = parsedValue
-                        Section.STEP -> currentStep[key] = parsedValue
-                        Section.END -> if (key == "cue") endCue = parsedValue
-                        Section.NONE -> Unit
-                    }
-                }
-            }
-        }
-
-        flushStep()
 
         return YogaFlow(
-            id = metadata["id"].orEmpty(),
-            name = metadata["name"].orEmpty(),
-            pose = metadata["pose"].orEmpty(),
-            language = metadata["language"].orEmpty(),
-            level = metadata["level"].orEmpty(),
+            id = flow.getString("id"),
+            name = flow.getString("name"),
+            pose = flow.getString("pose"),
+            language = flow.getString("language"),
+            level = flow.getString("level"),
             steps = steps,
-            endCue = endCue
+            endCue = root.getJSONObject("end").getString("cue")
         )
     }
 
-    private fun buildStep(map: Map<String, String>): YogaFlowStep {
-        val runtimeParams = map
-            .filterKeys { key -> isRuntimeParam(key) }
-            .mapValues { (_, value) -> value.toDoubleOrNull() }
-            .filterValues { value -> value != null }
-            .mapValues { (_, value) -> value!! }
+    private fun buildStep(step: JSONObject): YogaFlowStep {
+        val runtimeParams = step.optJSONObject("runtime")
+            ?.let { flattenRuntimeParams(it) }
+            .orEmpty()
 
         val detect = encodeDetectSpec(
-            baseDetect = map["detect"].orEmpty(),
+            baseDetect = step.getString("detect"),
             runtimeParams = runtimeParams
         )
 
         return YogaFlowStep(
-            state = CoachState.valueOf(map["state"] ?: "HOLD"),
-            durationMs = map["duration_ms"]?.toLongOrNull() ?: 2000,
-            cue = map["cue"].orEmpty(),
+            state = CoachState.valueOf(step.getString("state")),
+            durationMs = step.getLong("durationMs"),
+            cue = step.getString("cue"),
             detect = detect,
-            correction = map["correction"].orEmpty(),
+            correction = step.optString("correction", ""),
             angleParams = runtimeParams.filterKeys { it.startsWith("angle.") }
         )
     }
 
-    private fun isRuntimeParam(key: String): Boolean {
-        return key.startsWith("angle.") ||
-            key == "stability.ms" ||
-            key == "ema.alpha" ||
-            key == "deadband.degrees"
+    private fun flattenRuntimeParams(runtime: JSONObject): Map<String, Double> {
+        val params = mutableMapOf<String, Double>()
+
+        if (runtime.has("stabilityMs")) {
+            params["stability.ms"] = runtime.getDouble("stabilityMs")
+        }
+        if (runtime.has("emaAlpha")) {
+            params["ema.alpha"] = runtime.getDouble("emaAlpha")
+        }
+        if (runtime.has("deadbandDegrees")) {
+            params["deadband.degrees"] = runtime.getDouble("deadbandDegrees")
+        }
+
+        val angles = runtime.optJSONObject("angles") ?: return params
+        val joints = angles.keys()
+        while (joints.hasNext()) {
+            val joint = joints.next()
+            val phaseConfig = angles.getJSONObject(joint)
+            val phases = phaseConfig.keys()
+            while (phases.hasNext()) {
+                val phase = phases.next()
+                val range = phaseConfig.getJSONObject(phase)
+                if (range.has("min")) {
+                    params["angle.$joint.$phase.min"] = range.getDouble("min")
+                }
+                if (range.has("max")) {
+                    params["angle.$joint.$phase.max"] = range.getDouble("max")
+                }
+            }
+        }
+
+        return params
     }
 
     private fun encodeDetectSpec(
@@ -112,10 +96,5 @@ object FlowParser {
             .joinToString(separator = "|")
 
         return "$baseDetect|$encodedParams"
-    }
-
-    private fun parseKeyValue(line: String): Pair<String, String> {
-        val parts = line.split("=", limit = 2)
-        return parts[0].trim() to parts.getOrElse(1) { "" }.trim()
     }
 }
