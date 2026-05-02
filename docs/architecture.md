@@ -1,4 +1,4 @@
-# YogaFlow 3D Architecture (v4)
+# YogaFlow 3D Architecture (v5)
 
 YogaFlow 3D 是一個 on-device AI 瑜伽教練系統。
 
@@ -6,6 +6,8 @@ YogaFlow 3D 是一個 on-device AI 瑜伽教練系統。
 
 ```text
 Camera → Perception → Detection Mapping → Flow → Coaching
+                         ↓
+                    Observability
 ```
 
 ---
@@ -40,6 +42,41 @@ TTS Voice
 
 ---
 
+## Observability Pipeline
+
+The runtime also exposes a debug overlay for tuning and validation:
+
+```text
+PoseDetectionResult
+  ↓
+PoseGeometry
+  ↓
+DebugPoseInfo
+  ↓
+debugText overlay
+```
+
+Debug overlay shows:
+
+```text
+pose id
+detect key
+CoachState
+matched
+left / right knee angle
+left / right hip angle
+torso twist estimate
+```
+
+Purpose:
+
+- tune pose thresholds
+- inspect jitter
+- validate stability window behavior
+- understand why a step is or is not matched
+
+---
+
 ## Detection Mapping Layer
 
 Current supported mappers:
@@ -56,7 +93,15 @@ Each mapper:
 - converts geometry → semantic state
 - applies threshold rules
 - applies smoothing + stability window
-- outputs (matched, state, cue)
+- outputs `(matched, state, cue)`
+
+Mapping dispatch is handled by:
+
+```text
+PoseDetectionRouter
+```
+
+This keeps `MainActivity` focused on session orchestration and UI, while mapper selection stays in the coach layer.
 
 ---
 
@@ -87,9 +132,17 @@ StepCompleted
 FlowCompleted
 ```
 
+Flow progression requires both:
+
+```text
+matched = true
+state == currentStep.state
+```
+
 This ensures:
 
 - no duplicate triggers
+- no false progression when a mapper reports `matched = false`
 - correct step transitions
 - stable timing behavior
 
@@ -125,6 +178,8 @@ LLM decides HOW
 ✔ Full beginner class (5 poses)
 ✔ Event-driven runtime
 ✔ Stability-aware detection
+✔ PoseDetectionRouter mapper dispatch
+✔ Debug overlay for angle / state / matched inspection
 ✔ LLM + TTS coaching
 ```
 
@@ -134,9 +189,10 @@ LLM decides HOW
 
 - Extract mapper interface
 - Add variance-based stability scoring
-- Add UI debug overlay
 - Add more pose families
 - Improve coaching personalization
+- Add threshold tuning UI
+- Add record / replay debugging
 
 ---
 
@@ -149,3 +205,4 @@ All processing is on-device
 - no camera upload
 - no pose upload
 - no cloud dependency
+- debug overlay uses local pose geometry only
