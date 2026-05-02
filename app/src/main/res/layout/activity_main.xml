@@ -24,6 +24,18 @@
         android:textColor="#FFFFFFFF"
         android:textSize="16sp" />
 
+    <TextView
+        android:id="@+id/llmStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_margin="12dp"
+        android:padding="6dp"
+        android:background="#99000000"
+        android:text="LLM: OFF"
+        android:textColor="#FFFFFFFF"
+        android:textSize="12sp" />
+
     <Spinner
         android:id="@+id/poseSelector"
         android:layout_width="wrap_content"
