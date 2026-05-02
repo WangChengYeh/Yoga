@@ -4,6 +4,28 @@
 
 YogaFlow 3D 是一款針對現代隱私需求與個人化運動指導開發的智慧瑜珈教練系統。專案目標是結合 Android 本地端 AI、3D 姿勢分析、Python 科學運算與本地 LLM 推理，打造一個「影像不離機」的智慧瑜珈教練。
 
+## 產品定位
+
+**YogaFlow 3D 只支援高階 Android 手機。**
+
+本專案不追求低階或中階手機相容性。核心設計優先順序如下：
+
+1. 本地端 AI 推理
+2. 即時 3D 姿勢分析
+3. 本地語音教練
+4. 隱私資料零離機
+5. 低延遲互動體驗
+
+若裝置效能不足，App 應明確提示「此裝置不支援完整本地 AI 教練模式」，而不是降級成雲端或低品質體驗。
+
+## 建議最低裝置條件
+
+- Android 15 或以上優先
+- 旗艦級 SoC / NPU
+- RAM 12GB 以上建議
+- 支援 GPU / NNAPI / 高效能本地推理
+- 可穩定執行 CameraX + MediaPipe Pose + TTS + LLM
+
 ## 核心特色
 
 - **極致隱私**：影像與姿勢資料只在手機本地端處理，不上傳雲端。
@@ -50,4 +72,4 @@ TTS / Voice Feedback + 3D Skeleton Preview
 
 ## Tags
 
-`#Android15` `#Python313` `#MediaPipe` `#LocalLLM` `#AgenticAI`
+`#Android15` `#Python313` `#MediaPipe` `#LocalLLM` `#AgenticAI` `#HighEndAndroidOnly`
