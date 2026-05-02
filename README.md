@@ -21,13 +21,19 @@ PoseHelper / MediaPipe Pose
         ↓
 PoseDetectionResult (2D image landmarks + 3D world landmarks + image size)
         ↓
-CameraFramingCoach + ViewOrientation + PoseGeometry
+CameraFramingCoach + ViewOrientation
         ↓
-PoseStateMachine + Flow Engine
+Flow current step.detect
         ↓
-LLM Coach / Fallback
+Pose Detection Mapper (ForwardFold / Twist)
         ↓
-Voice Coaching
+EMA smoothing + deadband + stability window
+        ↓
+PoseFlowEngine FlowEvent
+        ↓
+LLM Coach / Fallback on background executor
+        ↓
+TTS Voice Coaching
 ```
 
 ---
@@ -37,10 +43,11 @@ Voice Coaching
 ### Core System
 - Flow DSL (`.flow.txt`)
 - Flow parser
-- Pose state machine
-- Flow runtime engine
+- Pose runtime engine
+- Event-driven `PoseFlowEngine`
 - Flow playlist (multi-flow class)
 - Auto flow discovery (`assets/flows`)
+- Flow step-level `detect` mapping
 
 ### App Orchestration
 - Complete `MainActivity` orchestration layer
@@ -48,7 +55,9 @@ Voice Coaching
 - Session lifecycle: IDLE / RUNNING / PAUSED / COMPLETED
 - Playlist reset / restart / transition handling
 - Camera lifecycle delegated to `CameraPosePipeline`
-- Full MainActivity wiring for 3D pose, framing, orientation, flow, LLM, and TTS
+- Full MainActivity wiring for 3D pose, framing, orientation, detection mapping, event flow, LLM, and TTS
+- Safe flow loading with `runCatching`
+- Empty playlist / restart guardrails
 
 ### Camera / Pose Pipeline
 - Reusable `CameraPosePipeline.kt`
@@ -57,6 +66,7 @@ Voice Coaching
 - Bitmap-based rotation before MediaPipe inference
 - `PoseHelper` owns `ImageProxy.close()`
 - `PoseHelper` emits `PoseDetectionResult`
+- Camera start error callback
 - `ImageProcessingOptions` removed from pose input path
 
 ### Geometry / Camera Coaching
@@ -64,7 +74,39 @@ Voice Coaching
 - 2D fallback with image width / height scaling and low confidence marking
 - `ViewOrientation`: detects whether the body is facing the camera using 3D depth ratio
 - `CameraFramingCoach`: detects full-body framing, too close / too far, left / right offset, top / bottom crop
-- Coaching priority: framing → orientation → pose correction
+- Coaching priority: framing → orientation → pose detection mapping → flow cue
+
+### Pose Detection Mapping
+- `ForwardFoldDetectionMapper`
+  - `ready_forward_fold`
+  - `tall_spine_setup`
+  - `hip_hinge`
+  - `controlled_forward_fold`
+  - `forward_hold`
+  - `return_standing`
+  - `neutral_finish`
+- `TwistDetectionMapper`
+  - `stable_base`
+  - `twist_start`
+  - `twist_hold`
+  - `return_center`
+- Forward Fold uses bilateral knee / hip angles
+- Twist uses left / right torso angle difference
+- Mapping returns `matched`, `CoachState`, and live correction cue
+
+### Runtime Stability
+- EMA angle smoothing
+- Angle deadband to ignore small jitter
+- Forward Fold stability window before matched state is accepted
+- FlowEvent model:
+  - `Cue`
+  - `StepCompleted`
+  - `FlowCompleted`
+- LLM generation moved off UI thread
+- Coach cue throttle:
+  - minimum cue interval
+  - same-cue repeat interval
+- UI text and TTS spoken text separated so fallback labels are not spoken
 
 ### UI / UX
 - Multi-course home screen
@@ -82,6 +124,7 @@ Voice Coaching
 - LLM Coach (Gemma via MediaPipe)
 - Fallback coach
 - TTS voice coaching
+- Background executor for LLM generation
 
 ---
 
@@ -93,11 +136,57 @@ Voice Coaching
 
 ---
 
+## Supported Live-Coached Poses
+
+### Forward Fold
+
+Full live-coach pipeline:
+
+```text
+flow step.detect
+→ ForwardFoldDetectionMapper
+→ knee / hip angle smoothing
+→ stability window
+→ FlowEvent
+→ LLM/TTS cue
+```
+
+Safety priorities:
+
+- knees long but not locked
+- forward movement from hip hinge
+- no forced depth
+- controlled return to neutral
+
+### Twist
+
+Live-coach mapping:
+
+```text
+flow step.detect
+→ TwistDetectionMapper
+→ torso twist estimate
+→ FlowEvent
+→ LLM/TTS cue
+```
+
+Safety priorities:
+
+- stable base first
+- gentle twist start
+- no excessive rotation
+- slow return to center
+
+---
+
 ## Remaining Product Work
 
-- Replace cover drawable with real generated images (#13)
+- Apply stability window to Twist mapping
+- Reset all mapper smoothing state on playlist restart / flow transition
+- Optional: extract mapper interface (`PoseDetectionMapper`)
 - Optional: visual body framing box overlay
-- Optional: voice pacing rules for production polish
+- Optional: angle / state debug overlay
+- Replace cover drawable with real generated images (#13)
 
 ---
 
@@ -110,4 +199,4 @@ Voice Coaching
 
 ## Tags
 
-`#Android15` `#MediaPipe` `#LocalLLM` `#OnDeviceAI` `#3DPose` `#CameraCoaching`
+`#Android15` `#MediaPipe` `#LocalLLM` `#OnDeviceAI` `#3DPose` `#CameraCoaching` `#OnDeviceYogaCoach`
