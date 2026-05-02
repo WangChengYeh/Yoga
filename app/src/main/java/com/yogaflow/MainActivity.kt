@@ -128,7 +128,10 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 val (detectedState, _) = stateMachine.update(currentPose, landmarks)
                 val (flowState, flowCue) = flowEngine.update(currentFlow, detectedState)
 
-                if (flowEngine.isLastStep(currentFlow) && flowEngine.remainingSeconds(currentFlow) == 0L) {
+                if (flowEngine.isLastStep(currentFlow)
+                    && flowEngine.remainingSeconds(currentFlow) == 0L
+                    && flowEngine.isCurrentStepSatisfied(currentFlow, detectedState)
+                ) {
                     advanceFlowOrComplete()
                     updateUi(animated = true)
                     return@runOnUiThread
@@ -149,17 +152,9 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun setupButtons() {
-        startClassButton.setOnClickListener {
-            loadDiscoveredPlaylist()
-        }
-
-        startStretchButton.setOnClickListener {
-            loadPlaylist(listOf("flows/02_forward_fold_main.flow.txt"))
-        }
-
-        startRecoveryButton.setOnClickListener {
-            loadPlaylist(listOf("flows/03_twist_cooldown.flow.txt"))
-        }
+        startClassButton.setOnClickListener { loadDiscoveredPlaylist() }
+        startStretchButton.setOnClickListener { loadPlaylist(listOf("flows/02_forward_fold_main.flow.txt")) }
+        startRecoveryButton.setOnClickListener { loadPlaylist(listOf("flows/03_twist_cooldown.flow.txt")) }
 
         startButton.setOnClickListener {
             sessionState = SessionState.RUNNING
@@ -315,9 +310,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         val providerFuture = ProcessCameraProvider.getInstance(this)
         providerFuture.addListener({
             val provider = providerFuture.get()
-            val preview = Preview.Builder().build().also {
-                it.setSurfaceProvider(previewView.surfaceProvider)
-            }
+            val preview = Preview.Builder().build().also { it.setSurfaceProvider(previewView.surfaceProvider) }
             val analyzer = ImageAnalysis.Builder().build().also {
                 it.setAnalyzer(cameraExecutor) { image ->
                     poseHelper.detect(image)
