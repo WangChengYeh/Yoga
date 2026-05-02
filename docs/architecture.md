@@ -1,4 +1,4 @@
-# YogaFlow 3D Architecture (v5)
+# YogaFlow 3D Architecture (v6)
 
 YogaFlow 3D 是一個 on-device AI 瑜伽教練系統。
 
@@ -8,6 +8,8 @@ YogaFlow 3D 是一個 on-device AI 瑜伽教練系統。
 Camera → Perception → Detection Mapping → Flow → Coaching
                          ↓
                     Observability
+                         ↓
+                      Tuning
 ```
 
 ---
@@ -42,9 +44,9 @@ TTS Voice
 
 ---
 
-## Observability Pipeline
+## Observability + Tuning Pipeline
 
-The runtime also exposes a debug overlay for tuning and validation:
+The runtime exposes a debug overlay and threshold tuning panel for validation and calibration:
 
 ```text
 PoseDetectionResult
@@ -54,6 +56,18 @@ PoseGeometry
 DebugPoseInfo
   ↓
 debugText overlay
+  ↓
+Threshold UI
+  ↓
+ThresholdConfig
+  ↓
+Detection Mapper
+```
+
+The tuning loop is closed:
+
+```text
+observe angles → adjust threshold → mapper behavior changes → observe matched result
 ```
 
 Debug overlay shows:
@@ -68,12 +82,22 @@ left / right hip angle
 torso twist estimate
 ```
 
+Threshold UI currently supports:
+
+```text
+Squat knee hold max threshold
+Bridge hip lift / hold max threshold
+```
+
+Threshold values are persisted with `SharedPreferences`, so user calibration survives app restarts.
+
 Purpose:
 
 - tune pose thresholds
 - inspect jitter
 - validate stability window behavior
 - understand why a step is or is not matched
+- preserve user-specific calibration
 
 ---
 
@@ -93,6 +117,7 @@ Each mapper:
 - converts geometry → semantic state
 - applies threshold rules
 - applies smoothing + stability window
+- reads runtime threshold config when supported
 - outputs `(matched, state, cue)`
 
 Mapping dispatch is handled by:
@@ -180,19 +205,35 @@ LLM decides HOW
 ✔ Stability-aware detection
 ✔ PoseDetectionRouter mapper dispatch
 ✔ Debug overlay for angle / state / matched inspection
+✔ Runtime threshold tuning UI
+✔ Persistent user calibration with SharedPreferences
 ✔ LLM + TTS coaching
 ```
 
 ---
 
-## Next Steps
+## Roadmap
 
-- Extract mapper interface
+### Near-term
+
+- Add threshold reset button
+- Add calibration profiles
+- Add visual body framing box overlay
+- Extract mapper interface (`PoseDetectionMapper`)
+
+### Perception Quality
+
 - Add variance-based stability scoring
+- Add record / replay debugging
+- Add auto calibration from observed range of motion
+- Add scoring system for pose quality
+
+### Product Expansion
+
 - Add more pose families
 - Improve coaching personalization
-- Add threshold tuning UI
-- Add record / replay debugging
+- Add per-user calibration presets
+- Replace cover drawable with real generated images (#13)
 
 ---
 
@@ -206,3 +247,4 @@ All processing is on-device
 - no pose upload
 - no cloud dependency
 - debug overlay uses local pose geometry only
+- threshold calibration is stored locally
