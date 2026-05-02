@@ -15,6 +15,10 @@ Course Selection (Beginner / Stretch / Recovery)
         ↓
 Camera Class
         ↓
+CameraPosePipeline
+        ↓
+PoseHelper / MediaPipe Pose
+        ↓
 Pose Detection + Flow Engine
         ↓
 LLM Coach / Fallback
@@ -33,6 +37,14 @@ Voice Coaching
 - Flow runtime engine
 - Flow playlist (multi-flow class)
 - Auto flow discovery (`assets/flows`)
+
+### Camera / Pose Pipeline
+- Reusable `CameraPosePipeline.kt`
+- CameraX `RGBA_8888` image analysis path
+- `STRATEGY_KEEP_ONLY_LATEST` backpressure control
+- Bitmap-based rotation before MediaPipe inference
+- `PoseHelper` owns `ImageProxy.close()`
+- `ImageProcessingOptions` removed from pose input path
 
 ### UI / UX
 - Multi-course home screen
@@ -60,7 +72,13 @@ Voice Coaching
 
 ---
 
-## Remaining Work
+## Known Engineering Follow-up
+
+- Restore full `MainActivity` UI / flow methods after the camera pipeline extraction. Current camera pipeline work is complete, but `MainActivity` must retain `setupButtons`, `showHome`, `loadDiscoveredPlaylist`, `updateUi`, and related class-session helpers to compile.
+
+---
+
+## Remaining Product Work
 
 - Replace cover drawable with real generated images (#13)
 
