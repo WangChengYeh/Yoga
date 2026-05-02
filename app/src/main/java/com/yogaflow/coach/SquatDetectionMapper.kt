@@ -88,15 +88,16 @@ object SquatDetectionMapper {
     private fun squatDescent(knee: Double): Result {
         return when {
             knee > 150 -> Result(false, CoachState.MOVEMENT, "慢慢往下蹲，膝蓋跟腳尖方向一致。")
-            knee < 85 -> Result(false, CoachState.CORRECTION, "不要蹲太低，先往上回一點。")
+            knee < SQUAT_MIN_KNEE_DEGREES -> Result(false, CoachState.CORRECTION, "不要蹲太低，先往上回一點。")
             else -> Result(true, CoachState.MOVEMENT, "很好，深度可以，保持控制。")
         }
     }
 
     private fun squatHold(knee: Double): Result {
+        val holdMax = ThresholdConfig.squatHoldKneeMaxDegrees
         return when {
-            knee > 145 -> Result(false, CoachState.MOVEMENT, "再往下一點，找到穩定深蹲位置。")
-            knee < 80 -> Result(false, CoachState.CORRECTION, "深度太多了，往上回一點。")
+            knee > holdMax -> Result(false, CoachState.MOVEMENT, "再往下一點，找到穩定深蹲位置。")
+            knee < SQUAT_MIN_KNEE_DEGREES -> Result(false, CoachState.CORRECTION, "深度太多了，往上回一點。")
             else -> Result(true, CoachState.HOLD, "很好，穩住，保持呼吸。")
         }
     }
@@ -109,6 +110,7 @@ object SquatDetectionMapper {
         }
     }
 
+    private const val SQUAT_MIN_KNEE_DEGREES = 80.0
     private const val KNEE_EMA_ALPHA = 0.35
     private const val ANGLE_DEADBAND_DEGREES = 2.0
     private const val STABILITY_WINDOW_MS = 300L
