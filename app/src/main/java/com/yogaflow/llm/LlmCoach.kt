@@ -4,6 +4,8 @@ import android.content.Context
 import android.util.Log
 import com.google.mediapipe.tasks.genai.llminference.LlmInference
 import com.google.mediapipe.tasks.genai.llminference.LlmInferenceOptions
+import com.yogaflow.coach.CoachState
+import com.yogaflow.yoga.YogaPose
 
 class LlmCoach(context: Context) {
 
@@ -24,22 +26,14 @@ class LlmCoach(context: Context) {
         }
     }
 
-    fun generate(poseText: String): String {
-        val prompt = PromptBuilder.buildCoachPrompt(poseText)
+    fun generate(pose: YogaPose, state: CoachState, raw: String): String {
+        val prompt = PromptBuilder.buildCoachPrompt(pose, state, raw)
 
         return try {
-            llm?.generateResponse(prompt) ?: fallback(poseText)
+            llm?.generateResponse(prompt) ?: raw
         } catch (e: Exception) {
             Log.e("LLM", "generate failed", e)
-            fallback(poseText)
-        }
-    }
-
-    private fun fallback(poseText: String): String {
-        return when {
-            poseText.contains("knee") -> "膝蓋稍微伸直一點，但不要鎖死"
-            poseText.contains("Forward") -> "從髖部往前，不要駝背"
-            else -> "很好，維持呼吸"
+            raw
         }
     }
 }
