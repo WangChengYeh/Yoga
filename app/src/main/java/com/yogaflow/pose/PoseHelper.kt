@@ -16,11 +16,13 @@ class PoseHelper(context: Context) {
 
     private var detector: PoseLandmarker? = null
     private var frameTimestampMs: Long = 0L
+    private var lastWidth: Int = 0
+    private var lastHeight: Int = 0
 
     var isReady: Boolean = false
         private set
 
-    var onResult: ((List<com.google.mediapipe.tasks.components.containers.NormalizedLandmark>) -> Unit)? = null
+    var onResult: ((PoseDetectionResult) -> Unit)? = null
 
     init {
         try {
@@ -32,9 +34,18 @@ class PoseHelper(context: Context) {
                 .setBaseOptions(base)
                 .setRunningMode(RunningMode.LIVE_STREAM)
                 .setResultListener { result: PoseLandmarkerResult, _ ->
-                    if (result.landmarks().isNotEmpty()) {
-                        onResult?.invoke(result.landmarks()[0])
-                    }
+                    val imagePoints = result.landmarks().firstOrNull()
+                    if (imagePoints == null || imagePoints.isEmpty()) return@setResultListener
+
+                    val worldPoints = result.worldLandmarks().firstOrNull() ?: emptyList()
+                    onResult?.invoke(
+                        PoseDetectionResult(
+                            imageLandmarks = imagePoints,
+                            worldLandmarks = worldPoints,
+                            imageWidth = lastWidth,
+                            imageHeight = lastHeight
+                        )
+                    )
                 }
                 .build()
 
@@ -64,10 +75,8 @@ class PoseHelper(context: Context) {
             buffer.rewind()
             bitmapBuffer.copyPixelsFromBuffer(buffer)
 
-            val rotation = imageProxy.imageInfo.rotationDegrees
-
             val matrix = Matrix().apply {
-                postRotate(rotation.toFloat())
+                postRotate(imageProxy.imageInfo.rotationDegrees.toFloat())
             }
 
             val rotatedBitmap = Bitmap.createBitmap(
@@ -80,10 +89,11 @@ class PoseHelper(context: Context) {
                 true
             )
 
+            lastWidth = rotatedBitmap.width
+            lastHeight = rotatedBitmap.height
+
             val mpImage = BitmapImageBuilder(rotatedBitmap).build()
-
             frameTimestampMs = maxOf(frameTimestampMs + 1, SystemClock.uptimeMillis())
-
             detector?.detectAsync(mpImage, frameTimestampMs)
 
         } finally {
