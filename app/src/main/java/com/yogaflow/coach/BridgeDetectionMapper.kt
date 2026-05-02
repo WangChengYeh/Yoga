@@ -6,11 +6,7 @@ import kotlin.math.abs
 
 object BridgeDetectionMapper {
 
-    data class Result(
-        val matched: Boolean,
-        val state: CoachState,
-        val cue: String
-    )
+    data class Result(val matched: Boolean, val state: CoachState, val cue: String)
 
     private var smoothedHip: Double? = null
     private var stableDetect: String? = null
@@ -22,24 +18,16 @@ object BridgeDetectionMapper {
         stableSince = 0L
     }
 
-    fun evaluate(
-        detect: String,
-        frame: PoseDetectionResult,
-        params: Map<String, Double> = emptyMap()
-    ): Result {
+    fun evaluate(detect: String, frame: PoseDetectionResult, params: Map<String, Double> = emptyMap()): Result {
         val leftHip = PoseGeometry.angle(frame, 11, 23, 25)
         val rightHip = PoseGeometry.angle(frame, 12, 24, 26)
 
-        if (leftHip.confidence == PoseGeometry.Confidence.INVALID ||
-            rightHip.confidence == PoseGeometry.Confidence.INVALID
-        ) {
+        if (leftHip.confidence == PoseGeometry.Confidence.INVALID || rightHip.confidence == PoseGeometry.Confidence.INVALID) {
             reset()
             return Result(false, CoachState.CORRECTION, "請讓髖部與膝蓋進入畫面。")
         }
 
-        val rawHip = minOf(leftHip.degrees, rightHip.degrees)
-        val hip = smooth(rawHip, params)
-
+        val hip = smooth(minOf(leftHip.degrees, rightHip.degrees), params)
         val rawResult = when (detect) {
             "bridge_setup" -> setup()
             "bridge_lift" -> lift(hip, params)
@@ -47,34 +35,22 @@ object BridgeDetectionMapper {
             "bridge_return" -> ret()
             else -> Result(true, CoachState.HOLD, "維持姿勢")
         }
-
         return applyStabilityWindow(detect, rawResult, params)
     }
 
-    private fun applyStabilityWindow(
-        detect: String,
-        result: Result,
-        params: Map<String, Double>
-    ): Result {
+    private fun applyStabilityWindow(detect: String, result: Result, params: Map<String, Double>): Result {
         if (!result.matched) {
             stableDetect = null
             stableSince = 0L
             return result
         }
-
         val now = System.currentTimeMillis()
         if (stableDetect != detect) {
             stableDetect = detect
             stableSince = now
         }
-
-        val stableFor = now - stableSince
         val stabilityMs = params["stability.ms"]?.toLong() ?: STABILITY_WINDOW_MS
-        return if (stableFor >= stabilityMs) {
-            result
-        } else {
-            result.copy(matched = false, cue = "穩住這個橋式位置，再保持一下。")
-        }
+        return if (now - stableSince >= stabilityMs) result else result.copy(matched = false, cue = "穩住這個橋式位置，再保持一下。")
     }
 
     private fun smooth(raw: Double, params: Map<String, Double>): Double {
@@ -92,8 +68,8 @@ object BridgeDetectionMapper {
     }
 
     private fun lift(hip: Double, params: Map<String, Double>): Result {
-        val liftMax = params["angle.hip.max"] ?: ThresholdConfig.bridgeLiftHipMaxDegrees
-        val liftMin = params["angle.hip.min"] ?: BRIDGE_MIN_HIP_DEGREES
+        val liftMin = params["angle.hip.lift.min"] ?: BRIDGE_MIN_HIP_DEGREES
+        val liftMax = params["angle.hip.lift.max"] ?: ThresholdConfig.bridgeLiftHipMaxDegrees
         return when {
             hip > liftMax -> Result(false, CoachState.MOVEMENT, "慢慢抬起臀部，從骨盆帶動。")
             hip < liftMin -> Result(false, CoachState.CORRECTION, "不要抬太高，稍微放低一點，避免壓腰。")
@@ -102,8 +78,8 @@ object BridgeDetectionMapper {
     }
 
     private fun hold(hip: Double, params: Map<String, Double>): Result {
-        val holdMax = params["angle.hip.max"] ?: ThresholdConfig.bridgeLiftHipMaxDegrees
-        val holdMin = params["angle.hip.min"] ?: BRIDGE_MIN_HIP_DEGREES
+        val holdMin = params["angle.hip.hold.min"] ?: BRIDGE_MIN_HIP_DEGREES
+        val holdMax = params["angle.hip.hold.max"] ?: ThresholdConfig.bridgeLiftHipMaxDegrees
         return when {
             hip > holdMax -> Result(false, CoachState.MOVEMENT, "再抬高一點臀部，但不要拱腰。")
             hip < holdMin -> Result(false, CoachState.CORRECTION, "稍微放低一點，讓腰保持舒服。")
