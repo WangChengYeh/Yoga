@@ -1,0 +1,79 @@
+{
+  "version": "dsl-v2",
+  "flow": {
+    "id": "demo_forward_fold",
+    "name": "Demo Forward Fold",
+    "pose": "forward_fold",
+    "language": "zh-TW",
+    "level": "beginner"
+  },
+  "steps": [
+    {
+      "state": "SETUP",
+      "durationMs": 3000,
+      "cue": "雙腳打開，膝蓋伸直，先穩定站好。",
+      "detect": "ready_forward_fold",
+      "correction": "如果膝蓋彎曲，提醒使用者慢慢伸直，但不要鎖死。",
+      "runtime": {
+        "angles": {
+          "knee": { "ready": { "min": 155 } },
+          "hip": { "ready": { "min": 120 } }
+        },
+        "stabilityMs": 300,
+        "emaAlpha": 0.35,
+        "deadbandDegrees": 3
+      }
+    },
+    {
+      "state": "MOVEMENT",
+      "durationMs": 5000,
+      "cue": "吸氣延伸脊椎，吐氣時從髖部慢慢往前折。",
+      "detect": "hip_hinge",
+      "correction": "如果使用者用背部彎下去，提醒從髖部折，不要拱背。",
+      "runtime": {
+        "angles": {
+          "knee": { "hinge": { "min": 150 } },
+          "hip": { "hinge": { "max": 140 } }
+        },
+        "stabilityMs": 250,
+        "emaAlpha": 0.4,
+        "deadbandDegrees": 3
+      }
+    },
+    {
+      "state": "HOLD",
+      "durationMs": 10000,
+      "cue": "停在前彎位置，保持呼吸，放鬆肩膀與背部。",
+      "detect": "forward_hold",
+      "correction": "如果膝蓋彎太多，提醒膝蓋再伸直一點；如果重心太後，提醒重心往腳掌中間。",
+      "runtime": {
+        "angles": {
+          "knee": { "hold": { "min": 145 } },
+          "hip": { "hold": { "min": 50, "max": 130 } }
+        },
+        "stabilityMs": 650,
+        "emaAlpha": 0.25,
+        "deadbandDegrees": 3
+      }
+    },
+    {
+      "state": "TRANSITION",
+      "durationMs": 5000,
+      "cue": "慢慢吸氣，從髖部帶動身體回到站姿。",
+      "detect": "return_standing",
+      "correction": "如果起身太快，提醒放慢速度，保持穩定。",
+      "runtime": {
+        "angles": {
+          "knee": { "return": { "min": 145 } },
+          "hip": { "return": { "min": 120 } }
+        },
+        "stabilityMs": 300,
+        "emaAlpha": 0.35,
+        "deadbandDegrees": 3
+      }
+    }
+  ],
+  "end": {
+    "cue": "很好，這一輪前彎完成。"
+  }
+}
