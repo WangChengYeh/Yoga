@@ -169,30 +169,20 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
         squatThresholdSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                ThresholdConfig.squatHoldKneeMaxDegrees = clampThreshold(
-                    SQUAT_THRESHOLD_MIN + progress,
-                    SQUAT_THRESHOLD_MIN,
-                    SQUAT_THRESHOLD_RANGE
-                )
+                ThresholdConfig.squatHoldKneeMaxDegrees = clampThreshold(SQUAT_THRESHOLD_MIN + progress, SQUAT_THRESHOLD_MIN, SQUAT_THRESHOLD_RANGE)
                 updateThresholdLabels()
                 saveThresholdPreferences()
             }
-
             override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
             override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
         })
 
         bridgeThresholdSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                ThresholdConfig.bridgeLiftHipMaxDegrees = clampThreshold(
-                    BRIDGE_THRESHOLD_MIN + progress,
-                    BRIDGE_THRESHOLD_MIN,
-                    BRIDGE_THRESHOLD_RANGE
-                )
+                ThresholdConfig.bridgeLiftHipMaxDegrees = clampThreshold(BRIDGE_THRESHOLD_MIN + progress, BRIDGE_THRESHOLD_MIN, BRIDGE_THRESHOLD_RANGE)
                 updateThresholdLabels()
                 saveThresholdPreferences()
             }
-
             override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
             override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
         })
@@ -200,25 +190,10 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     private fun loadThresholdPreferences() {
         val prefs = getSharedPreferences(THRESHOLD_PREFS, MODE_PRIVATE)
-        val squat = prefs.getFloat(
-            KEY_SQUAT_HOLD_KNEE_MAX,
-            ThresholdConfig.squatHoldKneeMaxDegrees.toFloat()
-        ).toDouble()
-        val bridge = prefs.getFloat(
-            KEY_BRIDGE_LIFT_HIP_MAX,
-            ThresholdConfig.bridgeLiftHipMaxDegrees.toFloat()
-        ).toDouble()
-
-        ThresholdConfig.squatHoldKneeMaxDegrees = clampThreshold(
-            squat,
-            SQUAT_THRESHOLD_MIN,
-            SQUAT_THRESHOLD_RANGE
-        )
-        ThresholdConfig.bridgeLiftHipMaxDegrees = clampThreshold(
-            bridge,
-            BRIDGE_THRESHOLD_MIN,
-            BRIDGE_THRESHOLD_RANGE
-        )
+        val squat = prefs.getFloat(KEY_SQUAT_HOLD_KNEE_MAX, ThresholdConfig.squatHoldKneeMaxDegrees.toFloat()).toDouble()
+        val bridge = prefs.getFloat(KEY_BRIDGE_LIFT_HIP_MAX, ThresholdConfig.bridgeLiftHipMaxDegrees.toFloat()).toDouble()
+        ThresholdConfig.squatHoldKneeMaxDegrees = clampThreshold(squat, SQUAT_THRESHOLD_MIN, SQUAT_THRESHOLD_RANGE)
+        ThresholdConfig.bridgeLiftHipMaxDegrees = clampThreshold(bridge, BRIDGE_THRESHOLD_MIN, BRIDGE_THRESHOLD_RANGE)
     }
 
     private fun saveThresholdPreferences() {
@@ -252,11 +227,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             previewView = previewView,
             poseHelper = poseHelper,
             cameraExecutor = cameraExecutor,
-            onError = {
-                runOnUiThread {
-                    coachText.text = "Camera 啟動失敗，請確認權限或重新開啟 App。"
-                }
-            }
+            onError = { runOnUiThread { coachText.text = "Camera 啟動失敗，請確認權限或重新開啟 App。" } }
         )
 
         tts = TextToSpeech(this, this)
@@ -267,11 +238,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             coachText.text = "Pose model not found. Please add pose_landmarker_lite.task to assets."
         }
 
-        poseHelper.onResult = { frame ->
-            runOnUiThread {
-                handlePoseFrame(frame)
-            }
-        }
+        poseHelper.onResult = { frame -> runOnUiThread { handlePoseFrame(frame) } }
     }
 
     private fun handlePoseFrame(frame: PoseDetectionResult) {
@@ -279,8 +246,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
         val framing = CameraFramingCoach.analyze(frame)
         val orientation = ViewOrientation.analyze(frame)
-        val ready = framing.status == CameraFramingStatus.GOOD &&
-            orientation.status == ViewOrientationStatus.GOOD
+        val ready = framing.status == CameraFramingStatus.GOOD && orientation.status == ViewOrientationStatus.GOOD
 
         when (sessionState) {
             SessionState.IDLE -> {
@@ -290,21 +256,18 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 updateUi(animated = false)
                 return
             }
-
             SessionState.PAUSED -> {
                 cameraSetupPanel.visibility = View.GONE
                 updateDebugOverlay(frame, detect = "paused", state = CoachState.SETUP, matched = ready)
                 updateUi(animated = false)
                 return
             }
-
             SessionState.COMPLETED -> {
                 cameraSetupPanel.visibility = View.GONE
                 updateDebugOverlay(frame, detect = "completed", state = CoachState.HOLD, matched = true)
                 updateUi(animated = false)
                 return
             }
-
             SessionState.RUNNING -> Unit
         }
 
@@ -329,6 +292,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         val mapping = PoseDetectionRouter.evaluate(
             poseId = currentPose.id,
             detect = currentStep.detect,
+            params = currentStep.params,
             frame = frame,
             fallback = stateMachine,
             currentPose = currentPose
@@ -337,29 +301,18 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         updateDebugOverlay(frame, detect = currentStep.detect, state = mapping.state, matched = mapping.matched)
 
         when (event) {
-            is PoseFlowEngine.FlowEvent.Cue -> {
-                val cue = if (mapping.matched) event.text else mapping.cue
-                speakCoachCue(mapping.state, cue)
-            }
-
+            is PoseFlowEngine.FlowEvent.Cue -> speakCoachCue(mapping.state, if (mapping.matched) event.text else mapping.cue)
             is PoseFlowEngine.FlowEvent.StepCompleted -> {
                 animateFlowTransition()
                 speakCoachCue(event.state, event.text)
             }
-
-            is PoseFlowEngine.FlowEvent.FlowCompleted -> {
-                completeCurrentFlow(event.text)
-            }
+            is PoseFlowEngine.FlowEvent.FlowCompleted -> completeCurrentFlow(event.text)
         }
 
         updateUi(animated = true)
     }
 
-    private fun updateCameraSetupPanel(
-        ready: Boolean,
-        framingMessage: String,
-        orientationMessage: String
-    ) {
+    private fun updateCameraSetupPanel(ready: Boolean, framingMessage: String, orientationMessage: String) {
         val now = System.currentTimeMillis()
         if (ready) {
             if (!cameraReady) cameraReadySince = now
@@ -376,11 +329,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         if (ready) {
             val stableFor = now - cameraReadySince
             val remaining = ((CAMERA_AUTO_START_STABLE_MS - stableFor).coerceAtLeast(0L) / 1000.0)
-            cameraSetupStatus.text = if (stableFor >= CAMERA_AUTO_START_STABLE_MS) {
-                "Ready ✔\nStarting class automatically..."
-            } else {
-                "Ready ✔\nHold still. Auto-start in %.1fs.".format(remaining)
-            }
+            cameraSetupStatus.text = if (stableFor >= CAMERA_AUTO_START_STABLE_MS) "Ready ✔\nStarting class automatically..." else "Ready ✔\nHold still. Auto-start in %.1fs.".format(remaining)
             coachText.text = "準備好了，請穩住，系統會自動開始。"
         } else {
             val message = when {
@@ -394,15 +343,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun maybeAutoStartClass() {
-        if (!AUTO_START_ENABLED) return
-        if (!cameraReady) return
-        if (autoStartedCurrentSetup) return
-        if (sessionState != SessionState.IDLE) return
-        if (cameraReadySince == 0L) return
-
-        val stableFor = System.currentTimeMillis() - cameraReadySince
-        if (stableFor < CAMERA_AUTO_START_STABLE_MS) return
-
+        if (!AUTO_START_ENABLED || !cameraReady || autoStartedCurrentSetup || sessionState != SessionState.IDLE || cameraReadySince == 0L) return
+        if (System.currentTimeMillis() - cameraReadySince < CAMERA_AUTO_START_STABLE_MS) return
         autoStartedCurrentSetup = true
         startRunningClass(auto = true)
     }
@@ -420,33 +362,21 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         updateUi(animated = true)
     }
 
-    private fun updateDebugOverlay(
-        frame: PoseDetectionResult,
-        detect: String,
-        state: CoachState,
-        matched: Boolean
-    ) {
+    private fun updateDebugOverlay(frame: PoseDetectionResult, detect: String, state: CoachState, matched: Boolean) {
         if (!::debugText.isInitialized) return
-
         if (!DEBUG_OVERLAY_ENABLED) {
             debugText.visibility = View.GONE
             return
         }
 
         debugText.visibility = View.VISIBLE
-
         val leftKnee = PoseGeometry.angleDegreesOrNull(frame, 23, 25, 27)
         val rightKnee = PoseGeometry.angleDegreesOrNull(frame, 24, 26, 28)
         val leftHip = PoseGeometry.angleDegreesOrNull(frame, 11, 23, 25)
         val rightHip = PoseGeometry.angleDegreesOrNull(frame, 12, 24, 26)
         val leftShoulderHipKnee = PoseGeometry.angleDegreesOrNull(frame, 11, 23, 25)
         val rightShoulderHipKnee = PoseGeometry.angleDegreesOrNull(frame, 12, 24, 26)
-
-        val torsoTwist = if (leftShoulderHipKnee != null && rightShoulderHipKnee != null) {
-            abs(leftShoulderHipKnee - rightShoulderHipKnee)
-        } else {
-            null
-        }
+        val torsoTwist = if (leftShoulderHipKnee != null && rightShoulderHipKnee != null) abs(leftShoulderHipKnee - rightShoulderHipKnee) else null
 
         val debugInfo = DebugPoseInfo(
             poseId = if (::currentPose.isInitialized) currentPose.id else "none",
@@ -459,7 +389,6 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             rightHipAngle = rightHip,
             torsoTwistEstimate = torsoTwist
         )
-
         debugText.text = debugInfo.toDisplayText()
     }
 
@@ -480,10 +409,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
     }
 
-    private fun cameraSetupCue(
-        framing: com.yogaflow.pose.CameraFramingResult,
-        orientation: com.yogaflow.pose.ViewOrientationResult
-    ): String {
+    private fun cameraSetupCue(framing: com.yogaflow.pose.CameraFramingResult, orientation: com.yogaflow.pose.ViewOrientationResult): String {
         return when {
             framing.status != CameraFramingStatus.GOOD -> framing.message
             orientation.status != ViewOrientationStatus.GOOD -> orientation.message
@@ -495,16 +421,13 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         val now = System.currentTimeMillis()
         if (cue == lastCoachCue && now - lastCoachAt < SAME_CUE_INTERVAL_MS) return false
         if (now - lastCoachAt < MIN_CUE_INTERVAL_MS) return false
-
         lastCoachCue = cue
         lastCoachAt = now
         return true
     }
 
     private fun speakCoachCue(state: CoachState, cue: String) {
-        if (cue.isBlank()) return
-        if (!shouldEmitCoach(cue)) return
-
+        if (cue.isBlank() || !shouldEmitCoach(cue)) return
         val pose = currentPose
         val requestId = ++coachRequestId
         val flowId = currentFlow.id
@@ -517,10 +440,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             val displayText = if (isFallback) "(fallback) $spokenText" else spokenText
 
             runOnUiThread {
-                if (requestId != coachRequestId) return@runOnUiThread
-                if (flowId != currentFlow.id) return@runOnUiThread
-                if (step != flowEngine.currentStepNumber()) return@runOnUiThread
-
+                if (requestId != coachRequestId || flowId != currentFlow.id || step != flowEngine.currentStepNumber()) return@runOnUiThread
                 llmStatus.text = if (isFallback) "LLM: OFF" else "LLM: ON"
                 coachText.text = displayText
                 speaker.speakIfNeeded(spokenText)
@@ -534,32 +454,17 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun setupButtons() {
-        startClassButton.setOnClickListener {
-            loadDiscoveredPlaylist(openClassView = true)
-        }
-
-        startStretchButton.setOnClickListener {
-            loadPlaylist(listOf("flows/02_forward_fold_main.flow.txt"), openClassView = true)
-        }
-
-        startRecoveryButton.setOnClickListener {
-            loadPlaylist(listOf("flows/03_twist_cooldown.flow.txt"), openClassView = true)
-        }
-
-        startButton.setOnClickListener {
-            startRunningClass(auto = false)
-        }
-
+        startClassButton.setOnClickListener { loadDiscoveredPlaylist(openClassView = true) }
+        startStretchButton.setOnClickListener { loadPlaylist(listOf("flows/02_forward_fold_main.flow.json"), openClassView = true) }
+        startRecoveryButton.setOnClickListener { loadPlaylist(listOf("flows/03_twist_cooldown.flow.json"), openClassView = true) }
+        startButton.setOnClickListener { startRunningClass(auto = false) }
         pauseButton.setOnClickListener {
             sessionState = SessionState.PAUSED
             coachRequestId++
             coachText.text = "已暫停。準備好後按 Start 繼續。"
             updateUi(animated = false)
         }
-
-        restartButton.setOnClickListener {
-            restartCurrentPlaylist()
-        }
+        restartButton.setOnClickListener { restartCurrentPlaylist() }
     }
 
     private fun loadDiscoveredPlaylist(openClassView: Boolean = true) {
@@ -652,22 +557,17 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun resolvePose(flow: YogaFlow): YogaPose {
-        return YogaPoseCatalog.poses.firstOrNull { it.id == flow.pose }
-            ?: YogaPoseCatalog.poses.first()
+        return YogaPoseCatalog.poses.firstOrNull { it.id == flow.pose } ?: YogaPoseCatalog.poses.first()
     }
 
     private fun updateUi(animated: Boolean) {
         if (!::currentFlow.isInitialized) return
-
         flowName.text = "Flow ${playlist.currentNumber()}/${playlist.total()} · ${currentFlow.name}"
-
         val step = flowEngine.currentStepNumber()
         val total = flowEngine.totalSteps(currentFlow)
         progressText.text = "Step $step/$total"
-
         val progress = ((step.toFloat() / total.toFloat()) * 100).toInt().coerceIn(0, 100)
         if (animated) animateProgress(progress) else progressBar.progress = progress
-
         val countdown = when (sessionState) {
             SessionState.IDLE -> if (cameraReady) "Ready" else "Setup"
             SessionState.PAUSED -> "Paused"
@@ -687,51 +587,27 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     private fun updateCountdown(text: String) {
         if (text == lastCountdownText) return
-
         countdownText.text = text
         lastCountdownText = text
-
         if (sessionState == SessionState.RUNNING) {
             val number = text.toIntOrNull()
-            if (number != null && number in 1..3) {
-                speaker.speakIfNeeded(number.toString())
-            }
+            if (number != null && number in 1..3) speaker.speakIfNeeded(number.toString())
         }
-
         countdownText.scaleX = 1.35f
         countdownText.scaleY = 1.35f
         countdownText.alpha = 0.4f
-        countdownText.animate()
-            .scaleX(1f)
-            .scaleY(1f)
-            .alpha(1f)
-            .setDuration(250L)
-            .start()
+        countdownText.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(250L).start()
     }
 
     private fun animateFlowTransition() {
         flowName.alpha = 0f
         flowName.translationY = -20f
-        flowName.animate()
-            .alpha(1f)
-            .translationY(0f)
-            .setDuration(400L)
-            .start()
+        flowName.animate().alpha(1f).translationY(0f).setDuration(400L).start()
     }
 
-    private fun showHome() {
-        homeView.visibility = View.VISIBLE
-        classView.visibility = View.GONE
-    }
-
-    private fun showClass() {
-        homeView.visibility = View.GONE
-        classView.visibility = View.VISIBLE
-    }
-
-    private fun startCamera() {
-        cameraPipeline.start()
-    }
+    private fun showHome() { homeView.visibility = View.VISIBLE; classView.visibility = View.GONE }
+    private fun showClass() { homeView.visibility = View.GONE; classView.visibility = View.VISIBLE }
+    private fun startCamera() { cameraPipeline.start() }
 
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
@@ -743,14 +619,10 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     override fun onDestroy() {
-        if (::cameraPipeline.isInitialized) {
-            cameraPipeline.stop()
-        }
+        if (::cameraPipeline.isInitialized) cameraPipeline.stop()
         cameraExecutor.shutdown()
         coachExecutor.shutdown()
-        if (::tts.isInitialized) {
-            tts.shutdown()
-        }
+        if (::tts.isInitialized) tts.shutdown()
         super.onDestroy()
     }
 
