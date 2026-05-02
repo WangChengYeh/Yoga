@@ -29,13 +29,16 @@ import com.yogaflow.llm.LlmCoach
 import com.yogaflow.pose.CameraFramingCoach
 import com.yogaflow.pose.CameraFramingStatus
 import com.yogaflow.pose.CameraPosePipeline
+import com.yogaflow.pose.DebugPoseInfo
 import com.yogaflow.pose.PoseDetectionResult
+import com.yogaflow.pose.PoseGeometry
 import com.yogaflow.pose.PoseHelper
 import com.yogaflow.pose.PoseOverlayView
 import com.yogaflow.pose.ViewOrientation
 import com.yogaflow.pose.ViewOrientationStatus
 import com.yogaflow.yoga.YogaPose
 import com.yogaflow.yoga.YogaPoseCatalog
+import kotlin.math.abs
 import java.util.Locale
 import java.util.concurrent.Executors
 
@@ -47,6 +50,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private lateinit var classView: View
     private lateinit var previewView: PreviewView
     private lateinit var overlayView: PoseOverlayView
+    private lateinit var debugText: TextView
     private lateinit var coachText: TextView
     private lateinit var flowName: TextView
     private lateinit var progressText: TextView
@@ -116,6 +120,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         classView = findViewById(R.id.classView)
         previewView = findViewById(R.id.previewView)
         overlayView = findViewById(R.id.overlayView)
+        debugText = findViewById(R.id.debugText)
         coachText = findViewById(R.id.coachText)
         flowName = findViewById(R.id.flowName)
         progressText = findViewById(R.id.progressText)
@@ -173,6 +178,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             if (setupCue.isNotBlank()) {
                 coachText.text = setupCue
             }
+            updateDebugOverlay(frame, detect = "camera_setup", state = CoachState.SETUP, matched = false)
             updateUi(animated = false)
             return
         }
@@ -183,6 +189,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         if (!allowPoseCoaching) {
             val setupCue = cameraSetupCue(framing, orientation)
             speakCoachCue(CoachState.CORRECTION, setupCue)
+            updateDebugOverlay(frame, detect = "camera_setup", state = CoachState.CORRECTION, matched = false)
             updateUi(animated = false)
             return
         }
@@ -190,6 +197,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         val currentStep = currentFlow.steps.getOrNull(flowEngine.currentStepNumber() - 1)
         if (currentStep == null) {
             completeCurrentFlow(currentFlow.endCue.ifBlank { "課程完成，很好。" })
+            updateDebugOverlay(frame, detect = "flow_complete", state = CoachState.HOLD, matched = true)
             updateUi(animated = true)
             return
         }
@@ -202,6 +210,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             currentPose = currentPose
         )
         val event = flowEngine.update(currentFlow, mapping.state, mapping.matched)
+        updateDebugOverlay(frame, detect = currentStep.detect, state = mapping.state, matched = mapping.matched)
 
         when (event) {
             is PoseFlowEngine.FlowEvent.Cue -> {
@@ -220,6 +229,44 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
 
         updateUi(animated = true)
+    }
+
+    private fun updateDebugOverlay(
+        frame: PoseDetectionResult,
+        detect: String,
+        state: CoachState,
+        matched: Boolean
+    ) {
+        if (!::debugText.isInitialized) return
+
+        val leftKnee = PoseGeometry.angle(frame, 23, 25, 27).toNullableDegrees()
+        val rightKnee = PoseGeometry.angle(frame, 24, 26, 28).toNullableDegrees()
+        val leftHip = PoseGeometry.angle(frame, 11, 23, 25).toNullableDegrees()
+        val rightHip = PoseGeometry.angle(frame, 12, 24, 26).toNullableDegrees()
+
+        val torsoTwist = if (leftHip != null && rightHip != null) {
+            abs(leftHip - rightHip)
+        } else {
+            null
+        }
+
+        val debugInfo = DebugPoseInfo(
+            poseId = if (::currentPose.isInitialized) currentPose.id else "none",
+            detect = detect,
+            state = state,
+            matched = matched,
+            leftKneeAngle = leftKnee,
+            rightKneeAngle = rightKnee,
+            leftHipAngle = leftHip,
+            rightHipAngle = rightHip,
+            torsoTwistEstimate = torsoTwist
+        )
+
+        debugText.text = debugInfo.toDisplayText()
+    }
+
+    private fun PoseGeometry.AngleResult.toNullableDegrees(): Double? {
+        return if (confidence == PoseGeometry.Confidence.INVALID) null else degrees
     }
 
     private fun completeCurrentFlow(cue: String) {
