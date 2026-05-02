@@ -1,0 +1,43 @@
+# YogaFlow Class Demo Flow
+# Flow ID: 01_mountain_warmup
+# Pose: Mountain Pose
+# Role: Warmup
+# Version: 0.1
+
+[FLOW]
+id = 01_mountain_warmup
+name = 01 Mountain Warmup
+pose = mountain
+language = zh-TW
+level = beginner
+
+[STEP 1]
+state = SETUP
+duration_ms = 3000
+cue = 雙腳穩穩踩地，站到墊子的中央。
+detect = standing_centered
+correction = 如果身體晃動，提醒使用者把重量平均放在雙腳。
+
+[STEP 2]
+state = MOVEMENT
+duration_ms = 4000
+cue = 吸氣，把脊椎慢慢往上延伸，肩膀放鬆。
+detect = spine_lengthened
+correction = 如果肩膀聳起，提醒肩膀往下放鬆。
+
+[STEP 3]
+state = HOLD
+duration_ms = 8000
+cue = 保持站姿，感覺頭頂往上，腳掌穩定往下。
+detect = mountain_hold
+correction = 如果膝蓋鎖死，提醒膝蓋保持微微彈性。
+
+[STEP 4]
+state = TRANSITION
+duration_ms = 3000
+cue = 維持呼吸，準備進入下一個動作。
+detect = ready_for_next_pose
+correction = 如果呼吸急促，提醒慢慢吸氣吐氣。
+
+[END]
+cue = 暖身完成，身體已經準備好。
