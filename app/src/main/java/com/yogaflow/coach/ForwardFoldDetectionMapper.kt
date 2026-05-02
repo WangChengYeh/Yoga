@@ -106,18 +106,11 @@ object ForwardFoldDetectionMapper {
         return if (stableFor >= stabilityMs) {
             result
         } else {
-            result.copy(
-                matched = false,
-                cue = "穩住這個位置，再保持一下。"
-            )
+            result.copy(matched = false, cue = "穩住這個位置，再保持一下。")
         }
     }
 
-    private fun smoothAngles(
-        rawKnee: Double,
-        rawHip: Double,
-        params: Map<String, Double>
-    ): SmoothedAngles {
+    private fun smoothAngles(rawKnee: Double, rawHip: Double, params: Map<String, Double>): SmoothedAngles {
         val now = System.currentTimeMillis()
         val resetSmoothing = lastFrameAt == 0L || now - lastFrameAt > SMOOTHING_RESET_GAP_MS
         lastFrameAt = now
@@ -216,19 +209,11 @@ object ForwardFoldDetectionMapper {
         defaultHipMax: Double?
     ): AngleRange {
         return AngleRange(
-            kneeMin = param(params, "angle.knee.$phase.min", "angle.knee.min", defaultKneeMin),
-            kneeMax = param(params, "angle.knee.$phase.max", "angle.knee.max", defaultKneeMax),
-            hipMin = param(params, "angle.hip.$phase.min", "angle.hip.min", defaultHipMin),
-            hipMax = param(params, "angle.hip.$phase.max", "angle.hip.max", defaultHipMax)
+            kneeMin = params["angle.knee.$phase.min"] ?: defaultKneeMin,
+            kneeMax = params["angle.knee.$phase.max"] ?: defaultKneeMax,
+            hipMin = params["angle.hip.$phase.min"] ?: defaultHipMin,
+            hipMax = params["angle.hip.$phase.max"] ?: defaultHipMax
         )
-    }
-
-    private fun param(params: Map<String, Double>, primaryKey: String, legacyKey: String, defaultValue: Double): Double {
-        return params[primaryKey] ?: params[legacyKey] ?: defaultValue
-    }
-
-    private fun param(params: Map<String, Double>, primaryKey: String, legacyKey: String, defaultValue: Double?): Double? {
-        return params[primaryKey] ?: params[legacyKey] ?: defaultValue
     }
 
     private fun hipBelowMin(hip: Double, range: AngleRange): Boolean {
