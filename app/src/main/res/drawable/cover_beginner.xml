@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:startColor="#1C1A17"
+                android:centerColor="#6D6253"
+                android:endColor="#D8C4A3"
+                android:angle="0" />
+        </shape>
+    </item>
+
+    <item android:left="0dp" android:right="0dp" android:top="0dp" android:bottom="0dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#33000000" />
+        </shape>
+    </item>
+
+    <item android:left="28dp" android:top="38dp" android:right="140dp" android:bottom="92dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#22000000" />
+            <corners android:radius="18dp" />
+        </shape>
+    </item>
+
+    <item android:left="250dp" android:right="36dp" android:top="58dp" android:bottom="58dp">
+        <vector
+            android:width="180dp"
+            android:height="180dp"
+            android:viewportWidth="180"
+            android:viewportHeight="180">
+            <path
+                android:fillColor="#EADDC8"
+                android:pathData="M88,32a14,14 0,1 0,0.1,0M84,52 L96,52 L104,88 L132,82 L136,92 L102,104 L92,78 L78,104 L44,92 L48,82 L76,88 Z" />
+            <path
+                android:fillColor="#EADDC8"
+                android:pathData="M78,104 L64,154 L76,158 L92,118 L112,158 L124,154 L102,104 Z" />
+        </vector>
+    </item>
+</layer-list>
