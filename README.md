@@ -71,6 +71,21 @@ Voice Coaching
 
 ---
 
+## Known Engineering Correctness Issue
+
+### P0: 2D angle projection distortion
+
+`PoseStateMachine` currently computes knee and hip angles from `NormalizedLandmark.x/y` image coordinates. This is a 2D projected angle, not a true body-space 3D joint angle.
+
+When the user turns sideways or the camera is off-axis, perspective projection can significantly distort the measured angle. This can cause false corrections for poses such as forward fold and squat.
+
+Required fix:
+- Use MediaPipe world landmarks for 3D joint angles when available.
+- Add a `PoseGeometry` layer for 3D angle calculation.
+- Fall back to 2D only when 3D landmarks are unavailable, and mark the result as low confidence.
+
+---
+
 ## Demo Courses
 
 - Beginner Flow (Mountain → Forward Fold → Twist)
@@ -81,6 +96,7 @@ Voice Coaching
 
 ## Remaining Product Work
 
+- Fix P0 2D angle projection distortion with 3D/world-landmark geometry
 - Replace cover drawable with real generated images (#13)
 
 ---
