@@ -282,12 +282,30 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         val ready = framing.status == CameraFramingStatus.GOOD &&
             orientation.status == ViewOrientationStatus.GOOD
 
-        if (sessionState != SessionState.RUNNING) {
-            updateCameraSetupPanel(ready, framing.message, orientation.message)
-            maybeAutoStartClass()
-            updateDebugOverlay(frame, detect = "camera_setup", state = CoachState.SETUP, matched = ready)
-            updateUi(animated = false)
-            return
+        when (sessionState) {
+            SessionState.IDLE -> {
+                updateCameraSetupPanel(ready, framing.message, orientation.message)
+                maybeAutoStartClass()
+                updateDebugOverlay(frame, detect = "camera_setup", state = CoachState.SETUP, matched = ready)
+                updateUi(animated = false)
+                return
+            }
+
+            SessionState.PAUSED -> {
+                cameraSetupPanel.visibility = View.GONE
+                updateDebugOverlay(frame, detect = "paused", state = CoachState.SETUP, matched = ready)
+                updateUi(animated = false)
+                return
+            }
+
+            SessionState.COMPLETED -> {
+                cameraSetupPanel.visibility = View.GONE
+                updateDebugOverlay(frame, detect = "completed", state = CoachState.HOLD, matched = true)
+                updateUi(animated = false)
+                return
+            }
+
+            SessionState.RUNNING -> Unit
         }
 
         cameraSetupPanel.visibility = View.GONE
@@ -395,6 +413,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             return
         }
         sessionState = SessionState.RUNNING
+        cameraReadySince = 0L
         cameraSetupPanel.visibility = View.GONE
         coachText.text = if (auto) "相機設定完成，自動開始練習。" else "開始練習，跟著我的節奏。"
         speaker.speakIfNeeded(if (auto) "相機設定完成，開始練習。" else "開始練習，跟著我的節奏。")
