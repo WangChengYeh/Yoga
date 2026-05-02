@@ -13,6 +13,13 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
+    <Spinner
+        android:id="@+id/poseSelector"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|center_horizontal"
+        android:background="#99000000" />
+
     <TextView
         android:id="@+id/coachText"
         android:layout_width="match_parent"
