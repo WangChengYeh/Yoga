@@ -20,9 +20,13 @@ import com.yogaflow.flow.FlowLoader
 import com.yogaflow.flow.FlowPlaylistEngine
 import com.yogaflow.flow.YogaFlow
 import com.yogaflow.llm.LlmCoach
+import com.yogaflow.pose.CameraFramingCoach
+import com.yogaflow.pose.CameraFramingStatus
 import com.yogaflow.pose.CameraPosePipeline
 import com.yogaflow.pose.PoseHelper
 import com.yogaflow.pose.PoseOverlayView
+import com.yogaflow.pose.ViewOrientation
+import com.yogaflow.pose.ViewOrientationStatus
 import com.yogaflow.yoga.YogaPose
 import com.yogaflow.yoga.YogaPoseCatalog
 import java.util.Locale
@@ -135,16 +139,22 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             coachText.text = "Pose model not found. Please add pose_landmarker_lite.task to assets."
         }
 
-        poseHelper.onResult = { landmarks ->
+        poseHelper.onResult = { frame ->
             runOnUiThread {
-                overlayView.setLandmarks(landmarks)
+                overlayView.setLandmarks(frame.imageLandmarks)
+
+                val framing = CameraFramingCoach.analyze(frame)
+                val orientation = ViewOrientation.analyze(frame)
 
                 if (sessionState != SessionState.RUNNING) {
+                    if (framing.status != CameraFramingStatus.GOOD) {
+                        coachText.text = framing.message
+                    }
                     updateUi(animated = false)
                     return@runOnUiThread
                 }
 
-                val (detectedState, _) = stateMachine.update(currentPose, landmarks)
+                val (detectedState, poseCue) = stateMachine.update(currentPose, frame)
                 val (flowState, flowCue) = flowEngine.update(currentFlow, detectedState)
 
                 if (flowEngine.isLastStep(currentFlow)
@@ -156,8 +166,15 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                     return@runOnUiThread
                 }
 
-                val generated = llmCoach.generate(currentPose, flowState, flowCue)
-                val isFallback = generated == flowCue
+                val prioritizedCue = when {
+                    framing.status != CameraFramingStatus.GOOD -> framing.message
+                    orientation.status != ViewOrientationStatus.GOOD -> orientation.message
+                    poseCue.isNotBlank() -> poseCue
+                    else -> flowCue
+                }
+
+                val generated = llmCoach.generate(currentPose, flowState, prioritizedCue)
+                val isFallback = generated == prioritizedCue
                 val displayText = if (isFallback) "(fallback) $generated" else generated
                 val polished = CoachPhrasePolisher.polish(displayText)
 
