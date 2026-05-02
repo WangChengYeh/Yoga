@@ -1,113 +1,75 @@
 # Architecture (Product-Level)
 
-YogaFlow 3D 已從技術 demo 演進為完整 App Prototype。本文件描述「產品級架構」，包含 UI、Session 控制、Flow Runtime 與本地 AI。
+YogaFlow 3D 為完整 on-device AI 瑜珈系統。
 
 ---
 
-## Full Product Pipeline
+## Full Pipeline
 
 ```text
-Home Course Page
+Home (Multi-course)
         ↓
-Course Selection (Card UI)
+Course Selection
         ↓
-Class Session Controller
-(Start / Pause / Restart)
+Session Controller
         ↓
-CameraX (Preview + Frame)
+CameraX
         ↓
-MediaPipe Pose Landmarker
-        ↓
-33 Keypoints + Skeleton Overlay
+MediaPipe Pose
         ↓
 PoseStateMachine
         ↓
-PoseFlowEngine (Flow Runtime)
+FlowPlaylistEngine
         ↓
-LLM Coach (Gemma) / Fallback
+PoseFlowEngine
         ↓
-CoachPhrasePolisher
+LLM Coach / Fallback
         ↓
-TTS Speaker
-        ↓
-User Feedback (Voice + UI)
+TTS
 ```
 
 ---
 
-## System Layers
+## Implemented Modules
 
-### 1. Presentation Layer (UI)
-- Home screen (course selection)
-- Course cover image
-- Class screen (camera + overlay)
-- Progress bar / step indicator
-- Countdown timer
-- LLM status indicator
-- Control buttons (Start / Pause / Restart)
+### UI Layer
+- Multi-course home
+- Course selection
+- Progress + countdown + animation
+- Session controls
 
-### 2. Session Layer
-- SessionState: IDLE / RUNNING / PAUSED / COMPLETED
-- Controls lifecycle of a yoga class
-- Blocks processing when paused
+### Session Layer
+- IDLE / RUNNING / PAUSED / COMPLETED
 
-### 3. Camera Layer
-- CameraX PreviewView
-- ImageAnalysis pipeline
-- Back camera default
-
-### 4. Perception Layer
-- MediaPipe Pose Landmarker
-- 33 landmarks detection
-- PoseOverlayView rendering
-
-### 5. Yoga Domain Layer
-- YogaPose
-- YogaPoseCatalog
-
-### 6. State Machine Layer
-- PoseStateMachine
-- SETUP / MOVEMENT / HOLD / TRANSITION / CORRECTION
-
-### 7. Flow Runtime Layer
+### Flow Layer
+- Flow DSL
+- FlowParser
+- FlowPlaylistEngine
 - PoseFlowEngine
-- Multi-step yoga instruction
-- Time-based transitions
 
-### 8. LLM Layer
-- LlmCoach
-- MediaPipe Gemma
-- Fallback mode
-
-### 9. Voice Layer
-- CoachPhrasePolisher
-- CoachSpeaker (TTS)
+### AI Layer
+- MediaPipe Pose
+- LLM Coach (Gemma)
+- TTS
 
 ---
 
-## Design Principles
+## Principles
 
-### Deterministic Core + LLM Enhancement
-
-```text
-Pose → State Machine → Flow → LLM phrasing
-```
-
-### On-Device First
-- No cloud
-- Full local inference
-
-### Flow-Driven System
-- `.flow.txt` = behavior definition
-
-### High-End Only
-- Optimized for flagship devices
+- Deterministic core, LLM for language only
+- On-device first
+- Flow-driven design
 
 ---
 
-## Future Extensions
+## Status
 
-- Flow Playlist (multi-flow class)
-- Multi-course system
+All core architecture implemented.
+
+---
+
+## Future
+
 - Personalized coaching
 - AI-generated flows
+- Biomechanics (Python)
