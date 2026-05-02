@@ -6,7 +6,8 @@ import org.json.JSONObject
 object FlowParser {
 
     fun parse(text: String): YogaFlow {
-        val root = JSONObject(text)
+        val root = FlowJsonValidator.validate(JSONObject(text))
+
         val flow = root.getJSONObject("flow")
         val stepsArray = root.getJSONArray("steps")
         val steps = mutableListOf<YogaFlowStep>()
@@ -15,7 +16,7 @@ object FlowParser {
             steps.add(buildStep(stepsArray.getJSONObject(i)))
         }
 
-        return YogaFlow(
+        val yogaFlow = YogaFlow(
             id = flow.getString("id"),
             name = flow.getString("name"),
             pose = flow.getString("pose"),
@@ -24,6 +25,8 @@ object FlowParser {
             steps = steps,
             endCue = root.getJSONObject("end").getString("cue")
         )
+
+        return FlowValidator.validate(yogaFlow)
     }
 
     private fun buildStep(step: JSONObject): YogaFlowStep {
