@@ -13,4 +13,15 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
+    <TextView
+        android:id="@+id/coachText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:padding="16dp"
+        android:background="#99000000"
+        android:text="Coach ready"
+        android:textColor="#FFFFFFFF"
+        android:textSize="18sp" />
+
 </FrameLayout>
