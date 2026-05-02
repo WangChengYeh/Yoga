@@ -20,9 +20,41 @@
         android:layout_gravity="top"
         android:padding="12dp"
         android:background="#99000000"
-        android:text="YogaFlow 3D Demo Mode"
+        android:text="YogaFlow 3D Demo Class"
         android:textColor="#FFFFFFFF"
         android:textSize="16sp" />
+
+    <TextView
+        android:id="@+id/flowName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|center_horizontal"
+        android:layout_marginTop="36dp"
+        android:text="Flow"
+        android:textColor="#FFFFFF"
+        android:textSize="14sp"
+        android:background="#66000000"
+        android:padding="6dp" />
+
+    <TextView
+        android:id="@+id/progressText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|center_horizontal"
+        android:layout_marginTop="64dp"
+        android:text="Step 1/4"
+        android:textColor="#FFFFFF"
+        android:textSize="12sp" />
+
+    <TextView
+        android:id="@+id/countdownText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|center_horizontal"
+        android:layout_marginTop="84dp"
+        android:text="3"
+        android:textColor="#FFFFFF"
+        android:textSize="20sp" />
 
     <TextView
         android:id="@+id/llmStatus"
@@ -35,14 +67,6 @@
         android:text="LLM: OFF"
         android:textColor="#FFFFFFFF"
         android:textSize="12sp" />
-
-    <Spinner
-        android:id="@+id/poseSelector"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="top|center_horizontal"
-        android:layout_marginTop="48dp"
-        android:background="#CCFFFFFF" />
 
     <TextView
         android:id="@+id/coachText"
