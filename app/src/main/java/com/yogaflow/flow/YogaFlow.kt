@@ -18,5 +18,5 @@ data class YogaFlowStep(
     val cue: String,
     val detect: String,
     val correction: String,
-    val angleParams: Map<String, Double> = emptyMap()
+    val params: Map<String, Double> = emptyMap()
 )
