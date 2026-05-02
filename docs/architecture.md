@@ -11,11 +11,11 @@ Home (Multi-course)
         ↓
 Course Selection
         ↓
-Session Controller
+MainActivity (Orchestration Layer)
         ↓
-CameraX
+CameraPosePipeline
         ↓
-MediaPipe Pose
+PoseHelper (Inference Layer)
         ↓
 PoseStateMachine
         ↓
@@ -38,8 +38,21 @@ TTS
 - Progress + countdown + animation
 - Session controls
 
-### Session Layer
-- IDLE / RUNNING / PAUSED / COMPLETED
+### Orchestration Layer
+- MainActivity (single source of truth)
+- Session state management
+- Playlist control
+- Flow transition handling
+
+### Camera Layer
+- CameraPosePipeline
+- RGBA_8888 deterministic pipeline
+- Backpressure control
+
+### Inference Layer
+- PoseHelper
+- Bitmap rotation + MPImage conversion
+- MediaPipe Pose
 
 ### Flow Layer
 - Flow DSL
@@ -59,12 +72,13 @@ TTS
 - Deterministic core, LLM for language only
 - On-device first
 - Flow-driven design
+- Pipeline modularization (Camera / Inference / Orchestration)
 
 ---
 
 ## Status
 
-All core architecture implemented.
+All core architecture implemented (production-ready MVP).
 
 ---
 
