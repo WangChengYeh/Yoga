@@ -4,67 +4,85 @@ import com.yogaflow.coach.CoachState
 
 object FlowParser {
 
-    fun parse(text: String): YogaFlow {
+    private enum class Section {
+        NONE,
+        FLOW,
+        STEP,
+        END
+    }
 
+    fun parse(text: String): YogaFlow {
         val lines = text.lines().map { it.trim() }
 
-        var id = ""
-        var name = ""
-        var pose = ""
-        var language = ""
-        var level = ""
-
+        val metadata = mutableMapOf<String, String>()
         val steps = mutableListOf<YogaFlowStep>()
-        var currentStep: MutableMap<String, String> = mutableMapOf()
+        var currentStep = mutableMapOf<String, String>()
+        var section = Section.NONE
         var endCue = ""
 
-        for (line in lines) {
-
-            if (line.startsWith("id =")) id = value(line)
-            if (line.startsWith("name =")) name = value(line)
-            if (line.startsWith("pose =")) pose = value(line)
-            if (line.startsWith("language =")) language = value(line)
-            if (line.startsWith("level =")) level = value(line)
-
-            if (line.startsWith("[STEP")) {
-                if (currentStep.isNotEmpty()) {
-                    steps.add(buildStep(currentStep))
-                    currentStep = mutableMapOf()
-                }
-            }
-
-            if (line.contains("=")) {
-                val (k, v) = line.split("=", limit = 2)
-                currentStep[k.trim()] = v.trim()
-            }
-
-            if (line.startsWith("[END]")) {
+        fun flushStep() {
+            if (currentStep.isNotEmpty()) {
+                steps.add(buildStep(currentStep))
                 currentStep = mutableMapOf()
             }
+        }
 
-            if (line.startsWith("cue =") && lines.contains("[END]")) {
-                endCue = value(line)
+        for (line in lines) {
+            if (line.isBlank() || line.startsWith("#")) continue
+
+            when {
+                line == "[FLOW]" -> {
+                    flushStep()
+                    section = Section.FLOW
+                }
+
+                line.startsWith("[STEP") -> {
+                    flushStep()
+                    section = Section.STEP
+                }
+
+                line == "[END]" -> {
+                    flushStep()
+                    section = Section.END
+                }
+
+                line.contains("=") -> {
+                    val (key, parsedValue) = parseKeyValue(line)
+                    when (section) {
+                        Section.FLOW -> metadata[key] = parsedValue
+                        Section.STEP -> currentStep[key] = parsedValue
+                        Section.END -> if (key == "cue") endCue = parsedValue
+                        Section.NONE -> Unit
+                    }
+                }
             }
         }
 
-        if (currentStep.isNotEmpty()) {
-            steps.add(buildStep(currentStep))
-        }
+        flushStep()
 
-        return YogaFlow(id, name, pose, language, level, steps, endCue)
+        return YogaFlow(
+            id = metadata["id"].orEmpty(),
+            name = metadata["name"].orEmpty(),
+            pose = metadata["pose"].orEmpty(),
+            language = metadata["language"].orEmpty(),
+            level = metadata["level"].orEmpty(),
+            steps = steps,
+            endCue = endCue
+        )
     }
 
     private fun buildStep(map: Map<String, String>): YogaFlowStep {
         return YogaFlowStep(
             state = CoachState.valueOf(map["state"] ?: "HOLD"),
             durationMs = map["duration_ms"]?.toLongOrNull() ?: 2000,
-            cue = map["cue"] ?: "",
-            detect = map["detect"] ?: "",
-            correction = map["correction"] ?: ""
+            cue = map["cue"].orEmpty(),
+            detect = map["detect"].orEmpty(),
+            correction = map["correction"].orEmpty()
         )
     }
 
-    private fun value(line: String): String {
-        return line.substringAfter("=").trim()
+    private fun parseKeyValue(line: String): Pair<String, String> {
+        val parts = line.split("=", limit = 2)
+        return parts[0].trim() to parts.getOrElse(1) { "" }.trim()
     }
 }
