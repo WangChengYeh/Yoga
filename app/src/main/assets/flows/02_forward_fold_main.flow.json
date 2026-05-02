@@ -1,0 +1,143 @@
+{
+  "version": "dsl-v2",
+  "flow": {
+    "id": "02_forward_fold_main",
+    "name": "兩腿水平拉筋 · Forward Fold",
+    "pose": "forward_fold",
+    "language": "zh-TW",
+    "level": "beginner"
+  },
+  "steps": [
+    {
+      "state": "SETUP",
+      "durationMs": 4000,
+      "cue": "先坐穩或站穩，雙腿打開，膝蓋伸直但不要鎖死，腳尖自然朝上。",
+      "detect": "ready_forward_fold",
+      "correction": "先把雙腿打開，膝蓋伸長。如果膝蓋彎曲，先不要急著前彎。",
+      "runtime": {
+        "angles": {
+          "knee": { "ready": { "min": 155 } },
+          "hip": { "ready": { "min": 120 } }
+        },
+        "stabilityMs": 300,
+        "emaAlpha": 0.35,
+        "deadbandDegrees": 3
+      }
+    },
+    {
+      "state": "SETUP",
+      "durationMs": 3000,
+      "cue": "吸氣，把背拉長，胸口打開，雙手可以放在地板或腿上支撐。",
+      "detect": "tall_spine_setup",
+      "correction": "先不要低頭壓下去，胸口打開，讓背變長。",
+      "runtime": {
+        "angles": {
+          "knee": { "setup": { "min": 155 } },
+          "hip": { "setup": { "min": 115 } }
+        },
+        "stabilityMs": 300,
+        "emaAlpha": 0.35,
+        "deadbandDegrees": 3
+      }
+    },
+    {
+      "state": "MOVEMENT",
+      "durationMs": 5000,
+      "cue": "吐氣，從髖部慢慢往前傾，不是用脖子或上背硬壓。",
+      "detect": "hip_hinge",
+      "correction": "你現在有點用背彎，先停一下，背打直，再從髖部往前。",
+      "runtime": {
+        "angles": {
+          "knee": { "hinge": { "min": 150 } },
+          "hip": { "hinge": { "max": 140 } }
+        },
+        "stabilityMs": 250,
+        "emaAlpha": 0.4,
+        "deadbandDegrees": 3
+      }
+    },
+    {
+      "state": "MOVEMENT",
+      "durationMs": 5000,
+      "cue": "維持膝蓋伸長，身體只到舒服的位置，雙手往前或扶住腿都可以。",
+      "detect": "controlled_forward_fold",
+      "correction": "如果膝蓋彎了，先減少前傾深度，把腿重新伸長。",
+      "runtime": {
+        "angles": {
+          "knee": { "fold": { "min": 150 } },
+          "hip": { "fold": { "min": 55, "max": 135 } }
+        },
+        "stabilityMs": 300,
+        "emaAlpha": 0.4,
+        "deadbandDegrees": 3
+      }
+    },
+    {
+      "state": "HOLD",
+      "durationMs": 8000,
+      "cue": "停在這裡，肩膀放鬆，呼吸保持穩定，不要憋氣。",
+      "detect": "forward_hold",
+      "correction": "不需要再壓更深，先穩住呼吸，讓背和大腿慢慢放鬆。",
+      "runtime": {
+        "angles": {
+          "knee": { "hold": { "min": 145 } },
+          "hip": { "hold": { "min": 50, "max": 130 } }
+        },
+        "stabilityMs": 650,
+        "emaAlpha": 0.25,
+        "deadbandDegrees": 3
+      }
+    },
+    {
+      "state": "HOLD",
+      "durationMs": 8000,
+      "cue": "再維持一下。吸氣感覺背拉長，吐氣讓身體自然沉一點點。",
+      "detect": "forward_hold",
+      "correction": "如果感覺拉扯太強，身體退回一點，保持安全伸展。",
+      "runtime": {
+        "angles": {
+          "knee": { "hold": { "min": 145 } },
+          "hip": { "hold": { "min": 50, "max": 130 } }
+        },
+        "stabilityMs": 650,
+        "emaAlpha": 0.25,
+        "deadbandDegrees": 3
+      }
+    },
+    {
+      "state": "TRANSITION",
+      "durationMs": 5000,
+      "cue": "準備回來。吸氣，雙手支撐，從髖部帶動身體慢慢起來。",
+      "detect": "return_standing",
+      "correction": "不要突然抬頭或快速起身，慢慢回到中間。",
+      "runtime": {
+        "angles": {
+          "knee": { "return": { "min": 145 } },
+          "hip": { "return": { "min": 120 } }
+        },
+        "stabilityMs": 300,
+        "emaAlpha": 0.35,
+        "deadbandDegrees": 3
+      }
+    },
+    {
+      "state": "HOLD",
+      "durationMs": 3000,
+      "cue": "回到中間，肩膀放鬆，感覺大腿後側和背部的伸展。",
+      "detect": "neutral_finish",
+      "correction": "如果還覺得緊，保持腿伸長，先穩定呼吸。",
+      "runtime": {
+        "angles": {
+          "knee": { "neutral": { "min": 150 } },
+          "hip": { "neutral": { "min": 120 } }
+        },
+        "stabilityMs": 300,
+        "emaAlpha": 0.35,
+        "deadbandDegrees": 3
+      }
+    }
+  ],
+  "end": {
+    "cue": "前彎完成，很好。這一段重點是腿伸長、背拉長、從髖部前傾。"
+  }
+}
