@@ -1,38 +1,38 @@
 # Roadmap (Updated)
 
-## Phase 1 - MVP (Completed)
-- CameraX pipeline
-- MediaPipe Pose
-- Skeleton overlay
+## Completed
 
-## Phase 2 - Core Logic (Completed)
+### Core System
+- CameraX + MediaPipe Pose
 - Pose state machine
-- Rule-based posture analysis
+- Flow DSL + parser
+- Flow runtime engine
+- Flow playlist (multi-flow class)
+- Auto flow discovery
 
-## Phase 3 - Flow System (Completed)
-- Flow parser
-- PoseFlowEngine
-- Multi-step yoga flows
-
-## Phase 4 - LLM Coach (Completed)
-- Gemma LLM integration
-- Fallback coach
-- TTS voice output
-
-## Phase 5 - App Prototype (Completed)
-- Home course page
-- Course cover UI
-- Start / Pause / Restart
+### App
+- Multi-course home UI
+- Course selection
+- Session control (Start / Pause / Restart)
 - Progress bar + countdown
-- Demo multi-step class
+- UI animations (progress / countdown / transition)
 
-## Phase 6 - Productization (Next)
-- Multi-course system
-- Flow auto discovery
-- Real cover images
-- UI animation polish
+### AI
+- LLM Coach (Gemma)
+- Fallback coach
+- TTS
 
-## Phase 7 - Scale
-- 100+ flows
-- YouTube-aligned training
+---
+
+## Remaining
+
+- Replace cover drawable with real images (#13)
+
+---
+
+## Future
+
 - Personalized coaching
+- AI-generated flows
+- YouTube alignment
+- 100+ flows library
