@@ -20,11 +20,15 @@ object ForwardFoldDetectionMapper {
     private var smoothedKnee: Double? = null
     private var smoothedHip: Double? = null
     private var lastFrameAt = 0L
+    private var stableDetect: String? = null
+    private var stableSince = 0L
 
     fun reset() {
         smoothedKnee = null
         smoothedHip = null
         lastFrameAt = 0L
+        stableDetect = null
+        stableSince = 0L
     }
 
     fun evaluate(detect: String, frame: PoseDetectionResult): Result {
@@ -55,7 +59,7 @@ object ForwardFoldDetectionMapper {
         }
         val prefix = confidencePrefix(confidence)
 
-        return when (detect) {
+        val rawResult = when (detect) {
             "ready_forward_fold" -> readyForwardFold(smoothed.knee, smoothed.hip, prefix)
             "tall_spine_setup" -> tallSpineSetup(smoothed.knee, smoothed.hip, prefix)
             "hip_hinge" -> hipHinge(smoothed.knee, smoothed.hip, prefix)
@@ -64,6 +68,32 @@ object ForwardFoldDetectionMapper {
             "return_standing" -> returnStanding(smoothed.knee, smoothed.hip, prefix)
             "neutral_finish" -> neutralFinish(smoothed.knee, smoothed.hip, prefix)
             else -> Result(true, CoachState.HOLD, "維持姿勢")
+        }
+
+        return applyStabilityWindow(detect, rawResult)
+    }
+
+    private fun applyStabilityWindow(detect: String, result: Result): Result {
+        if (!result.matched) {
+            stableDetect = null
+            stableSince = 0L
+            return result
+        }
+
+        val now = System.currentTimeMillis()
+        if (stableDetect != detect) {
+            stableDetect = detect
+            stableSince = now
+        }
+
+        val stableFor = now - stableSince
+        return if (stableFor >= STABILITY_WINDOW_MS) {
+            result
+        } else {
+            result.copy(
+                matched = false,
+                cue = "穩住這個位置，再保持一下。"
+            )
         }
     }
 
@@ -159,4 +189,5 @@ object ForwardFoldDetectionMapper {
     private const val ANGLE_EMA_ALPHA = 0.35
     private const val ANGLE_DEADBAND_DEGREES = 2.0
     private const val SMOOTHING_RESET_GAP_MS = 750L
+    private const val STABILITY_WINDOW_MS = 300L
 }
