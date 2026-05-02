@@ -12,6 +12,9 @@ import com.google.mediapipe.framework.image.MediaImageBuilder
 class PoseHelper(context: Context) {
 
     private var detector: PoseLandmarker? = null
+    var isReady: Boolean = false
+        private set
+
     var onResult: ((List<com.google.mediapipe.tasks.components.containers.NormalizedLandmark>) -> Unit)? = null
 
     init {
@@ -31,13 +34,16 @@ class PoseHelper(context: Context) {
                 .build()
 
             detector = PoseLandmarker.createFromOptions(context, options)
+            isReady = true
 
         } catch (e: Exception) {
             Log.e("Pose", "init error", e)
+            isReady = false
         }
     }
 
     fun detect(imageProxy: ImageProxy) {
+        if (!isReady) return
         val image = imageProxy.image ?: return
         val mp = MediaImageBuilder(image).build()
         detector?.detectAsync(mp, System.currentTimeMillis())
