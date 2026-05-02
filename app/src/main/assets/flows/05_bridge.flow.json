@@ -1,0 +1,51 @@
+{
+  "version": "dsl-v2",
+  "flow": {
+    "id": "05_bridge",
+    "name": "橋式 · Bridge",
+    "pose": "bridge",
+    "language": "zh-TW",
+    "level": "beginner"
+  },
+  "steps": [
+    {
+      "state": "SETUP",
+      "durationMs": 4000,
+      "cue": "躺下，雙腳踩地。",
+      "detect": "bridge_setup",
+      "runtime": {}
+    },
+    {
+      "state": "MOVEMENT",
+      "durationMs": 5000,
+      "cue": "慢慢抬起臀部。",
+      "detect": "bridge_lift",
+      "runtime": {
+        "angles": {
+          "hip": { "lift": { "min": 75, "max": 180 } }
+        }
+      }
+    },
+    {
+      "state": "HOLD",
+      "durationMs": 8000,
+      "cue": "維持橋式。",
+      "detect": "bridge_hold",
+      "runtime": {
+        "angles": {
+          "hip": { "hold": { "min": 75, "max": 180 } }
+        }
+      }
+    },
+    {
+      "state": "TRANSITION",
+      "durationMs": 4000,
+      "cue": "慢慢放下。",
+      "detect": "bridge_return",
+      "runtime": {}
+    }
+  ],
+  "end": {
+    "cue": "橋式完成。"
+  }
+}
