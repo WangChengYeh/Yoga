@@ -1,0 +1,382 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/WangChengYeh/Yoga/schemas/flow-editor.schema.json",
+  "title": "YogaFlow Flow Editor Schema",
+  "description": "Strongly typed schema for editing YogaFlow DSL v2 flows in a visual editor.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "flow", "steps", "end"],
+  "properties": {
+    "version": {
+      "const": "dsl-v2"
+    },
+    "flow": {
+      "$ref": "#/$defs/flowMetadata"
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/step"
+      }
+    },
+    "end": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cue"],
+      "properties": {
+        "cue": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  },
+  "$defs": {
+    "flowMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "pose", "language", "level"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pose": {
+          "type": "string",
+          "enum": ["mountain", "forward_fold", "twist", "squat", "bridge"]
+        },
+        "language": {
+          "type": "string",
+          "enum": ["zh-TW", "en-US"]
+        },
+        "level": {
+          "type": "string",
+          "enum": ["beginner", "intermediate", "advanced"]
+        }
+      }
+    },
+    "step": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "durationMs", "cue", "detect", "correction", "runtime"],
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": ["SETUP", "MOVEMENT", "HOLD", "TRANSITION", "CORRECTION"]
+        },
+        "durationMs": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 60000
+        },
+        "cue": {
+          "type": "string",
+          "minLength": 1
+        },
+        "detect": {
+          "$ref": "#/$defs/detectKey"
+        },
+        "correction": {
+          "type": "string"
+        },
+        "runtime": {
+          "$ref": "#/$defs/runtimeConfig"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "detect": { "const": "ready_forward_fold" } },
+            "required": ["detect"]
+          },
+          "then": {
+            "properties": {
+              "runtime": { "$ref": "#/$defs/forwardFoldReadyRuntime" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "detect": { "const": "tall_spine_setup" } },
+            "required": ["detect"]
+          },
+          "then": {
+            "properties": {
+              "runtime": { "$ref": "#/$defs/forwardFoldSetupRuntime" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "detect": { "const": "hip_hinge" } },
+            "required": ["detect"]
+          },
+          "then": {
+            "properties": {
+              "runtime": { "$ref": "#/$defs/forwardFoldHingeRuntime" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "detect": { "const": "controlled_forward_fold" } },
+            "required": ["detect"]
+          },
+          "then": {
+            "properties": {
+              "runtime": { "$ref": "#/$defs/forwardFoldFoldRuntime" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "detect": { "const": "forward_hold" } },
+            "required": ["detect"]
+          },
+          "then": {
+            "properties": {
+              "runtime": { "$ref": "#/$defs/forwardFoldHoldRuntime" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "detect": { "const": "return_standing" } },
+            "required": ["detect"]
+          },
+          "then": {
+            "properties": {
+              "runtime": { "$ref": "#/$defs/forwardFoldReturnRuntime" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "detect": { "const": "neutral_finish" } },
+            "required": ["detect"]
+          },
+          "then": {
+            "properties": {
+              "runtime": { "$ref": "#/$defs/forwardFoldNeutralRuntime" }
+            }
+          }
+        }
+      ]
+    },
+    "detectKey": {
+      "type": "string",
+      "enum": [
+        "standing_centered",
+        "spine_lengthened",
+        "mountain_hold",
+        "ready_for_next_pose",
+        "ready_forward_fold",
+        "tall_spine_setup",
+        "hip_hinge",
+        "controlled_forward_fold",
+        "forward_hold",
+        "return_standing",
+        "neutral_finish",
+        "stable_base",
+        "twist_start",
+        "twist_hold",
+        "return_center",
+        "squat_setup",
+        "squat_descent",
+        "squat_hold",
+        "squat_return",
+        "bridge_setup",
+        "bridge_lift",
+        "bridge_hold",
+        "bridge_return"
+      ]
+    },
+    "runtimeConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "stabilityMs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5000
+        },
+        "emaAlpha": {
+          "type": "number",
+          "minimum": 0.01,
+          "maximum": 1
+        },
+        "deadbandDegrees": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 20
+        },
+        "angles": {
+          "$ref": "#/$defs/angleConfig"
+        }
+      }
+    },
+    "angleConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "knee": { "$ref": "#/$defs/phaseAngleConfig" },
+        "hip": { "$ref": "#/$defs/phaseAngleConfig" },
+        "twist": { "$ref": "#/$defs/phaseAngleConfig" }
+      }
+    },
+    "phaseAngleConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "ready": { "$ref": "#/$defs/range" },
+        "setup": { "$ref": "#/$defs/range" },
+        "hinge": { "$ref": "#/$defs/range" },
+        "fold": { "$ref": "#/$defs/range" },
+        "hold": { "$ref": "#/$defs/range" },
+        "return": { "$ref": "#/$defs/range" },
+        "neutral": { "$ref": "#/$defs/range" }
+      }
+    },
+    "range": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "min": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 180
+        },
+        "max": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 180
+        }
+      },
+      "minProperties": 1
+    },
+    "forwardFoldReadyRuntime": {
+      "allOf": [
+        { "$ref": "#/$defs/runtimeConfig" },
+        {
+          "required": ["angles"],
+          "properties": {
+            "angles": {
+              "required": ["knee", "hip"],
+              "properties": {
+                "knee": { "required": ["ready"] },
+                "hip": { "required": ["ready"] }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "forwardFoldSetupRuntime": {
+      "allOf": [
+        { "$ref": "#/$defs/runtimeConfig" },
+        {
+          "required": ["angles"],
+          "properties": {
+            "angles": {
+              "required": ["knee", "hip"],
+              "properties": {
+                "knee": { "required": ["setup"] },
+                "hip": { "required": ["setup"] }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "forwardFoldHingeRuntime": {
+      "allOf": [
+        { "$ref": "#/$defs/runtimeConfig" },
+        {
+          "required": ["angles"],
+          "properties": {
+            "angles": {
+              "required": ["knee", "hip"],
+              "properties": {
+                "knee": { "required": ["hinge"] },
+                "hip": { "required": ["hinge"] }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "forwardFoldFoldRuntime": {
+      "allOf": [
+        { "$ref": "#/$defs/runtimeConfig" },
+        {
+          "required": ["angles"],
+          "properties": {
+            "angles": {
+              "required": ["knee", "hip"],
+              "properties": {
+                "knee": { "required": ["fold"] },
+                "hip": { "required": ["fold"] }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "forwardFoldHoldRuntime": {
+      "allOf": [
+        { "$ref": "#/$defs/runtimeConfig" },
+        {
+          "required": ["angles"],
+          "properties": {
+            "angles": {
+              "required": ["knee", "hip"],
+              "properties": {
+                "knee": { "required": ["hold"] },
+                "hip": { "required": ["hold"] }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "forwardFoldReturnRuntime": {
+      "allOf": [
+        { "$ref": "#/$defs/runtimeConfig" },
+        {
+          "required": ["angles"],
+          "properties": {
+            "angles": {
+              "required": ["knee", "hip"],
+              "properties": {
+                "knee": { "required": ["return"] },
+                "hip": { "required": ["return"] }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "forwardFoldNeutralRuntime": {
+      "allOf": [
+        { "$ref": "#/$defs/runtimeConfig" },
+        {
+          "required": ["angles"],
+          "properties": {
+            "angles": {
+              "required": ["knee", "hip"],
+              "properties": {
+                "knee": { "required": ["neutral"] },
+                "hip": { "required": ["neutral"] }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
