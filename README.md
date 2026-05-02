@@ -4,21 +4,28 @@
 
 YogaFlow 3D is a production-oriented on-device AI yoga coach for Android. It turns live camera frames into 3D pose geometry, maps the user’s body state to structured yoga flow steps, and gives real-time voice coaching through local LLM + TTS.
 
-This is not a prototype. It is a real product foundation: an on-device perception, coaching, tuning, and calibration system built for live user interaction.
+This is not a prototype. It is a real product foundation: an on-device perception, coaching, tuning, calibration, and onboarding system built for live user interaction.
 
 ---
 
 ## Product Milestone
 
 ```text
-v0.2-threshold-ui
-Runtime threshold tuning + persistent user calibration
+v0.3-camera-onboarding
+Camera setup screen + ready gating + stable auto-start + visual framing box
 ```
 
-This milestone adds a complete tuning loop:
+This milestone adds a complete onboarding loop:
 
 ```text
-Debug Overlay → Threshold UI → ThresholdConfig → Pose Mapper → FlowEngine
+Camera → Framing + Orientation → Setup Panel → Visual Framing Box → Ready Gate → Auto-start → FlowEngine
+```
+
+Previous milestone:
+
+```text
+v0.2-threshold-ui
+Runtime threshold tuning + persistent user calibration
 ```
 
 ---
@@ -33,6 +40,8 @@ Mountain → Forward Fold → Twist → Squat → Bridge
 - Platform: Android
 - Runtime: On-device camera + pose + coach loop
 - Coaching mode: live correction + flow progression
+- Camera onboarding: setup panel, ready gating, stable auto-start
+- Visual feedback: body framing box + fixed guide frame
 - Debug mode: live pose angle / state / matched overlay
 - Tuning mode: runtime Squat / Bridge threshold sliders
 - Calibration: persisted user thresholds via SharedPreferences
@@ -52,14 +61,18 @@ flowchart TD
     Landmarks --> Framing[Framing Check]
     Landmarks --> Orientation[Orientation Check]
     Landmarks --> Geometry[Pose Geometry]
+    Landmarks --> VisualBox[Visual Framing Box]
 
     Framing --> Gate{Ready?}
     Orientation --> Gate
+    VisualBox --> SetupPanel[Camera Setup Panel]
+    Gate --> SetupPanel
 
-    Gate -- No --> Setup[Camera Coaching]
-    Setup --> Voice1[TTS]
+    Gate -- Not Ready --> Setup[Camera Coaching]
+    Setup --> UISetup[Setup UI]
 
-    Gate -- Yes --> Flow[Flow Step]
+    Gate -- Ready Stable --> AutoStart[Auto-start Gate]
+    AutoStart --> Flow[Flow Step]
 
     Flow --> Mapper[Detection Mapper]
     Geometry --> Mapper
@@ -88,6 +101,7 @@ Full system architecture: [`docs/architecture.md`](docs/architecture.md)
 Real-time AI coaching is harder than pose detection alone.
 
 - Live pose landmarks are noisy and jitter frame by frame.
+- Users need clear onboarding before coaching starts.
 - Yoga coaching needs step-level context, not only a final pose label.
 - Flow transitions must avoid skipped steps, repeated triggers, and timer bugs.
 - Coaching must prioritize camera setup before body correction.
@@ -97,7 +111,8 @@ Real-time AI coaching is harder than pose detection alone.
 YogaFlow solves this with a deterministic runtime core:
 
 ```text
-Flow step.detect
+Camera setup gate
+→ Flow step.detect
 → Detection Mapper
 → Smoothing + Stability Window
 → FlowEvent
@@ -118,7 +133,10 @@ Mountain → Forward Fold → Twist → Squat → Bridge
 
 The runtime supports:
 
-- camera setup coaching before pose correction
+- camera setup screen before pose correction
+- ready gating based on body framing + camera orientation
+- stable auto-start after sustained ready state
+- visual body framing box and fixed guide frame
 - flow-driven class progression
 - step-level pose detection mapping
 - event-driven flow runtime
@@ -143,6 +161,16 @@ The runtime supports:
 - Auto flow discovery from `assets/flows`
 - Flow step-level `detect` mapping
 - `PoseDetectionRouter` for mapper dispatch
+
+### Camera Onboarding
+
+- Camera setup panel before class start
+- Full-body framing guidance
+- Face-camera orientation guidance
+- Start button ready gating
+- Stable auto-start after sustained ready state
+- Visual body framing box
+- Fixed framing guide rectangle
 
 ### Camera + Pose Pipeline
 
@@ -169,6 +197,7 @@ The runtime supports:
 - EMA angle smoothing
 - angle deadband
 - stability window before accepting matched state
+- camera ready stability window before auto-start
 - mapper reset on playlist restart / flow transition
 - coach cue throttle
 - LLM generation off UI thread
@@ -185,6 +214,7 @@ The runtime supports:
 - left/right knee angle
 - left/right hip angle
 - torso twist estimate
+- visual body framing feedback
 
 ### Runtime Tuning + Calibration
 
@@ -228,6 +258,21 @@ correction = 如果太低，往上回一點；如果太高，再慢慢下去一�
 ```
 
 A flow file defines the class content. A detection mapper decides whether the user actually satisfies the current step.
+
+---
+
+## Camera Setup Experience
+
+```text
+Not Ready
+→ adjust body position / orientation
+→ visual body framing box updates
+→ Ready ✔
+→ hold stable for 1.5s
+→ class auto-starts
+```
+
+The camera setup panel prevents users from entering a class before the system has reliable body framing and orientation.
 
 ---
 
@@ -286,7 +331,8 @@ No camera frames or pose landmarks are required to leave the device for the core
 ## Roadmap
 
 - Extract mapper interface (`PoseDetectionMapper`)
-- Add visual body framing box overlay
+- Add color-coded ready / not-ready visual states
+- Add direction-aware framing hints
 - Add variance-based stability scoring
 - Add threshold reset button
 - Add auto calibration
