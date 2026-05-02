@@ -14,28 +14,17 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.app.ActivityCompat
-import com.yogaflow.coach.CoachPhrasePolisher
-import com.yogaflow.coach.CoachSpeaker
-import com.yogaflow.coach.PoseFlowEngine
-import com.yogaflow.coach.PoseStateMachine
-import com.yogaflow.flow.FlowLoader
-import com.yogaflow.flow.YogaFlow
+import com.yogaflow.coach.*
+import com.yogaflow.flow.*
 import com.yogaflow.llm.LlmCoach
-import com.yogaflow.pose.PoseHelper
-import com.yogaflow.pose.PoseOverlayView
-import com.yogaflow.yoga.YogaPose
-import com.yogaflow.yoga.YogaPoseCatalog
+import com.yogaflow.pose.*
+import com.yogaflow.yoga.*
 import java.util.Locale
 import java.util.concurrent.Executors
 
 class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
-    private enum class SessionState {
-        IDLE,
-        RUNNING,
-        PAUSED,
-        COMPLETED
-    }
+    private enum class SessionState { IDLE, RUNNING, PAUSED, COMPLETED }
 
     private lateinit var homeView: View
     private lateinit var classView: View
@@ -62,11 +51,11 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     private val stateMachine = PoseStateMachine()
     private val flowEngine = PoseFlowEngine()
+    private val playlist = FlowPlaylistEngine()
 
     private lateinit var currentFlow: YogaFlow
     private lateinit var currentPose: YogaPose
     private var sessionState = SessionState.IDLE
-    private var lastCountdownSpoken: Long = -1L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -80,7 +69,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         if (checkSelfPermission(android.Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
             startCamera()
         } else {
-            ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.CAMERA), CAMERA_PERMISSION_REQUEST)
+            ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.CAMERA), 100)
         }
     }
 
@@ -102,67 +91,81 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun initRuntime() {
-        currentFlow = FlowLoader.loadFromAssets(this, BEGINNER_FLOW_ASSET)
-        currentPose = YogaPoseCatalog.poses.firstOrNull { it.id == currentFlow.pose }
-            ?: YogaPoseCatalog.poses.first()
+        val flows = listOf(
+            FlowLoader.loadFromAssets(this, "flows/01_mountain_warmup.flow.txt"),
+            FlowLoader.loadFromAssets(this, "flows/02_forward_fold_main.flow.txt"),
+            FlowLoader.loadFromAssets(this, "flows/03_twist_cooldown.flow.txt")
+        )
+
+        playlist.setPlaylist(flows)
+        currentFlow = playlist.current()!!
+        currentPose = YogaPoseCatalog.poses.first { it.id == currentFlow.pose }
 
         poseHelper = PoseHelper(this)
         tts = TextToSpeech(this, this)
         speaker = CoachSpeaker(tts)
         llmCoach = LlmCoach(this)
 
-        updateCourseUi()
-
-        if (!poseHelper.isReady) {
-            coachText.text = "Pose model not found. Please add pose_landmarker_lite.task to assets."
-        }
-
         poseHelper.onResult = { landmarks ->
             runOnUiThread {
                 overlayView.setLandmarks(landmarks)
 
-                if (sessionState != SessionState.RUNNING) {
-                    updateCourseUi()
-                    return@runOnUiThread
-                }
+                if (sessionState != SessionState.RUNNING) return@runOnUiThread
 
                 val (detectedState, _) = stateMachine.update(currentPose, landmarks)
                 val (flowState, flowCue) = flowEngine.update(currentFlow, detectedState)
-                val generated = llmCoach.generate(currentPose, flowState, flowCue)
-                val isFallback = generated == flowCue
-                val displayText = if (isFallback) "(fallback) $generated" else generated
-                val polished = CoachPhrasePolisher.polish(displayText)
 
-                llmStatus.text = if (isFallback) "LLM: OFF" else "LLM: ON"
+                if (flowEngine.isLastStep(currentFlow) && flowEngine.remainingSeconds(currentFlow) == 0L) {
+                    val next = playlist.moveNext()
+                    if (next != null) {
+                        currentFlow = next
+                        flowEngine.reset()
+                        currentPose = YogaPoseCatalog.poses.first { it.id == currentFlow.pose }
+                        speaker.speakIfNeeded("下一個動作")
+                    } else {
+                        sessionState = SessionState.COMPLETED
+                        speaker.speakIfNeeded("課程完成")
+                    }
+                }
+
+                val generated = llmCoach.generate(currentPose, flowState, flowCue)
+                val polished = CoachPhrasePolisher.polish(generated)
+
                 coachText.text = polished
                 speaker.speakIfNeeded(polished)
 
-                updateCourseUi()
-                speakCountdownIfNeeded()
+                updateUi()
             }
         }
+    }
+
+    private fun updateUi() {
+        flowName.text = currentFlow.name
+        val step = flowEngine.currentStepNumber()
+        val total = flowEngine.totalSteps(currentFlow)
+        progressText.text = "Step $step/$total"
+        progressBar.progress = ((step.toFloat() / total) * 100).toInt()
     }
 
     private fun setupButtons() {
         startClassButton.setOnClickListener {
             showClass()
-            resetClass()
+            sessionState = SessionState.IDLE
         }
 
         startButton.setOnClickListener {
             sessionState = SessionState.RUNNING
-            coachText.text = "開始練習，跟著我的節奏。"
-            speaker.speakIfNeeded("開始練習，跟著我的節奏。")
         }
 
         pauseButton.setOnClickListener {
             sessionState = SessionState.PAUSED
-            coachText.text = "已暫停。準備好後按 Start 繼續。"
         }
 
         restartButton.setOnClickListener {
-            resetClass()
-            coachText.text = "已重新開始，按 Start 開始課程。"
+            playlist.reset()
+            flowEngine.reset()
+            currentFlow = playlist.current()!!
+            sessionState = SessionState.IDLE
         }
     }
 
@@ -176,35 +179,6 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         classView.visibility = View.VISIBLE
     }
 
-    private fun resetClass() {
-        sessionState = SessionState.IDLE
-        flowEngine.reset()
-        lastCountdownSpoken = -1L
-        updateCourseUi()
-    }
-
-    private fun updateCourseUi() {
-        flowName.text = currentFlow.name
-        val step = flowEngine.currentStepNumber()
-        val total = flowEngine.totalSteps(currentFlow)
-        progressText.text = "Step $step / $total"
-        progressBar.progress = ((step.toFloat() / total.toFloat()) * 100).toInt().coerceIn(0, 100)
-        countdownText.text = when (sessionState) {
-            SessionState.IDLE -> "Ready"
-            SessionState.PAUSED -> "Paused"
-            SessionState.COMPLETED -> "Done"
-            SessionState.RUNNING -> flowEngine.remainingSeconds(currentFlow).toString()
-        }
-    }
-
-    private fun speakCountdownIfNeeded() {
-        val seconds = flowEngine.remainingSeconds(currentFlow)
-        if (seconds in 1..3 && seconds != lastCountdownSpoken) {
-            speaker.speakIfNeeded(seconds.toString())
-            lastCountdownSpoken = seconds
-        }
-    }
-
     override fun onInit(status: Int) {
         tts.language = Locale.TAIWAN
     }
@@ -216,34 +190,18 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun startCamera() {
-        val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
-
-        cameraProviderFuture.addListener({
-            val cameraProvider = cameraProviderFuture.get()
-
-            val preview = Preview.Builder().build().also {
-                it.setSurfaceProvider(previewView.surfaceProvider)
-            }
-
+        val providerFuture = ProcessCameraProvider.getInstance(this)
+        providerFuture.addListener({
+            val provider = providerFuture.get()
+            val preview = Preview.Builder().build().also { it.setSurfaceProvider(previewView.surfaceProvider) }
             val analyzer = ImageAnalysis.Builder().build().also {
-                it.setAnalyzer(cameraExecutor) { imageProxy ->
-                    poseHelper.detect(imageProxy)
-                    imageProxy.close()
+                it.setAnalyzer(cameraExecutor) { image ->
+                    poseHelper.detect(image)
+                    image.close()
                 }
             }
-
-            cameraProvider.unbindAll()
-            cameraProvider.bindToLifecycle(
-                this,
-                CameraSelector.DEFAULT_BACK_CAMERA,
-                preview,
-                analyzer
-            )
+            provider.unbindAll()
+            provider.bindToLifecycle(this, CameraSelector.DEFAULT_BACK_CAMERA, preview, analyzer)
         }, mainExecutor)
-    }
-
-    companion object {
-        private const val CAMERA_PERMISSION_REQUEST = 100
-        private const val BEGINNER_FLOW_ASSET = "flows/02_forward_fold_main.flow.txt"
     }
 }
