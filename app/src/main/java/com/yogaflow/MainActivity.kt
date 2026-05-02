@@ -15,8 +15,10 @@ import androidx.core.app.ActivityCompat
 import com.yogaflow.coach.CoachPhrasePolisher
 import com.yogaflow.coach.CoachSpeaker
 import com.yogaflow.coach.CoachState
+import com.yogaflow.coach.ForwardFoldDetectionMapper
 import com.yogaflow.coach.PoseFlowEngine
 import com.yogaflow.coach.PoseStateMachine
+import com.yogaflow.coach.TwistDetectionMapper
 import com.yogaflow.flow.FlowLoader
 import com.yogaflow.flow.FlowPlaylistEngine
 import com.yogaflow.flow.YogaFlow
@@ -24,6 +26,7 @@ import com.yogaflow.llm.LlmCoach
 import com.yogaflow.pose.CameraFramingCoach
 import com.yogaflow.pose.CameraFramingStatus
 import com.yogaflow.pose.CameraPosePipeline
+import com.yogaflow.pose.PoseDetectionResult
 import com.yogaflow.pose.PoseHelper
 import com.yogaflow.pose.PoseOverlayView
 import com.yogaflow.pose.ViewOrientation
@@ -56,6 +59,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private lateinit var restartButton: Button
 
     private val cameraExecutor = Executors.newSingleThreadExecutor()
+    private val coachExecutor = Executors.newSingleThreadExecutor()
 
     private lateinit var poseHelper: PoseHelper
     private lateinit var cameraPipeline: CameraPosePipeline
@@ -71,6 +75,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private lateinit var currentPose: YogaPose
     private var sessionState = SessionState.IDLE
     private var lastCountdownText = ""
+    private var lastCoachCue = ""
+    private var lastCoachAt = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -129,7 +135,12 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             lifecycleOwner = this,
             previewView = previewView,
             poseHelper = poseHelper,
-            cameraExecutor = cameraExecutor
+            cameraExecutor = cameraExecutor,
+            onError = {
+                runOnUiThread {
+                    coachText.text = "Camera 啟動失敗，請確認權限或重新開啟 App。"
+                }
+            }
         )
 
         tts = TextToSpeech(this, this)
@@ -142,46 +153,99 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
         poseHelper.onResult = { frame ->
             runOnUiThread {
-                overlayView.setLandmarks(frame.imageLandmarks)
-
-                val framing = CameraFramingCoach.analyze(frame)
-                val orientation = ViewOrientation.analyze(frame)
-
-                if (sessionState != SessionState.RUNNING) {
-                    val setupCue = cameraSetupCue(framing, orientation)
-                    if (setupCue.isNotBlank()) {
-                        coachText.text = setupCue
-                    }
-                    updateUi(animated = false)
-                    return@runOnUiThread
-                }
-
-                val allowPoseCoaching = framing.status == CameraFramingStatus.GOOD &&
-                    orientation.status == ViewOrientationStatus.GOOD
-
-                if (!allowPoseCoaching) {
-                    val setupCue = cameraSetupCue(framing, orientation)
-                    speakCoachCue(CoachState.CORRECTION, setupCue)
-                    updateUi(animated = false)
-                    return@runOnUiThread
-                }
-
-                val (detectedState, poseCue) = stateMachine.update(currentPose, frame)
-                val (flowState, flowCue) = flowEngine.update(currentFlow, detectedState)
-
-                if (flowEngine.isLastStep(currentFlow)
-                    && flowEngine.remainingSeconds(currentFlow) == 0L
-                    && flowEngine.isCurrentStepSatisfied(currentFlow, detectedState)
-                ) {
-                    advanceFlowOrComplete()
-                    updateUi(animated = true)
-                    return@runOnUiThread
-                }
-
-                val prioritizedCue = poseCue.ifBlank { flowCue }
-                speakCoachCue(flowState, prioritizedCue)
-                updateUi(animated = true)
+                handlePoseFrame(frame)
             }
+        }
+    }
+
+    private fun handlePoseFrame(frame: PoseDetectionResult) {
+        overlayView.setLandmarks(frame.imageLandmarks)
+
+        val framing = CameraFramingCoach.analyze(frame)
+        val orientation = ViewOrientation.analyze(frame)
+
+        if (sessionState != SessionState.RUNNING) {
+            val setupCue = cameraSetupCue(framing, orientation)
+            if (setupCue.isNotBlank()) {
+                coachText.text = setupCue
+            }
+            updateUi(animated = false)
+            return
+        }
+
+        val allowPoseCoaching = framing.status == CameraFramingStatus.GOOD &&
+            orientation.status == ViewOrientationStatus.GOOD
+
+        if (!allowPoseCoaching) {
+            val setupCue = cameraSetupCue(framing, orientation)
+            speakCoachCue(CoachState.CORRECTION, setupCue)
+            updateUi(animated = false)
+            return
+        }
+
+        val currentStep = currentFlow.steps.getOrNull(flowEngine.currentStepNumber() - 1)
+        if (currentStep == null) {
+            completeCurrentFlow(currentFlow.endCue.ifBlank { "課程完成，很好。" })
+            updateUi(animated = true)
+            return
+        }
+
+        val mapping = evaluateCurrentStep(currentStep.detect, frame)
+        val event = flowEngine.update(currentFlow, mapping.state)
+
+        when (event) {
+            is PoseFlowEngine.FlowEvent.Cue -> {
+                val cue = if (mapping.matched) event.text else mapping.cue
+                speakCoachCue(mapping.state, cue)
+            }
+
+            is PoseFlowEngine.FlowEvent.StepCompleted -> {
+                animateFlowTransition()
+                speakCoachCue(event.state, event.text)
+            }
+
+            is PoseFlowEngine.FlowEvent.FlowCompleted -> {
+                completeCurrentFlow(event.text)
+            }
+        }
+
+        updateUi(animated = true)
+    }
+
+    private fun evaluateCurrentStep(
+        detect: String,
+        frame: PoseDetectionResult
+    ): ForwardFoldDetectionMapper.Result {
+        return when (currentPose.id) {
+            "forward_fold" -> ForwardFoldDetectionMapper.evaluate(detect, frame)
+            "twist" -> {
+                val result = TwistDetectionMapper.evaluate(detect, frame)
+                ForwardFoldDetectionMapper.Result(result.matched, result.state, result.cue)
+            }
+            else -> {
+                val (state, cue) = stateMachine.update(currentPose, frame)
+                ForwardFoldDetectionMapper.Result(
+                    matched = state != CoachState.CORRECTION,
+                    state = state,
+                    cue = cue
+                )
+            }
+        }
+    }
+
+    private fun completeCurrentFlow(cue: String) {
+        val next = playlist.moveNext()
+        if (next != null) {
+            currentFlow = next
+            currentPose = resolvePose(currentFlow)
+            flowEngine.reset()
+            resetDetectionMappers()
+            animateFlowTransition()
+            speakRawCue("下一個動作")
+        } else {
+            sessionState = SessionState.COMPLETED
+            coachText.text = cue
+            speakRawCue(cue)
         }
     }
 
@@ -196,17 +260,38 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
     }
 
+    private fun shouldEmitCoach(cue: String): Boolean {
+        val now = System.currentTimeMillis()
+        if (cue == lastCoachCue && now - lastCoachAt < SAME_CUE_INTERVAL_MS) return false
+        if (now - lastCoachAt < MIN_CUE_INTERVAL_MS) return false
+
+        lastCoachCue = cue
+        lastCoachAt = now
+        return true
+    }
+
     private fun speakCoachCue(state: CoachState, cue: String) {
         if (cue.isBlank()) return
+        if (!shouldEmitCoach(cue)) return
 
-        val generated = llmCoach.generate(currentPose, state, cue)
-        val isFallback = generated == cue
-        val displayText = if (isFallback) "(fallback) $generated" else generated
-        val polished = CoachPhrasePolisher.polish(displayText)
+        val pose = currentPose
+        coachExecutor.execute {
+            val generated = llmCoach.generate(pose, state, cue)
+            val isFallback = generated == cue
+            val spokenText = CoachPhrasePolisher.polish(generated)
+            val displayText = if (isFallback) "(fallback) $spokenText" else spokenText
 
-        llmStatus.text = if (isFallback) "LLM: OFF" else "LLM: ON"
-        coachText.text = polished
-        speaker.speakIfNeeded(polished)
+            runOnUiThread {
+                llmStatus.text = if (isFallback) "LLM: OFF" else "LLM: ON"
+                coachText.text = displayText
+                speaker.speakIfNeeded(spokenText)
+            }
+        }
+    }
+
+    private fun speakRawCue(cue: String) {
+        if (cue.isBlank()) return
+        speaker.speakIfNeeded(cue)
     }
 
     private fun setupButtons() {
@@ -241,12 +326,18 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun loadDiscoveredPlaylist(openClassView: Boolean = true) {
-        val flows = FlowLoader.loadAllFromAssets(this)
+        val flows = runCatching { FlowLoader.loadAllFromAssets(this) }
+            .onFailure { coachText.text = "課程載入失敗，請確認 assets/flows。" }
+            .getOrDefault(emptyList())
         applyPlaylist(flows, openClassView)
     }
 
     private fun loadPlaylist(paths: List<String>, openClassView: Boolean = true) {
-        val flows = paths.map { FlowLoader.loadFromAssets(this, it) }
+        val flows = paths.mapNotNull { path ->
+            runCatching { FlowLoader.loadFromAssets(this, path) }
+                .onFailure { coachText.text = "課程載入失敗：$path" }
+                .getOrNull()
+        }
         applyPlaylist(flows, openClassView)
     }
 
@@ -257,11 +348,20 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
 
         playlist.setPlaylist(flows)
-        currentFlow = playlist.current()!!
+        val flow = playlist.current()
+        if (flow == null) {
+            coachText.text = "No yoga flows found in assets/flows."
+            return
+        }
+
+        currentFlow = flow
         currentPose = resolvePose(currentFlow)
         flowEngine.reset()
+        resetDetectionMappers()
         sessionState = SessionState.IDLE
         lastCountdownText = ""
+        lastCoachCue = ""
+        lastCoachAt = 0L
         coachText.text = "按 Start 開始課程。"
         llmStatus.text = "LLM: OFF"
 
@@ -271,33 +371,34 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     private fun restartCurrentPlaylist() {
         playlist.reset()
+        val flow = playlist.current()
+        if (flow == null) {
+            sessionState = SessionState.IDLE
+            coachText.text = "找不到課程流程，請確認 assets/flows。"
+            updateUi(animated = false)
+            return
+        }
+
         flowEngine.reset()
-        currentFlow = playlist.current()!!
+        resetDetectionMappers()
+        currentFlow = flow
         currentPose = resolvePose(currentFlow)
         sessionState = SessionState.IDLE
         lastCountdownText = ""
+        lastCoachCue = ""
+        lastCoachAt = 0L
         coachText.text = "已重新開始，按 Start 開始課程。"
         updateUi(animated = false)
+    }
+
+    private fun resetDetectionMappers() {
+        ForwardFoldDetectionMapper.reset()
+        TwistDetectionMapper.reset()
     }
 
     private fun resolvePose(flow: YogaFlow): YogaPose {
         return YogaPoseCatalog.poses.firstOrNull { it.id == flow.pose }
             ?: YogaPoseCatalog.poses.first()
-    }
-
-    private fun advanceFlowOrComplete() {
-        val next = playlist.moveNext()
-        if (next != null) {
-            currentFlow = next
-            currentPose = resolvePose(currentFlow)
-            flowEngine.reset()
-            animateFlowTransition()
-            speaker.speakIfNeeded("下一個動作")
-        } else {
-            sessionState = SessionState.COMPLETED
-            coachText.text = "課程完成，很好。"
-            speaker.speakIfNeeded("課程完成，很好。")
-        }
     }
 
     private fun updateUi(animated: Boolean) {
@@ -379,7 +480,10 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
-            tts.language = Locale.TAIWAN
+            val result = tts.setLanguage(Locale.TAIWAN)
+            if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                coachText.text = "TTS 中文語音不可用，請安裝語音資料。"
+            }
         }
     }
 
@@ -388,6 +492,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             cameraPipeline.stop()
         }
         cameraExecutor.shutdown()
+        coachExecutor.shutdown()
         if (::tts.isInitialized) {
             tts.shutdown()
         }
@@ -396,5 +501,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     companion object {
         private const val CAMERA_PERMISSION_REQUEST = 100
+        private const val MIN_CUE_INTERVAL_MS = 1200L
+        private const val SAME_CUE_INTERVAL_MS = 2500L
     }
 }

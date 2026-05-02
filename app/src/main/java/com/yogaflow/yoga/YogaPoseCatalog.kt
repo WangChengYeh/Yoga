@@ -11,6 +11,13 @@ object YogaPoseCatalog {
             correctionFocus = "髖部折疊"
         ),
         YogaPose(
+            id = "twist",
+            displayName = "Supine Twist",
+            category = "Cooldown",
+            setupCue = "躺平，雙肩貼地，準備扭轉",
+            correctionFocus = "肩膀貼地與安全扭轉"
+        ),
+        YogaPose(
             id = "mountain",
             displayName = "Mountain Pose",
             category = "Standing",
