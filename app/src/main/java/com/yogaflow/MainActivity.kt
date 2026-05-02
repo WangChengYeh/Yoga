@@ -2,23 +2,55 @@ package com.yogaflow
 
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.speech.tts.TextToSpeech
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.app.ActivityCompat
+import com.yogaflow.pose.PoseHelper
+import com.yogaflow.pose.PostureAnalyzer
+import com.yogaflow.pose.PoseOverlayView
+import java.util.*
 import java.util.concurrent.Executors
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     private lateinit var previewView: PreviewView
+    private lateinit var overlayView: PoseOverlayView
+    private lateinit var coachText: TextView
+
     private val cameraExecutor = Executors.newSingleThreadExecutor()
+    private lateinit var poseHelper: PoseHelper
+    private lateinit var tts: TextToSpeech
+
+    private var lastSpoken = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         previewView = findViewById(R.id.previewView)
+        overlayView = findViewById(R.id.overlayView)
+        coachText = findViewById(R.id.coachText)
+
+        poseHelper = PoseHelper(this)
+        tts = TextToSpeech(this, this)
+
+        poseHelper.onResult = { landmarks ->
+            runOnUiThread {
+                overlayView.setLandmarks(landmarks)
+
+                val result = PostureAnalyzer.analyze(landmarks)
+                coachText.text = result
+
+                if (result != lastSpoken) {
+                    speak(result)
+                    lastSpoken = result
+                }
+            }
+        }
 
         if (checkSelfPermission(android.Manifest.permission.CAMERA)
             == PackageManager.PERMISSION_GRANTED) {
@@ -27,6 +59,14 @@ class MainActivity : AppCompatActivity() {
             ActivityCompat.requestPermissions(this,
                 arrayOf(android.Manifest.permission.CAMERA), 100)
         }
+    }
+
+    private fun speak(text: String) {
+        tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
+    }
+
+    override fun onInit(status: Int) {
+        tts.language = Locale.US
     }
 
     private fun startCamera() {
@@ -39,21 +79,19 @@ class MainActivity : AppCompatActivity() {
                 it.setSurfaceProvider(previewView.surfaceProvider)
             }
 
-            val imageAnalyzer = ImageAnalysis.Builder().build().also {
+            val analyzer = ImageAnalysis.Builder().build().also {
                 it.setAnalyzer(cameraExecutor) { imageProxy ->
-                    // TODO: send frame to MediaPipe
+                    poseHelper.detect(imageProxy)
                     imageProxy.close()
                 }
             }
 
-            val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
-
             cameraProvider.unbindAll()
             cameraProvider.bindToLifecycle(
                 this,
-                cameraSelector,
+                CameraSelector.DEFAULT_BACK_CAMERA,
                 preview,
-                imageAnalyzer
+                analyzer
             )
 
         }, mainExecutor)
