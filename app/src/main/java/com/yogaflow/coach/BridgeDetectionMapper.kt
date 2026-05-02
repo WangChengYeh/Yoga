@@ -22,7 +22,11 @@ object BridgeDetectionMapper {
         stableSince = 0L
     }
 
-    fun evaluate(detect: String, frame: PoseDetectionResult): Result {
+    fun evaluate(
+        detect: String,
+        frame: PoseDetectionResult,
+        params: Map<String, Double> = emptyMap()
+    ): Result {
         val leftHip = PoseGeometry.angle(frame, 11, 23, 25)
         val rightHip = PoseGeometry.angle(frame, 12, 24, 26)
 
@@ -34,20 +38,24 @@ object BridgeDetectionMapper {
         }
 
         val rawHip = minOf(leftHip.degrees, rightHip.degrees)
-        val hip = smooth(rawHip)
+        val hip = smooth(rawHip, params)
 
         val rawResult = when (detect) {
             "bridge_setup" -> setup()
-            "bridge_lift" -> lift(hip)
-            "bridge_hold" -> hold(hip)
+            "bridge_lift" -> lift(hip, params)
+            "bridge_hold" -> hold(hip, params)
             "bridge_return" -> ret()
             else -> Result(true, CoachState.HOLD, "維持姿勢")
         }
 
-        return applyStabilityWindow(detect, rawResult)
+        return applyStabilityWindow(detect, rawResult, params)
     }
 
-    private fun applyStabilityWindow(detect: String, result: Result): Result {
+    private fun applyStabilityWindow(
+        detect: String,
+        result: Result,
+        params: Map<String, Double>
+    ): Result {
         if (!result.matched) {
             stableDetect = null
             stableSince = 0L
@@ -61,17 +69,20 @@ object BridgeDetectionMapper {
         }
 
         val stableFor = now - stableSince
-        return if (stableFor >= STABILITY_WINDOW_MS) {
+        val stabilityMs = params["stability.ms"]?.toLong() ?: STABILITY_WINDOW_MS
+        return if (stableFor >= stabilityMs) {
             result
         } else {
             result.copy(matched = false, cue = "穩住這個橋式位置，再保持一下。")
         }
     }
 
-    private fun smooth(raw: Double): Double {
+    private fun smooth(raw: Double, params: Map<String, Double>): Double {
         val prev = smoothedHip
-        if (prev != null && abs(raw - prev) <= ANGLE_DEADBAND_DEGREES) return prev
-        val next = if (prev == null) raw else prev + HIP_EMA_ALPHA * (raw - prev)
+        val deadband = params["deadband.degrees"] ?: ANGLE_DEADBAND_DEGREES
+        val alpha = params["ema.alpha"] ?: HIP_EMA_ALPHA
+        if (prev != null && abs(raw - prev) <= deadband) return prev
+        val next = if (prev == null) raw else prev + alpha * (raw - prev)
         smoothedHip = next
         return next
     }
@@ -80,20 +91,22 @@ object BridgeDetectionMapper {
         return Result(true, CoachState.SETUP, "很好，腳踩穩，準備慢慢抬起臀部。")
     }
 
-    private fun lift(hip: Double): Result {
-        val liftMax = ThresholdConfig.bridgeLiftHipMaxDegrees
+    private fun lift(hip: Double, params: Map<String, Double>): Result {
+        val liftMax = params["angle.hip.max"] ?: ThresholdConfig.bridgeLiftHipMaxDegrees
+        val liftMin = params["angle.hip.min"] ?: BRIDGE_MIN_HIP_DEGREES
         return when {
             hip > liftMax -> Result(false, CoachState.MOVEMENT, "慢慢抬起臀部，從骨盆帶動。")
-            hip < BRIDGE_MIN_HIP_DEGREES -> Result(false, CoachState.CORRECTION, "不要抬太高，稍微放低一點，避免壓腰。")
+            hip < liftMin -> Result(false, CoachState.CORRECTION, "不要抬太高，稍微放低一點，避免壓腰。")
             else -> Result(true, CoachState.MOVEMENT, "很好，持續抬起，保持控制。")
         }
     }
 
-    private fun hold(hip: Double): Result {
-        val holdMax = ThresholdConfig.bridgeLiftHipMaxDegrees
+    private fun hold(hip: Double, params: Map<String, Double>): Result {
+        val holdMax = params["angle.hip.max"] ?: ThresholdConfig.bridgeLiftHipMaxDegrees
+        val holdMin = params["angle.hip.min"] ?: BRIDGE_MIN_HIP_DEGREES
         return when {
             hip > holdMax -> Result(false, CoachState.MOVEMENT, "再抬高一點臀部，但不要拱腰。")
-            hip < BRIDGE_MIN_HIP_DEGREES -> Result(false, CoachState.CORRECTION, "稍微放低一點，讓腰保持舒服。")
+            hip < holdMin -> Result(false, CoachState.CORRECTION, "稍微放低一點，讓腰保持舒服。")
             else -> Result(true, CoachState.HOLD, "很好，維持橋式，保持呼吸。")
         }
     }
