@@ -148,13 +148,25 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun setupThresholdControls() {
-        squatThresholdSeekBar.progress = (ThresholdConfig.squatHoldKneeMaxDegrees - SQUAT_THRESHOLD_MIN).toInt()
-        bridgeThresholdSeekBar.progress = (ThresholdConfig.bridgeLiftHipMaxDegrees - BRIDGE_THRESHOLD_MIN).toInt()
+        squatThresholdSeekBar.progress = thresholdProgress(
+            value = ThresholdConfig.squatHoldKneeMaxDegrees,
+            min = SQUAT_THRESHOLD_MIN,
+            maxProgress = SQUAT_THRESHOLD_RANGE
+        )
+        bridgeThresholdSeekBar.progress = thresholdProgress(
+            value = ThresholdConfig.bridgeLiftHipMaxDegrees,
+            min = BRIDGE_THRESHOLD_MIN,
+            maxProgress = BRIDGE_THRESHOLD_RANGE
+        )
         updateThresholdLabels()
 
         squatThresholdSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                ThresholdConfig.squatHoldKneeMaxDegrees = SQUAT_THRESHOLD_MIN + progress
+                ThresholdConfig.squatHoldKneeMaxDegrees = clampThreshold(
+                    SQUAT_THRESHOLD_MIN + progress,
+                    SQUAT_THRESHOLD_MIN,
+                    SQUAT_THRESHOLD_RANGE
+                )
                 updateThresholdLabels()
                 saveThresholdPreferences()
             }
@@ -165,7 +177,11 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
         bridgeThresholdSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                ThresholdConfig.bridgeLiftHipMaxDegrees = BRIDGE_THRESHOLD_MIN + progress
+                ThresholdConfig.bridgeLiftHipMaxDegrees = clampThreshold(
+                    BRIDGE_THRESHOLD_MIN + progress,
+                    BRIDGE_THRESHOLD_MIN,
+                    BRIDGE_THRESHOLD_RANGE
+                )
                 updateThresholdLabels()
                 saveThresholdPreferences()
             }
@@ -177,14 +193,25 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     private fun loadThresholdPreferences() {
         val prefs = getSharedPreferences(THRESHOLD_PREFS, MODE_PRIVATE)
-        ThresholdConfig.squatHoldKneeMaxDegrees = prefs.getFloat(
+        val squat = prefs.getFloat(
             KEY_SQUAT_HOLD_KNEE_MAX,
             ThresholdConfig.squatHoldKneeMaxDegrees.toFloat()
         ).toDouble()
-        ThresholdConfig.bridgeLiftHipMaxDegrees = prefs.getFloat(
+        val bridge = prefs.getFloat(
             KEY_BRIDGE_LIFT_HIP_MAX,
             ThresholdConfig.bridgeLiftHipMaxDegrees.toFloat()
         ).toDouble()
+
+        ThresholdConfig.squatHoldKneeMaxDegrees = clampThreshold(
+            squat,
+            SQUAT_THRESHOLD_MIN,
+            SQUAT_THRESHOLD_RANGE
+        )
+        ThresholdConfig.bridgeLiftHipMaxDegrees = clampThreshold(
+            bridge,
+            BRIDGE_THRESHOLD_MIN,
+            BRIDGE_THRESHOLD_RANGE
+        )
     }
 
     private fun saveThresholdPreferences() {
@@ -193,6 +220,14 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             .putFloat(KEY_SQUAT_HOLD_KNEE_MAX, ThresholdConfig.squatHoldKneeMaxDegrees.toFloat())
             .putFloat(KEY_BRIDGE_LIFT_HIP_MAX, ThresholdConfig.bridgeLiftHipMaxDegrees.toFloat())
             .apply()
+    }
+
+    private fun thresholdProgress(value: Double, min: Double, maxProgress: Int): Int {
+        return (value - min).toInt().coerceIn(0, maxProgress)
+    }
+
+    private fun clampThreshold(value: Double, min: Double, range: Int): Double {
+        return value.coerceIn(min, min + range)
     }
 
     private fun updateThresholdLabels() {
@@ -626,6 +661,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         private const val DEBUG_OVERLAY_ENABLED = true
         private const val SQUAT_THRESHOLD_MIN = 80.0
         private const val BRIDGE_THRESHOLD_MIN = 120.0
+        private const val SQUAT_THRESHOLD_RANGE = 70
+        private const val BRIDGE_THRESHOLD_RANGE = 70
         private const val THRESHOLD_PREFS = "threshold_prefs"
         private const val KEY_SQUAT_HOLD_KNEE_MAX = "squat_hold_knee_max"
         private const val KEY_BRIDGE_LIFT_HIP_MAX = "bridge_lift_hip_max"
