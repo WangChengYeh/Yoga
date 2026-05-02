@@ -13,9 +13,13 @@ object TwistDetectionMapper {
     )
 
     private var smoothedTwist: Double? = null
+    private var stableDetect: String? = null
+    private var stableSince = 0L
 
     fun reset() {
         smoothedTwist = null
+        stableDetect = null
+        stableSince = 0L
     }
 
     fun evaluate(detect: String, frame: PoseDetectionResult): Result {
@@ -32,18 +36,44 @@ object TwistDetectionMapper {
         val rawTwist = abs(leftShoulder.degrees - rightShoulder.degrees)
         val twist = smooth(rawTwist)
 
-        return when (detect) {
+        val rawResult = when (detect) {
             "stable_base" -> stableBase(twist)
             "twist_start" -> twistStart(twist)
             "twist_hold" -> twistHold(twist)
             "return_center" -> returnCenter(twist)
             else -> Result(true, CoachState.HOLD, "維持姿勢")
         }
+
+        return applyStabilityWindow(detect, rawResult)
+    }
+
+    private fun applyStabilityWindow(detect: String, result: Result): Result {
+        if (!result.matched) {
+            stableDetect = null
+            stableSince = 0L
+            return result
+        }
+
+        val now = System.currentTimeMillis()
+        if (stableDetect != detect) {
+            stableDetect = detect
+            stableSince = now
+        }
+
+        val stableFor = now - stableSince
+        return if (stableFor >= STABILITY_WINDOW_MS) {
+            result
+        } else {
+            result.copy(
+                matched = false,
+                cue = "穩住這個扭轉位置，再保持一下。"
+            )
+        }
     }
 
     private fun smooth(raw: Double): Double {
         val prev = smoothedTwist
-        val next = if (prev == null) raw else prev + 0.4 * (raw - prev)
+        val next = if (prev == null) raw else prev + TWIST_EMA_ALPHA * (raw - prev)
         smoothedTwist = next
         return next
     }
@@ -79,4 +109,7 @@ object TwistDetectionMapper {
             Result(true, CoachState.TRANSITION, "很好，已回到中間。")
         }
     }
+
+    private const val TWIST_EMA_ALPHA = 0.4
+    private const val STABILITY_WINDOW_MS = 300L
 }
