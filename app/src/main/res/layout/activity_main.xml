@@ -25,12 +25,52 @@
             android:layout_height="wrap_content"
             android:layout_gravity="bottom|start"
             android:layout_marginStart="12dp"
-            android:layout_marginBottom="116dp"
+            android:layout_marginBottom="208dp"
             android:padding="8dp"
             android:background="#88000000"
             android:text="DEBUG"
             android:textColor="#00FF00"
             android:textSize="10sp" />
+
+        <LinearLayout
+            android:id="@+id/thresholdPanel"
+            android:layout_width="260dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|end"
+            android:layout_marginEnd="12dp"
+            android:layout_marginBottom="116dp"
+            android:orientation="vertical"
+            android:background="#88000000"
+            android:padding="8dp">
+
+            <TextView
+                android:id="@+id/squatThresholdLabel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Squat knee: 115°"
+                android:textColor="#FFFFFFFF"
+                android:textSize="11sp" />
+
+            <SeekBar
+                android:id="@+id/squatThresholdSeekBar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="70" />
+
+            <TextView
+                android:id="@+id/bridgeThresholdLabel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Bridge hip: 155°"
+                android:textColor="#FFFFFFFF"
+                android:textSize="11sp" />
+
+            <SeekBar
+                android:id="@+id/bridgeThresholdSeekBar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="70" />
+        </LinearLayout>
 
         <TextView
             android:id="@+id/demoTitle"
@@ -205,7 +245,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:text="Mountain → Forward Fold → Twist"
+                        android:text="Mountain → Forward Fold → Twist → Squat → Bridge"
                         android:textColor="#DDDDDD"
                         android:textSize="14sp" />
 
