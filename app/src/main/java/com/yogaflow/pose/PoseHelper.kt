@@ -3,15 +3,17 @@ package com.yogaflow.pose
 import android.content.Context
 import android.util.Log
 import androidx.camera.core.ImageProxy
+import com.google.mediapipe.framework.image.MediaImageBuilder
 import com.google.mediapipe.tasks.core.BaseOptions
 import com.google.mediapipe.tasks.vision.core.RunningMode
 import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarker
 import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarkerResult
-import com.google.mediapipe.framework.image.MediaImageBuilder
 
 class PoseHelper(context: Context) {
 
     private var detector: PoseLandmarker? = null
+    private var frameTimestampMs: Long = 0L
+
     var isReady: Boolean = false
         private set
 
@@ -45,7 +47,13 @@ class PoseHelper(context: Context) {
     fun detect(imageProxy: ImageProxy) {
         if (!isReady) return
         val image = imageProxy.image ?: return
-        val mp = MediaImageBuilder(image).build()
-        detector?.detectAsync(mp, System.currentTimeMillis())
+        val mpImage = MediaImageBuilder(image).build()
+
+        frameTimestampMs += FRAME_TIMESTAMP_STEP_MS
+        detector?.detectAsync(mpImage, frameTimestampMs)
+    }
+
+    companion object {
+        private const val FRAME_TIMESTAMP_STEP_MS = 33L
     }
 }
