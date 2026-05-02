@@ -106,11 +106,16 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         speaker = CoachSpeaker(tts)
         llmCoach = LlmCoach(this)
 
+        updateUi()
+
         poseHelper.onResult = { landmarks ->
             runOnUiThread {
                 overlayView.setLandmarks(landmarks)
 
-                if (sessionState != SessionState.RUNNING) return@runOnUiThread
+                if (sessionState != SessionState.RUNNING) {
+                    updateUi()
+                    return@runOnUiThread
+                }
 
                 val (detectedState, _) = stateMachine.update(currentPose, landmarks)
                 val (flowState, flowCue) = flowEngine.update(currentFlow, detectedState)
@@ -140,32 +145,43 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun updateUi() {
-        flowName.text = currentFlow.name
+        flowName.text = "Flow ${playlist.currentNumber()}/${playlist.total()} · ${currentFlow.name}"
         val step = flowEngine.currentStepNumber()
         val total = flowEngine.totalSteps(currentFlow)
         progressText.text = "Step $step/$total"
-        progressBar.progress = ((step.toFloat() / total) * 100).toInt()
+        progressBar.progress = ((step.toFloat() / total) * 100).toInt().coerceIn(0, 100)
+        countdownText.text = when (sessionState) {
+            SessionState.IDLE -> "Ready"
+            SessionState.PAUSED -> "Paused"
+            SessionState.COMPLETED -> "Done"
+            SessionState.RUNNING -> flowEngine.remainingSeconds(currentFlow).toString()
+        }
     }
 
     private fun setupButtons() {
         startClassButton.setOnClickListener {
             showClass()
             sessionState = SessionState.IDLE
+            updateUi()
         }
 
         startButton.setOnClickListener {
             sessionState = SessionState.RUNNING
+            updateUi()
         }
 
         pauseButton.setOnClickListener {
             sessionState = SessionState.PAUSED
+            updateUi()
         }
 
         restartButton.setOnClickListener {
             playlist.reset()
             flowEngine.reset()
             currentFlow = playlist.current()!!
+            currentPose = YogaPoseCatalog.poses.first { it.id == currentFlow.pose }
             sessionState = SessionState.IDLE
+            updateUi()
         }
     }
 
