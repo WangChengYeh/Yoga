@@ -17,6 +17,7 @@ import com.yogaflow.coach.CoachPhrasePolisher
 import com.yogaflow.coach.CoachSpeaker
 import com.yogaflow.coach.CoachState
 import com.yogaflow.coach.ForwardFoldDetectionMapper
+import com.yogaflow.coach.PoseDetectionRouter
 import com.yogaflow.coach.PoseFlowEngine
 import com.yogaflow.coach.PoseStateMachine
 import com.yogaflow.coach.SquatDetectionMapper
@@ -193,7 +194,13 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             return
         }
 
-        val mapping = evaluateCurrentStep(currentStep.detect, frame)
+        val mapping = PoseDetectionRouter.evaluate(
+            poseId = currentPose.id,
+            detect = currentStep.detect,
+            frame = frame,
+            fallback = stateMachine,
+            currentPose = currentPose
+        )
         val event = flowEngine.update(currentFlow, mapping.state, mapping.matched)
 
         when (event) {
@@ -213,35 +220,6 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
 
         updateUi(animated = true)
-    }
-
-    private fun evaluateCurrentStep(
-        detect: String,
-        frame: PoseDetectionResult
-    ): ForwardFoldDetectionMapper.Result {
-        return when (currentPose.id) {
-            "forward_fold" -> ForwardFoldDetectionMapper.evaluate(detect, frame)
-            "twist" -> {
-                val result = TwistDetectionMapper.evaluate(detect, frame)
-                ForwardFoldDetectionMapper.Result(result.matched, result.state, result.cue)
-            }
-            "squat" -> {
-                val result = SquatDetectionMapper.evaluate(detect, frame)
-                ForwardFoldDetectionMapper.Result(result.matched, result.state, result.cue)
-            }
-            "bridge" -> {
-                val result = BridgeDetectionMapper.evaluate(detect, frame)
-                ForwardFoldDetectionMapper.Result(result.matched, result.state, result.cue)
-            }
-            else -> {
-                val (state, cue) = stateMachine.update(currentPose, frame)
-                ForwardFoldDetectionMapper.Result(
-                    matched = state != CoachState.CORRECTION,
-                    state = state,
-                    cue = cue
-                )
-            }
-        }
     }
 
     private fun completeCurrentFlow(cue: String) {
