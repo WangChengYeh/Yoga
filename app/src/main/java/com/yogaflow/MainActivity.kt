@@ -54,60 +54,58 @@ import java.util.concurrent.Executors
 
 class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
-    private enum class SessionState { IDLE, RUNNING, PAUSED, COMPLETED }
+    internal lateinit var homeView: View
+    internal lateinit var classView: View
+    internal lateinit var previewView: PreviewView
+    internal lateinit var overlayView: PoseOverlayView
+    internal lateinit var cameraSetupPanel: View
+    internal lateinit var cameraSetupStatus: TextView
+    internal lateinit var debugText: TextView
+    internal lateinit var coachText: TextView
+    internal lateinit var flowName: TextView
+    internal lateinit var progressText: TextView
+    internal lateinit var countdownText: TextView
+    internal lateinit var llmStatus: TextView
+    internal lateinit var progressBar: ProgressBar
+    internal lateinit var squatThresholdLabel: TextView
+    internal lateinit var bridgeThresholdLabel: TextView
+    internal lateinit var squatThresholdSeekBar: SeekBar
+    internal lateinit var bridgeThresholdSeekBar: SeekBar
 
-    private lateinit var homeView: View
-    private lateinit var classView: View
-    private lateinit var previewView: PreviewView
-    private lateinit var overlayView: PoseOverlayView
-    private lateinit var cameraSetupPanel: View
-    private lateinit var cameraSetupStatus: TextView
-    private lateinit var debugText: TextView
-    private lateinit var coachText: TextView
-    private lateinit var flowName: TextView
-    private lateinit var progressText: TextView
-    private lateinit var countdownText: TextView
-    private lateinit var llmStatus: TextView
-    private lateinit var progressBar: ProgressBar
-    private lateinit var squatThresholdLabel: TextView
-    private lateinit var bridgeThresholdLabel: TextView
-    private lateinit var squatThresholdSeekBar: SeekBar
-    private lateinit var bridgeThresholdSeekBar: SeekBar
-
-    private lateinit var startClassButton: Button
-    private lateinit var startStretchButton: Button
-    private lateinit var startRecoveryButton: Button
-    private lateinit var startButton: Button
-    private lateinit var pauseButton: Button
-    private lateinit var restartButton: Button
+    internal lateinit var startClassButton: Button
+    internal lateinit var startStretchButton: Button
+    internal lateinit var startRecoveryButton: Button
+    internal lateinit var startButton: Button
+    internal lateinit var pauseButton: Button
+    internal lateinit var restartButton: Button
 
     private val cameraExecutor = Executors.newSingleThreadExecutor()
     private val coachExecutor = Executors.newSingleThreadExecutor()
 
     private lateinit var poseHelper: PoseHelper
-    private lateinit var cameraPipeline: CameraPosePipeline
+    internal lateinit var cameraPipeline: CameraPosePipeline
     private lateinit var tts: TextToSpeech
-    private lateinit var speaker: CoachSpeaker
+    internal lateinit var speaker: CoachSpeaker
     private lateinit var llmCoach: LlmCoach
 
     private val stateMachine = PoseStateMachine()
     internal val flowEngine = PoseFlowEngine()
-    private val playlist = FlowPlaylistEngine()
+    internal val playlist = FlowPlaylistEngine()
     private val runtimeOverrideStore = RuntimeOverrideStore()
     private val autoTuningAdvisor = AutoTuningAdvisor()
-    private var latestSuggestion: AutoTuningSuggestion? = null
+    internal var latestSuggestion: AutoTuningSuggestion? = null
     private var suppressTuningCallbacks = false
 
     internal lateinit var currentFlow: YogaFlow
-    private lateinit var currentPose: YogaPose
-    private var sessionState = SessionState.IDLE
-    private var cameraReady = false
-    private var cameraReadySince = 0L
-    private var autoStartedCurrentSetup = false
-    private var lastCountdownText = ""
-    private var lastCoachCue = ""
-    private var lastCoachAt = 0L
-    private var coachRequestId = 0L
+    internal lateinit var currentPose: YogaPose
+    internal var sessionState = SessionState.IDLE
+    internal var cameraReady = false
+    internal var cameraReadySince = 0L
+    internal var autoStartedCurrentSetup = false
+    internal var lastCountdownText = ""
+    internal var lastCoachCue = ""
+    internal var lastCoachAt = 0L
+    internal var coachRequestId = 0L
 
     internal fun isCurrentFlowInitialized(): Boolean = ::currentFlow.isInitialized
 
@@ -547,151 +545,13 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
     }
 
-    private fun loadDiscoveredPlaylist(openClassView: Boolean = true) {
-        val flows = runCatching { FlowLoader.loadAllFromAssets(this) }
-            .onFailure { coachText.text = "課程載入失敗，請確認 assets/flows。" }
-            .getOrDefault(emptyList())
-        applyPlaylist(flows, openClassView)
-    }
+    
 
-    private fun loadPlaylist(paths: List<String>, openClassView: Boolean = true) {
-        val flows = paths.mapNotNull { path ->
-            runCatching { FlowLoader.loadFromAssets(this, path) }
-                .onFailure { coachText.text = "課程載入失敗：$path" }
-                .getOrNull()
-        }
-        applyPlaylist(flows, openClassView)
-    }
-
-    private fun applyPlaylist(flows: List<YogaFlow>, openClassView: Boolean) {
-        if (flows.isEmpty()) {
-            coachText.text = "No yoga flows found in assets/flows."
-            return
-        }
-
-        playlist.setPlaylist(flows)
-        val flow = playlist.current()
-        if (flow == null) {
-            coachText.text = "No yoga flows found in assets/flows."
-            return
-        }
-
-        currentFlow = flow
-        currentPose = resolvePose(currentFlow)
-        flowEngine.reset()
-        resetDetectionMappers()
-        latestSuggestion = null
-        sessionState = SessionState.IDLE
-        cameraReady = false
-        cameraReadySince = 0L
-        autoStartedCurrentSetup = false
-        startButton.isEnabled = false
-        startButton.alpha = 0.45f
-        cameraSetupPanel.visibility = View.VISIBLE
-        cameraSetupStatus.text = "Checking body framing..."
-        lastCountdownText = ""
-        lastCoachCue = ""
-        lastCoachAt = 0L
-        coachRequestId++
-        coachText.text = "請先完成相機設定。"
-        llmStatus.text = "LLM: OFF"
-        updateRuntimeTuningControls()
-
-        if (openClassView) showClass()
-        updateUi(animated = false)
-    }
-
-    private fun restartCurrentPlaylist() {
-        playlist.reset()
-        val flow = playlist.current()
-        if (flow == null) {
-            sessionState = SessionState.IDLE
-            coachText.text = "找不到課程流程，請確認 assets/flows。"
-            updateUi(animated = false)
-            return
-        }
-
-        flowEngine.reset()
-        resetDetectionMappers()
-        latestSuggestion = null
-        currentFlow = flow
-        currentPose = resolvePose(currentFlow)
-        sessionState = SessionState.IDLE
-        cameraReady = false
-        cameraReadySince = 0L
-        autoStartedCurrentSetup = false
-        startButton.isEnabled = false
-        startButton.alpha = 0.45f
-        cameraSetupPanel.visibility = View.VISIBLE
-        cameraSetupStatus.text = "Checking body framing..."
-        lastCountdownText = ""
-        lastCoachCue = ""
-        lastCoachAt = 0L
-        coachRequestId++
-        coachText.text = "已重新開始。請先完成相機設定。"
-        updateRuntimeTuningControls()
-        updateUi(animated = false)
-    }
-
-    private fun resetDetectionMappers() {
-        ForwardFoldDetectionMapper.reset()
-        TwistDetectionMapper.reset()
-        SquatDetectionMapper.reset()
-        BridgeDetectionMapper.reset()
-    }
-
-    private fun resolvePose(flow: YogaFlow): YogaPose {
+    internal fun resolvePose(flow: YogaFlow): YogaPose {
         return YogaPoseCatalog.poses.firstOrNull { it.id == flow.pose } ?: YogaPoseCatalog.poses.first()
     }
 
-    private fun updateUi(animated: Boolean) {
-        if (!::currentFlow.isInitialized) return
-        flowName.text = "Flow ${playlist.currentNumber()}/${playlist.total()} · ${currentFlow.name}"
-        val step = flowEngine.currentStepNumber()
-        val total = flowEngine.totalSteps(currentFlow)
-        progressText.text = "Step $step/$total"
-        val progress = ((step.toFloat() / total.toFloat()) * 100).toInt().coerceIn(0, 100)
-        if (animated) animateProgress(progress) else progressBar.progress = progress
-        val countdown = when (sessionState) {
-            SessionState.IDLE -> if (cameraReady) "Ready" else "Setup"
-            SessionState.PAUSED -> "Paused"
-            SessionState.COMPLETED -> "Done"
-            SessionState.RUNNING -> flowEngine.remainingSeconds(currentFlow).toString()
-        }
-        updateCountdown(countdown)
-    }
-
-    private fun animateProgress(progress: Int) {
-        ObjectAnimator.ofInt(progressBar, "progress", progressBar.progress, progress).apply {
-            duration = 350L
-            interpolator = DecelerateInterpolator()
-            start()
-        }
-    }
-
-    private fun updateCountdown(text: String) {
-        if (text == lastCountdownText) return
-        countdownText.text = text
-        lastCountdownText = text
-        if (sessionState == SessionState.RUNNING) {
-            val number = text.toIntOrNull()
-            if (number != null && number in 1..3) speaker.speakIfNeeded(number.toString())
-        }
-        countdownText.scaleX = 1.35f
-        countdownText.scaleY = 1.35f
-        countdownText.alpha = 0.4f
-        countdownText.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(250L).start()
-    }
-
-    private fun animateFlowTransition() {
-        flowName.alpha = 0f
-        flowName.translationY = -20f
-        flowName.animate().alpha(1f).translationY(0f).setDuration(400L).start()
-    }
-
-    private fun showHome() { homeView.visibility = View.VISIBLE; classView.visibility = View.GONE }
-    private fun showClass() { homeView.visibility = View.GONE; classView.visibility = View.VISIBLE }
-    private fun startCamera() { cameraPipeline.start() }
+    
 
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
