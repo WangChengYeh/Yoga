@@ -1,5 +1,6 @@
 package com.yogaflow.session
 
+import com.yogaflow.SessionState
 import com.yogaflow.coach.CoachState
 import com.yogaflow.pose.CameraFramingCoach
 import com.yogaflow.pose.CameraFramingResult

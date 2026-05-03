@@ -1,5 +1,6 @@
 package com.yogaflow
 
+import android.content.Context
 import android.widget.SeekBar
 import com.yogaflow.coach.ThresholdConfig
 
@@ -53,7 +54,7 @@ internal fun MainActivity.runtimeTuningListenerMain(index: Int): SeekBar.OnSeekB
 }
 
 internal fun MainActivity.loadThresholdPreferencesMain() {
-    val prefs = getSharedPreferences("threshold_prefs", MODE_PRIVATE)
+    val prefs = getSharedPreferences("threshold_prefs", Context.MODE_PRIVATE)
     val squat = prefs.getFloat("squat_hold_knee_max", ThresholdConfig.squatHoldKneeMaxDegrees.toFloat()).toDouble()
     val bridge = prefs.getFloat("bridge_lift_hip_max", ThresholdConfig.bridgeLiftHipMaxDegrees.toFloat()).toDouble()
     ThresholdConfig.squatHoldKneeMaxDegrees = clampThresholdMain(squat, 80.0, 70)
@@ -61,7 +62,7 @@ internal fun MainActivity.loadThresholdPreferencesMain() {
 }
 
 internal fun MainActivity.saveThresholdPreferencesMain() {
-    getSharedPreferences("threshold_prefs", MODE_PRIVATE)
+    getSharedPreferences("threshold_prefs", Context.MODE_PRIVATE)
         .edit()
         .putFloat("squat_hold_knee_max", ThresholdConfig.squatHoldKneeMaxDegrees.toFloat())
         .putFloat("bridge_lift_hip_max", ThresholdConfig.bridgeLiftHipMaxDegrees.toFloat())

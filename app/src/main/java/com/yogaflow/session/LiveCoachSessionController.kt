@@ -1,6 +1,7 @@
 package com.yogaflow.session
 
 import com.yogaflow.coach.CoachState
+import com.yogaflow.coach.PoseDetectionRouter
 import com.yogaflow.coach.PoseFlowEngine
 import com.yogaflow.coach.PoseStateMachine
 import com.yogaflow.flow.AutoTuningAdvisor

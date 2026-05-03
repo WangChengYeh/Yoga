@@ -208,5 +208,7 @@ class ForwardFoldDetectionMapper {
         return value ?: error("Missing required param for ${detect.jsonKey}: $key")
     }
 
-    private const val SMOOTHING_RESET_GAP_MS = 750L
+    companion object {
+        private const val SMOOTHING_RESET_GAP_MS = 750L
+    }
 }
