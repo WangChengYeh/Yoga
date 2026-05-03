@@ -18,11 +18,22 @@ object FlowJsonValidator {
         requireArray(root, "steps")
         requireObject(root, "end")
 
+        validateDefaults(root)
         validateFlow(root.getJSONObject("flow"))
         validateSteps(root.getJSONArray("steps"))
         validateEnd(root.getJSONObject("end"))
 
         return root
+    }
+
+    private fun validateDefaults(root: JSONObject) {
+        if (!root.has("defaults")) return
+        val defaults = root.optJSONObject("defaults")
+            ?: error("Invalid Flow JSON: root.defaults must be an object")
+        if (!defaults.has("runtime")) return
+        val runtime = defaults.optJSONObject("runtime")
+            ?: error("Invalid Flow JSON: root.defaults.runtime must be an object")
+        validateRuntime(runtime, "root.defaults.runtime")
     }
 
     private fun validateFlow(flow: JSONObject) {
@@ -46,71 +57,72 @@ object FlowJsonValidator {
     }
 
     private fun validateStep(step: JSONObject, stepNumber: Int) {
-        requireEnum(step, "state", validStates, path = "steps[$stepNumber]")
-        requireNumber(step, "durationMs", min = 100.0, max = 60000.0, path = "steps[$stepNumber]")
-        requireString(step, "cue", path = "steps[$stepNumber]")
-        requireString(step, "detect", path = "steps[$stepNumber]")
+        val path = "steps[$stepNumber]"
+        requireEnum(step, "state", validStates, path = path)
+        requireNumber(step, "durationMs", min = 100.0, max = 60000.0, path = path)
+        requireString(step, "cue", path = path)
+        requireString(step, "detect", path = path)
 
         if (step.has("correction") && !isString(step, "correction")) {
-            error("Invalid Flow JSON: steps[$stepNumber].correction must be a string")
+            error("Invalid Flow JSON: $path.correction must be a string")
         }
 
         if (step.has("runtime")) {
             val runtime = step.optJSONObject("runtime")
-                ?: error("Invalid Flow JSON: steps[$stepNumber].runtime must be an object")
-            validateRuntime(runtime, stepNumber)
+                ?: error("Invalid Flow JSON: $path.runtime must be an object")
+            validateRuntime(runtime, "$path.runtime")
         }
     }
 
-    private fun validateRuntime(runtime: JSONObject, stepNumber: Int) {
+    private fun validateRuntime(runtime: JSONObject, path: String) {
         if (runtime.has("stabilityMs")) {
-            requireNumber(runtime, "stabilityMs", min = 0.0, max = 5000.0, path = "steps[$stepNumber].runtime")
+            requireNumber(runtime, "stabilityMs", min = 0.0, max = 5000.0, path = path)
         }
         if (runtime.has("emaAlpha")) {
-            requireNumber(runtime, "emaAlpha", min = 0.01, max = 1.0, path = "steps[$stepNumber].runtime")
+            requireNumber(runtime, "emaAlpha", min = 0.01, max = 1.0, path = path)
         }
         if (runtime.has("deadbandDegrees")) {
-            requireNumber(runtime, "deadbandDegrees", min = 0.0, max = 20.0, path = "steps[$stepNumber].runtime")
+            requireNumber(runtime, "deadbandDegrees", min = 0.0, max = 20.0, path = path)
         }
         if (runtime.has("angles")) {
             val angles = runtime.optJSONObject("angles")
-                ?: error("Invalid Flow JSON: steps[$stepNumber].runtime.angles must be an object")
-            validateAngles(angles, stepNumber)
+                ?: error("Invalid Flow JSON: $path.angles must be an object")
+            validateAngles(angles, path)
         }
     }
 
-    private fun validateAngles(angles: JSONObject, stepNumber: Int) {
+    private fun validateAngles(angles: JSONObject, path: String) {
         val joints = angles.keys()
         while (joints.hasNext()) {
             val joint = joints.next()
             if (joint !in validJoints) {
-                error("Invalid Flow JSON: steps[$stepNumber].runtime.angles.$joint is not a supported joint")
+                error("Invalid Flow JSON: $path.angles.$joint is not a supported joint")
             }
 
             val phaseConfig = angles.optJSONObject(joint)
-                ?: error("Invalid Flow JSON: steps[$stepNumber].runtime.angles.$joint must be an object")
+                ?: error("Invalid Flow JSON: $path.angles.$joint must be an object")
 
             val phases = phaseConfig.keys()
             while (phases.hasNext()) {
                 val phase = phases.next()
                 if (phase !in validPhases) {
-                    error("Invalid Flow JSON: steps[$stepNumber].runtime.angles.$joint.$phase is not a supported phase")
+                    error("Invalid Flow JSON: $path.angles.$joint.$phase is not a supported phase")
                 }
 
                 val range = phaseConfig.optJSONObject(phase)
-                    ?: error("Invalid Flow JSON: steps[$stepNumber].runtime.angles.$joint.$phase must be an object")
+                    ?: error("Invalid Flow JSON: $path.angles.$joint.$phase must be an object")
 
                 if (!range.has("min") && !range.has("max")) {
-                    error("Invalid Flow JSON: steps[$stepNumber].runtime.angles.$joint.$phase must include min or max")
+                    error("Invalid Flow JSON: $path.angles.$joint.$phase must include min or max")
                 }
 
                 val bounds = range.keys()
                 while (bounds.hasNext()) {
                     val bound = bounds.next()
                     if (bound !in validBounds) {
-                        error("Invalid Flow JSON: steps[$stepNumber].runtime.angles.$joint.$phase.$bound is not supported; use min or max")
+                        error("Invalid Flow JSON: $path.angles.$joint.$phase.$bound is not supported; use min or max")
                     }
-                    requireNumber(range, bound, min = 0.0, max = 180.0, path = "steps[$stepNumber].runtime.angles.$joint.$phase")
+                    requireNumber(range, bound, min = 0.0, max = 180.0, path = "$path.angles.$joint.$phase")
                 }
             }
         }
