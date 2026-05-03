@@ -38,7 +38,7 @@ object FlowParser {
             state = CoachState.valueOf(step.getString("state")),
             durationMs = step.getLong("durationMs"),
             cue = step.getString("cue"),
-            detect = step.getString("detect"),
+            detect = DetectKey.fromJsonKey(step.getString("detect")),
             correction = step.optString("correction", ""),
             params = params
         )
