@@ -18,7 +18,6 @@ import com.yogaflow.coach.CoachCueController
 import com.yogaflow.coach.CoachSpeaker
 import com.yogaflow.coach.CoachState
 import com.yogaflow.coach.ForwardFoldDetectionMapper
-import com.yogaflow.coach.PoseDetectionRouter
 import com.yogaflow.coach.PoseFlowEngine
 import com.yogaflow.coach.PoseStateMachine
 import com.yogaflow.coach.SquatDetectionMapper
@@ -29,7 +28,6 @@ import com.yogaflow.flow.AutoTuningSuggestion
 import com.yogaflow.flow.FlowLoader
 import com.yogaflow.flow.FlowPlaylistEngine
 import com.yogaflow.flow.RuntimeOverrideKey
-import com.yogaflow.flow.RuntimeOverrideMerger
 import com.yogaflow.flow.RuntimeOverrideStore
 import com.yogaflow.flow.RuntimeParams
 import com.yogaflow.flow.TunableRuntimeParam
@@ -46,6 +44,7 @@ import com.yogaflow.pose.PoseHelper
 import com.yogaflow.pose.PoseOverlayView
 import com.yogaflow.pose.ViewOrientation
 import com.yogaflow.pose.ViewOrientationStatus
+import com.yogaflow.session.LiveCoachSessionController
 import com.yogaflow.yoga.YogaPose
 import com.yogaflow.yoga.YogaPoseCatalog
 import kotlin.math.abs
@@ -88,6 +87,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     internal lateinit var speaker: CoachSpeaker
     private lateinit var llmCoach: LlmCoach
     private lateinit var coachCueController: CoachCueController
+    private lateinit var liveCoachSessionController: LiveCoachSessionController
 
     private val stateMachine = PoseStateMachine()
     internal val flowEngine = PoseFlowEngine()
@@ -190,6 +190,23 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                     step == flowEngine.currentStepNumber()
             }
         )
+        liveCoachSessionController = LiveCoachSessionController(
+            stateMachine = stateMachine,
+            flowEngine = flowEngine,
+            runtimeOverrideStore = runtimeOverrideStore,
+            autoTuningAdvisor = autoTuningAdvisor,
+            onFlowCompleted = { completeCurrentFlow(it) },
+            onUpdateRuntimeTuningControls = { updateRuntimeTuningControls() },
+            onUpdateDebugOverlay = { frame, detect, state, matched, runtimeSummary, overrideSummary, failReason, suggestionSummary ->
+                updateDebugOverlay(frame, detect, state, matched, runtimeSummary, overrideSummary, failReason, suggestionSummary)
+            },
+            onSpeakCoachCue = { state, cue -> speakCoachCue(state, cue) },
+            onAnimateFlowTransition = { animateFlowTransition() },
+            onUpdateUi = { updateUi(it) },
+            buildRuntimeSummary = { buildRuntimeSummary(it) },
+            buildOverrideSummary = { buildOverrideSummary() },
+            buildSuggestionSummary = { flowId, stepIndex, detect -> buildSuggestionSummary(flowId, stepIndex, detect) }
+        )
 
         if (!poseHelper.isReady) {
             coachText.text = "Pose model not found. Please add pose_landmarker_lite.task to assets."
@@ -203,55 +220,11 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
         if (handleCameraSetupFrame(frame)) return
 
-        val currentStep = currentFlow.steps.getOrNull(flowEngine.currentStepNumber() - 1)
-        if (currentStep == null) {
-            completeCurrentFlow(currentFlow.endCue.ifBlank { "課程完成，很好。" })
-            updateDebugOverlay(frame, detect = "flow_complete", state = CoachState.HOLD, matched = true)
-            updateUi(animated = true)
-            return
-        }
-
-        val stepIndex = flowEngine.currentStepNumber() - 1
-        val overrides = runtimeOverrideStore.overridesFor(currentFlow.id, stepIndex, currentStep.detect)
-        val effectiveParams = RuntimeOverrideMerger.apply(currentStep.params, overrides)
-        val runtimeSummary = buildRuntimeSummary(effectiveParams)
-        val overrideSummary = buildOverrideSummary()
-
-        val mapping = PoseDetectionRouter.evaluate(
-            poseId = currentPose.id,
-            detect = currentStep.detect,
-            params = effectiveParams,
+        liveCoachSessionController.handleReadyPoseFrame(
             frame = frame,
-            fallback = stateMachine,
+            currentFlow = currentFlow,
             currentPose = currentPose
         )
-        if (!mapping.matched) {
-            autoTuningAdvisor.observeReason(currentFlow.id, stepIndex, currentStep.detect, mapping.reason)
-        }
-        val suggestionSummary = buildSuggestionSummary(currentFlow.id, stepIndex, currentStep.detect)
-        val event = flowEngine.update(currentFlow, mapping.state, mapping.matched)
-        updateRuntimeTuningControls()
-        updateDebugOverlay(
-            frame = frame,
-            detect = currentStep.detect.jsonKey,
-            state = mapping.state,
-            matched = mapping.matched,
-            runtimeSummary = runtimeSummary,
-            overrideSummary = overrideSummary,
-            failReason = mapping.reason,
-            suggestionSummary = suggestionSummary
-        )
-
-        when (event) {
-            is PoseFlowEngine.FlowEvent.Cue -> speakCoachCue(mapping.state, if (mapping.matched) event.text else mapping.cue)
-            is PoseFlowEngine.FlowEvent.StepCompleted -> {
-                animateFlowTransition()
-                speakCoachCue(event.state, event.text)
-            }
-            is PoseFlowEngine.FlowEvent.FlowCompleted -> completeCurrentFlow(event.text)
-        }
-
-        updateUi(animated = true)
     }
 
     private fun handleCameraSetupFrame(frame: PoseDetectionResult): Boolean {
