@@ -10,10 +10,11 @@ object FlowParser {
 
         val flow = root.getJSONObject("flow")
         val stepsArray = root.getJSONArray("steps")
+        val defaults = parseRuntimeParams(root.optJSONObject("defaults")?.optJSONObject("runtime"))
         val steps = mutableListOf<YogaFlowStep>()
 
         for (i in 0 until stepsArray.length()) {
-            steps.add(buildStep(stepsArray.getJSONObject(i)))
+            steps.add(buildStep(stepsArray.getJSONObject(i), defaults))
         }
 
         val yogaFlow = YogaFlow(
@@ -29,10 +30,9 @@ object FlowParser {
         return FlowValidator.validate(yogaFlow)
     }
 
-    private fun buildStep(step: JSONObject): YogaFlowStep {
-        val params = step.optJSONObject("runtime")
-            ?.let { parseRuntimeParams(it) }
-            ?: RuntimeParams.EMPTY
+    private fun buildStep(step: JSONObject, defaults: RuntimeParams): YogaFlowStep {
+        val stepParams = parseRuntimeParams(step.optJSONObject("runtime"))
+        val params = mergeRuntimeParams(defaults, stepParams)
 
         return YogaFlowStep(
             state = CoachState.valueOf(step.getString("state")),
@@ -44,7 +44,8 @@ object FlowParser {
         )
     }
 
-    private fun parseRuntimeParams(runtime: JSONObject): RuntimeParams {
+    private fun parseRuntimeParams(runtime: JSONObject?): RuntimeParams {
+        if (runtime == null) return RuntimeParams.EMPTY
         return RuntimeParams(
             stabilityMs = if (runtime.has("stabilityMs")) runtime.getLong("stabilityMs") else null,
             emaAlpha = if (runtime.has("emaAlpha")) runtime.getDouble("emaAlpha") else null,
@@ -84,6 +85,46 @@ object FlowParser {
         return AngleRange(
             min = if (range.has("min")) range.getDouble("min") else null,
             max = if (range.has("max")) range.getDouble("max") else null
+        )
+    }
+
+    private fun mergeRuntimeParams(defaults: RuntimeParams, override: RuntimeParams): RuntimeParams {
+        return RuntimeParams(
+            stabilityMs = override.stabilityMs ?: defaults.stabilityMs,
+            emaAlpha = override.emaAlpha ?: defaults.emaAlpha,
+            deadbandDegrees = override.deadbandDegrees ?: defaults.deadbandDegrees,
+            angles = mergeAngles(defaults.angles, override.angles)
+        )
+    }
+
+    private fun mergeAngles(defaults: AngleParams, override: AngleParams): AngleParams {
+        return AngleParams(
+            knee = mergePhaseAngles(defaults.knee, override.knee),
+            hip = mergePhaseAngles(defaults.hip, override.hip),
+            twist = mergePhaseAngles(defaults.twist, override.twist)
+        )
+    }
+
+    private fun mergePhaseAngles(defaults: PhaseAngleParams, override: PhaseAngleParams): PhaseAngleParams {
+        return PhaseAngleParams(
+            ready = mergeRange(defaults.ready, override.ready),
+            setup = mergeRange(defaults.setup, override.setup),
+            hinge = mergeRange(defaults.hinge, override.hinge),
+            fold = mergeRange(defaults.fold, override.fold),
+            hold = mergeRange(defaults.hold, override.hold),
+            returnPhase = mergeRange(defaults.returnPhase, override.returnPhase),
+            neutral = mergeRange(defaults.neutral, override.neutral),
+            start = mergeRange(defaults.start, override.start),
+            center = mergeRange(defaults.center, override.center),
+            descent = mergeRange(defaults.descent, override.descent),
+            lift = mergeRange(defaults.lift, override.lift)
+        )
+    }
+
+    private fun mergeRange(defaults: AngleRange, override: AngleRange): AngleRange {
+        return AngleRange(
+            min = override.min ?: defaults.min,
+            max = override.max ?: defaults.max
         )
     }
 }
