@@ -1,4 +1,4 @@
-# YogaFlow 3D Architecture (v7)
+# YogaFlow 3D Architecture (v8)
 
 YogaFlow 3D 是一個 production-oriented on-device AI 瑜伽教練系統。
 
@@ -12,6 +12,16 @@ Camera → Perception → Onboarding Gate → Detection Mapping → Flow → Coa
                     Observability
                          ↓
                       Tuning
+```
+
+Architecture design principles:
+
+```text
+Flow JSON is the lesson source of truth.
+Detection must be explicit and debuggable.
+LLM may adapt phrasing, but must not plan or reorder lessons.
+Camera and pose data should stay on device.
+Runtime tuning must not mutate packaged Flow JSON.
 ```
 
 ---
@@ -50,6 +60,20 @@ LLM Coach / Fallback
 TTS Voice
 ```
 
+Target controller pipeline:
+
+```text
+MainActivity.handlePoseFrame
+  ↓
+CameraSetupController.handleFrame
+  ↓
+LiveCoachSessionController.handleReadyPoseFrame
+  ↓
+CoachCueController
+```
+
+`MainActivity` should remain the Android shell: lifecycle, permissions, view binding, camera lifecycle, and callback wiring.
+
 ---
 
 ## Camera Onboarding Pipeline
@@ -74,7 +98,7 @@ FlowEngine
 
 The onboarding layer prevents users from entering a class until the system has reliable camera framing and view orientation.
 
-Current onboarding behavior:
+Current intended onboarding behavior:
 
 ```text
 Not Ready
@@ -84,6 +108,15 @@ Not Ready
 → hold Ready for ~1500ms
 → auto-start class
 ```
+
+Known integration gap:
+
+```text
+CameraSetupController exists, but latest main still needs final MainActivity wiring cleanup.
+MainActivity still contains local handleCameraSetupFrame logic.
+```
+
+This gap should be fixed before further feature work.
 
 ---
 
@@ -112,6 +145,65 @@ Purpose:
 
 ---
 
+## Flow DSL Runtime
+
+YogaFlow lessons are defined by JSON Flow DSL v2.
+
+```text
+.flow.json
+  ↓
+FlowJsonValidator
+  ↓
+FlowParser
+  ↓
+DetectKey
+  ↓
+RuntimeParams
+  ↓
+FlowValidator
+  ↓
+PoseFlowEngine
+```
+
+Flow JSON defines:
+
+- step state
+- duration
+- cue text
+- detect key
+- correction text
+- runtime thresholds
+- smoothing parameters
+- stability timing
+
+Example step:
+
+```json
+{
+  "state": "HOLD",
+  "durationMs": 8000,
+  "cue": "停在這裡，保持呼吸。",
+  "detect": "forward_hold",
+  "runtime": {
+    "stabilityMs": 650,
+    "emaAlpha": 0.25,
+    "angles": {
+      "knee": { "hold": { "min": 145 } },
+      "hip": { "hold": { "min": 50, "max": 130 } }
+    }
+  }
+}
+```
+
+Important rule:
+
+```text
+Flow JSON remains the source of truth.
+LLM cannot invent, remove, or reorder flow steps.
+```
+
+---
+
 ## Observability + Tuning Pipeline
 
 The runtime exposes a debug overlay and threshold tuning panel for validation and calibration:
@@ -125,9 +217,11 @@ DebugPoseInfo
   ↓
 debugText overlay
   ↓
-Threshold UI
+Threshold UI / Runtime Override UI
   ↓
-ThresholdConfig
+RuntimeOverrideStore
+  ↓
+RuntimeOverrideMerger
   ↓
 Detection Mapper
 ```
@@ -148,24 +242,39 @@ matched
 left / right knee angle
 left / right hip angle
 torso twist estimate
+effective runtime params
+active runtime overrides
+numeric fail reason
+auto tuning suggestion
 ```
 
-Threshold UI currently supports:
+Runtime override paths are scoped by flow, step, detect key, and parameter path:
+
+```kotlin
+data class RuntimeOverrideKey(
+    val flowId: String,
+    val stepIndex: Int,
+    val detect: DetectKey,
+    val path: String
+)
+```
+
+Example paths:
 
 ```text
-Squat knee hold max threshold
-Bridge hip lift / hold max threshold
+runtime.stabilityMs
+runtime.emaAlpha
+runtime.deadbandDegrees
+runtime.angles.knee.hold.min
+runtime.angles.hip.hold.max
 ```
 
-Threshold values are persisted with `SharedPreferences`, so user calibration survives app restarts.
+Design rule:
 
-Purpose:
-
-- tune pose thresholds
-- inspect jitter
-- validate stability window behavior
-- understand why a step is or is not matched
-- preserve user-specific calibration
+```text
+Packaged Flow JSON is never mutated.
+User tuning is applied through RuntimeOverrideStore only.
+```
 
 ---
 
@@ -185,8 +294,9 @@ Each mapper:
 - converts geometry → semantic state
 - applies threshold rules
 - applies smoothing + stability window
-- reads runtime threshold config when supported
-- outputs `(matched, state, cue)`
+- reads typed RuntimeParams
+- outputs matched / not matched result
+- provides numeric fail reasons when possible
 
 Mapping dispatch is handled by:
 
@@ -194,7 +304,51 @@ Mapping dispatch is handled by:
 PoseDetectionRouter
 ```
 
-This keeps `MainActivity` focused on session orchestration and UI, while mapper selection stays in the coach layer.
+Current strict routing behavior:
+
+```text
+unsupported poseId → error
+unsupported detect key in mapper → error
+missing required runtime param → error
+```
+
+Current exception:
+
+```text
+mountain still uses legacy PoseStateMachine fallback
+```
+
+Planned direction:
+
+```text
+add strict MountainDetectionMapper
+remove final fallback path
+```
+
+---
+
+## Detection Mapper Session
+
+Detection mappers contain smoothing and stability-window state. This state must be scoped to a live coaching session, not shared globally.
+
+Current lifecycle owner:
+
+```text
+DetectionMapperSession
+  ├─ ForwardFoldDetectionMapper
+  ├─ TwistDetectionMapper
+  ├─ SquatDetectionMapper
+  └─ BridgeDetectionMapper
+```
+
+Responsibilities:
+
+- create mapper instances
+- expose a configured `PoseDetectionRouter`
+- reset mapper state on playlist restart
+- reset mapper state on flow transition
+
+This prevents cross-flow contamination and prepares the architecture for future multi-session support.
 
 ---
 
@@ -221,7 +375,7 @@ All pose mappers use:
 
 - EMA smoothing
 - deadband filtering
-- stability window (~300ms)
+- stability window
 - cue throttling
 
 Purpose:
@@ -277,6 +431,45 @@ System decides WHAT
 LLM decides HOW
 ```
 
+`CoachCueController` owns:
+
+- cue rate limiting
+- stale async request cancellation
+- LLM phrase polishing
+- deterministic fallback cue
+- final TTS output
+
+---
+
+## Session State
+
+Current session states:
+
+```text
+IDLE
+RUNNING
+PAUSED
+COMPLETED
+```
+
+Recommended ownership:
+
+```text
+session/SessionState.kt
+```
+
+Reason:
+
+- avoid defining session lifecycle inside `MainActivity.kt`
+- improve reuse across controllers
+- reduce package coupling
+
+Known gap:
+
+```text
+SessionState is still defined in MainActivity.kt in latest main.
+```
+
 ---
 
 ## Current Capability
@@ -287,18 +480,26 @@ LLM decides HOW
 ✔ Squat
 ✔ Bridge
 ✔ Full beginner class (5 poses)
-✔ Camera setup panel before class start
-✔ Ready gating from framing + orientation
-✔ Stable auto-start after sustained Ready state
-✔ Visual body framing box
-✔ Fixed framing guide frame
-✔ Event-driven runtime
-✔ Stability-aware detection
+✔ Flow JSON DSL v2
+✔ Strict DetectKey validation
+✔ RuntimeOverrideStore
+✔ RuntimeOverrideMerger
+✔ AutoTuningAdvisor
+✔ Numeric fail reasons
 ✔ PoseDetectionRouter mapper dispatch
+✔ DetectionMapperSession mapper lifecycle owner
 ✔ Debug overlay for angle / state / matched inspection
 ✔ Runtime threshold tuning UI
 ✔ Persistent user calibration with SharedPreferences
 ✔ LLM + TTS coaching
+```
+
+Partially integrated / known gaps:
+
+```text
+△ CameraSetupController exists, but final MainActivity wiring cleanup is still needed
+△ Mountain still uses legacy fallback
+△ Teacher-video-to-flow pipeline is not fully automated
 ```
 
 ---
@@ -307,8 +508,10 @@ LLM decides HOW
 
 ### Near-term
 
-- Add color-coded ready / not-ready visual states
-- Add direction-aware framing hints
+- Restore full CameraSetupController wiring in MainActivity
+- Move SessionState to a dedicated file
+- Add strict MountainDetectionMapper
+- Add Flow JSON CI validation
 - Add threshold reset button
 - Extract mapper interface (`PoseDetectionMapper`)
 
@@ -325,6 +528,41 @@ LLM decides HOW
 - Improve coaching personalization
 - Add calibration profiles / per-user presets
 - Replace cover drawable with real generated images (#13)
+- Explore AI-assisted teacher-video-to-flow authoring
+
+---
+
+## Recommended Next Architecture PRs
+
+### PR 1: Restore CameraSetupController wiring
+
+Scope:
+
+- route setup frames through `CameraSetupController.handleFrame(frame)`
+- remove local `MainActivity.handleCameraSetupFrame`
+- fix pause/resume readiness gating
+- decide auto-start behavior
+
+### PR 2: Extract SessionState
+
+Scope:
+
+- move `SessionState` into a dedicated file
+- update imports across controllers
+
+### PR 3: Strict MountainDetectionMapper
+
+Scope:
+
+- implement mapper for mountain pose
+- remove final legacy `PoseStateMachine` fallback path
+
+### PR 4: Flow JSON CI
+
+Scope:
+
+- validate every `*.flow.json` in CI
+- reject unsupported detect keys / missing runtime params
 
 ---
 
@@ -336,7 +574,22 @@ All processing is on-device
 
 - no camera upload
 - no pose upload
-- no cloud dependency
+- no cloud dependency required for core detection
 - debug overlay uses local pose geometry only
 - threshold calibration is stored locally
 - camera onboarding uses local landmarks only
+
+---
+
+## Architecture Summary
+
+```text
+Flow JSON defines the lesson.
+Camera detects the body.
+Geometry measures the pose.
+Mappers evaluate correctness.
+Flow engine advances the class.
+Coach controller speaks the cue.
+Runtime tuning adapts thresholds.
+Debug output explains every decision.
+```
