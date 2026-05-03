@@ -29,15 +29,6 @@ app/src/main/assets/flows/*.flow.json
 flows/*.flow.json
 ```
 
-Removed:
-
-```text
-.flow.txt
-legacy detect strings
-Map<String, Double> runtime params
-silent fallback defaults
-```
-
 Each strict detection flow can define flow-level runtime defaults:
 
 ```json
@@ -189,8 +180,6 @@ Demo flows may live in:
 flows/
 ```
 
-Legacy `.flow.txt` files are removed and unsupported.
-
 ---
 
 ## Detection Mappers
@@ -259,8 +248,6 @@ hip angle
 torso twist estimate
 ```
 
-This is intended for development, validation, and flow tuning.
-
 ---
 
 ## Privacy Model
@@ -274,12 +261,6 @@ flow execution is local
 voice coaching can be local
 ```
 
-The product principle is:
-
-```text
-自己的資訊，自己掌控。數據零離機，專業不妥協。
-```
-
 ---
 
 ## Development Notes
@@ -287,27 +268,15 @@ The product principle is:
 Recommended validation before merging flow changes:
 
 ```text
-1. Ensure no .flow.txt files exist.
-2. Validate all .flow.json files.
-3. Confirm FlowJsonValidator passes.
-4. Confirm FlowValidator passes.
-5. Run app and inspect debug overlay.
-```
-
-Suggested guard:
-
-```bash
-if git ls-files | grep -q '\.flow\.txt$'; then
-  echo "ERROR: legacy .flow.txt files are not supported"
-  exit 1
-fi
+1. Validate all .flow.json files
+2. Confirm FlowJsonValidator passes
+3. Confirm FlowValidator passes
+4. Run app and inspect debug overlay
 ```
 
 ---
 
 ## Roadmap
-
-Potential next steps:
 
 ```text
 CI validation for all flow JSON files
@@ -316,7 +285,7 @@ Flow Editor UI
 DSL v3 constraint expressions
 ```
 
-Example DSL v3 direction:
+Example DSL direction:
 
 ```text
 knee > 145 && hip in 50..130
@@ -327,10 +296,9 @@ knee > 145 && hip in 50..130
 ## Status
 
 ```text
-JSON-only DSL: complete
-DetectKey enum: complete
-RuntimeParams typed model: complete
-Strict mappers: complete
-Flow-level defaults: complete
-Legacy .flow.txt removal: complete
+JSON DSL
+DetectKey enum
+RuntimeParams typed model
+Strict mappers
+Flow-level defaults
 ```
