@@ -8,7 +8,7 @@ import kotlin.math.abs
 
 object ForwardFoldDetectionMapper {
 
-    data class Result(val matched: Boolean, val state: CoachState, val cue: String)
+    data class Result(val matched: Boolean, val state: CoachState, val cue: String, val reason: String = "")
 
     private var smoothedKnee: Double? = null
     private var smoothedHip: Double? = null
@@ -33,7 +33,7 @@ object ForwardFoldDetectionMapper {
         val required = listOf(leftKnee, rightKnee, leftHip, rightHip)
         if (required.any { it.confidence == PoseGeometry.Confidence.INVALID }) {
             reset()
-            return Result(false, CoachState.CORRECTION, "我目前看不清楚你的膝蓋和髖部，請讓雙腿和上半身都進入畫面。")
+            return Result(false, CoachState.CORRECTION, "我目前看不清楚你的膝蓋和髖部，請讓雙腿和上半身都進入畫面。", "required landmarks invalid")
         }
 
         val smoothed = smoothAngles(
@@ -81,7 +81,7 @@ object ForwardFoldDetectionMapper {
         return if (now - stableSince >= stabilityMs) {
             result
         } else {
-            result.copy(matched = false, cue = "穩住這個位置，再保持一下。")
+            result.copy(matched = false, cue = "穩住這個位置，再保持一下。", reason = "stableFor=${now - stableSince}ms < required=${stabilityMs}ms")
         }
     }
 
@@ -116,8 +116,8 @@ object ForwardFoldDetectionMapper {
         val kneeMin = required(params.angles.knee.ready.min, DetectKey.READY_FORWARD_FOLD, "runtime.angles.knee.ready.min")
         val hipMin = required(params.angles.hip.ready.min, DetectKey.READY_FORWARD_FOLD, "runtime.angles.hip.ready.min")
         return when {
-            knee < kneeMin -> Result(false, CoachState.CORRECTION, "${prefix}先把膝蓋伸長，但不要鎖死。")
-            hip < hipMin -> Result(false, CoachState.CORRECTION, "${prefix}先回到比較直立的位置，再準備前傾。")
+            knee < kneeMin -> fail(CoachState.CORRECTION, "${prefix}先把膝蓋伸長，但不要鎖死。", "knee", knee, "<", "min", kneeMin)
+            hip < hipMin -> fail(CoachState.CORRECTION, "${prefix}先回到比較直立的位置，再準備前傾。", "hip", hip, "<", "min", hipMin)
             else -> Result(true, CoachState.SETUP, "${prefix}準備好了，雙腿伸長，身體保持穩定。")
         }
     }
@@ -126,8 +126,8 @@ object ForwardFoldDetectionMapper {
         val kneeMin = required(params.angles.knee.setup.min, DetectKey.TALL_SPINE_SETUP, "runtime.angles.knee.setup.min")
         val hipMin = required(params.angles.hip.setup.min, DetectKey.TALL_SPINE_SETUP, "runtime.angles.hip.setup.min")
         return when {
-            knee < kneeMin -> Result(false, CoachState.CORRECTION, "${prefix}膝蓋再伸長一點，先建立穩定的腿。")
-            hip < hipMin -> Result(false, CoachState.CORRECTION, "${prefix}你已經太早往前了，先把背拉長一點。")
+            knee < kneeMin -> fail(CoachState.CORRECTION, "${prefix}膝蓋再伸長一點，先建立穩定的腿。", "knee", knee, "<", "min", kneeMin)
+            hip < hipMin -> fail(CoachState.CORRECTION, "${prefix}你已經太早往前了，先把背拉長一點。", "hip", hip, "<", "min", hipMin)
             else -> Result(true, CoachState.SETUP, "${prefix}很好，背拉長，胸口打開。")
         }
     }
@@ -136,8 +136,8 @@ object ForwardFoldDetectionMapper {
         val kneeMin = required(params.angles.knee.hinge.min, DetectKey.HIP_HINGE, "runtime.angles.knee.hinge.min")
         val hipMax = required(params.angles.hip.hinge.max, DetectKey.HIP_HINGE, "runtime.angles.hip.hinge.max")
         return when {
-            knee < kneeMin -> Result(false, CoachState.CORRECTION, "${prefix}膝蓋彎太多了，先減少深度，讓腿重新伸長。")
-            hip > hipMax -> Result(false, CoachState.MOVEMENT, "${prefix}從髖部再往前一點，不要只低頭。")
+            knee < kneeMin -> fail(CoachState.CORRECTION, "${prefix}膝蓋彎太多了，先減少深度，讓腿重新伸長。", "knee", knee, "<", "min", kneeMin)
+            hip > hipMax -> fail(CoachState.MOVEMENT, "${prefix}從髖部再往前一點，不要只低頭。", "hip", hip, ">", "max", hipMax)
             else -> Result(true, CoachState.MOVEMENT, "${prefix}很好，正在從髖部前傾。")
         }
     }
@@ -147,9 +147,9 @@ object ForwardFoldDetectionMapper {
         val hipMin = required(params.angles.hip.fold.min, DetectKey.CONTROLLED_FORWARD_FOLD, "runtime.angles.hip.fold.min")
         val hipMax = required(params.angles.hip.fold.max, DetectKey.CONTROLLED_FORWARD_FOLD, "runtime.angles.hip.fold.max")
         return when {
-            knee < kneeMin -> Result(false, CoachState.CORRECTION, "${prefix}膝蓋開始彎了，退回一點，保持腿伸長。")
-            hip > hipMax -> Result(false, CoachState.MOVEMENT, "${prefix}再從髖部往前一點，到舒服的位置就好。")
-            hip < hipMin -> Result(false, CoachState.CORRECTION, "${prefix}深度太多了，先退回一點，不要硬壓。")
+            knee < kneeMin -> fail(CoachState.CORRECTION, "${prefix}膝蓋開始彎了，退回一點，保持腿伸長。", "knee", knee, "<", "min", kneeMin)
+            hip > hipMax -> fail(CoachState.MOVEMENT, "${prefix}再從髖部往前一點，到舒服的位置就好。", "hip", hip, ">", "max", hipMax)
+            hip < hipMin -> fail(CoachState.CORRECTION, "${prefix}深度太多了，先退回一點，不要硬壓。", "hip", hip, "<", "min", hipMin)
             else -> Result(true, CoachState.MOVEMENT, "${prefix}深度可以，保持控制，不要硬壓。")
         }
     }
@@ -159,9 +159,9 @@ object ForwardFoldDetectionMapper {
         val hipMin = required(params.angles.hip.hold.min, DetectKey.FORWARD_HOLD, "runtime.angles.hip.hold.min")
         val hipMax = required(params.angles.hip.hold.max, DetectKey.FORWARD_HOLD, "runtime.angles.hip.hold.max")
         return when {
-            knee < kneeMin -> Result(false, CoachState.CORRECTION, "${prefix}膝蓋彎太多，退回一點，讓大腿後側慢慢伸展。")
-            hip > hipMax -> Result(false, CoachState.MOVEMENT, "${prefix}如果身體還很高，從髖部再往前一點。")
-            hip < hipMin -> Result(false, CoachState.CORRECTION, "${prefix}不要再往下壓，退回安全深度。")
+            knee < kneeMin -> fail(CoachState.CORRECTION, "${prefix}膝蓋彎太多，退回一點，讓大腿後側慢慢伸展。", "knee", knee, "<", "min", kneeMin)
+            hip > hipMax -> fail(CoachState.MOVEMENT, "${prefix}如果身體還很高，從髖部再往前一點。", "hip", hip, ">", "max", hipMax)
+            hip < hipMin -> fail(CoachState.CORRECTION, "${prefix}不要再往下壓，退回安全深度。", "hip", hip, "<", "min", hipMin)
             else -> Result(true, CoachState.HOLD, "${prefix}很好，停在這裡，保持呼吸。")
         }
     }
@@ -170,8 +170,8 @@ object ForwardFoldDetectionMapper {
         val kneeMin = required(params.angles.knee.returnPhase.min, DetectKey.RETURN_STANDING, "runtime.angles.knee.return.min")
         val hipMin = required(params.angles.hip.returnPhase.min, DetectKey.RETURN_STANDING, "runtime.angles.hip.return.min")
         return when {
-            knee < kneeMin -> Result(false, CoachState.CORRECTION, "${prefix}回來時膝蓋也保持穩定，不要突然彎掉。")
-            hip < hipMin -> Result(false, CoachState.TRANSITION, "${prefix}慢慢回到中間，先不要急著抬頭。")
+            knee < kneeMin -> fail(CoachState.CORRECTION, "${prefix}回來時膝蓋也保持穩定，不要突然彎掉。", "knee", knee, "<", "min", kneeMin)
+            hip < hipMin -> fail(CoachState.TRANSITION, "${prefix}慢慢回到中間，先不要急著抬頭。", "hip", hip, "<", "min", hipMin)
             else -> Result(true, CoachState.TRANSITION, "${prefix}很好，已經回到中間。")
         }
     }
@@ -180,11 +180,17 @@ object ForwardFoldDetectionMapper {
         val kneeMin = required(params.angles.knee.neutral.min, DetectKey.NEUTRAL_FINISH, "runtime.angles.knee.neutral.min")
         val hipMin = required(params.angles.hip.neutral.min, DetectKey.NEUTRAL_FINISH, "runtime.angles.hip.neutral.min")
         return when {
-            knee < kneeMin -> Result(false, CoachState.CORRECTION, "${prefix}最後把雙腿伸長，回到穩定位置。")
-            hip < hipMin -> Result(false, CoachState.TRANSITION, "${prefix}再慢慢回正一點。")
+            knee < kneeMin -> fail(CoachState.CORRECTION, "${prefix}最後把雙腿伸長，回到穩定位置。", "knee", knee, "<", "min", kneeMin)
+            hip < hipMin -> fail(CoachState.TRANSITION, "${prefix}再慢慢回正一點。", "hip", hip, "<", "min", hipMin)
             else -> Result(true, CoachState.HOLD, "${prefix}完成，回到穩定呼吸。")
         }
     }
+
+    private fun fail(state: CoachState, cue: String, metric: String, actual: Double, op: String, boundName: String, expected: Double): Result {
+        return Result(false, state, cue, "$metric=${actual.fmt()} $op $boundName=${expected.fmt()}")
+    }
+
+    private fun Double.fmt(): String = "%.1f".format(this)
 
     private fun confidencePrefix(confidence: PoseGeometry.Confidence): String {
         return when (confidence) {
