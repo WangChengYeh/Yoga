@@ -148,7 +148,35 @@ numeric fail reason
 auto tuning suggestion
 ```
 
+Frame event fields:
+
+| Field | Meaning |
+| --- | --- |
+| `flowId` | Flow JSON id, for example `02_forward_fold_main`. |
+| `step` | 1-based step number inside the active flow. |
+| `detect` | Detection key from the Flow DSL, for example `ready_forward_fold`. |
+| `state` | Detected coach state: `SETUP`, `MOVEMENT`, `HOLD`, `CORRECTION`, or `TRANSITION`. |
+| `matched` | Whether the current frame satisfied the active detector and can count toward step progress. |
+| `landmarks` | Number of pose landmarks returned by MediaPipe for this frame. `33` means a full pose result was available. |
+| `imageWidth` / `imageHeight` | Camera frame size used for pose analysis. |
+| `mirrored` | Whether the camera frame was mirrored before display/analysis. |
+| `runtime` | Effective runtime parameters after flow defaults, step overrides, and user overrides. |
+| `overrides` | Count or summary of active user tuning overrides. |
+| `failReason` | Compact machine-readable reason the detector did not match, when available. |
+| `failExplanation` | Plain-language explanation of `failReason` for people reading the recording. |
+| `suggestion` | Auto-tuning suggestion derived from repeated numeric failures. |
+
 Recorded cue events include the raw flow cue, displayed/polished cue, completion cue, flow id, step, and source.
+
+Cue event fields:
+
+| Field | Meaning |
+| --- | --- |
+| `flowId` | Flow JSON id active when the cue was emitted. |
+| `step` | 1-based step number active when the cue was emitted. |
+| `state` | Coach state associated with the cue. |
+| `source` | Cue source, such as displayed coach text or flow completion. |
+| `text` | Cue text shown/spoken by the app. |
 
 Files are saved under the app external files directory:
 
@@ -282,6 +310,51 @@ Example numeric fail reason:
 ```text
 knee=138.2 < min=145.0
 ```
+
+Numeric fail reasons are compact diagnostics. They are meant for tuning, not for end-user coaching copy.
+
+Plain-language example:
+
+```text
+knee=48.2 < min=155.0
+```
+
+Means:
+
+```text
+The app estimated the user's knee angle as 48.2 degrees.
+This step required the knee angle to be at least 155.0 degrees.
+Because 48.2 is too low, the frame did not count toward completing the step.
+```
+
+In session recordings, the same event also includes `failExplanation`:
+
+```text
+Observed knee angle was 48.2 degrees; this step requires at least 155.0 degrees.
+```
+
+Machine-readable format:
+
+```text
+<metric>=<observed value> <comparison> <bound name>=<required threshold>
+```
+
+Common metrics:
+
+| Metric | Unit | Meaning |
+| --- | --- | --- |
+| `knee` | degrees | Knee joint angle estimated from hip-knee-ankle landmarks. Larger values mean a straighter leg; smaller values mean a more bent knee. |
+| `hip` | degrees | Hip/body angle estimated from shoulder-hip-knee landmarks. The interpretation depends on the pose and detect phase. |
+| `twist` | degrees | Approximate torso twist derived from left/right upper-body geometry. Larger values mean more rotation. |
+| `stableFor` | milliseconds | How long the detector has continuously seen the required pose. |
+
+Common bounds:
+
+| Bound | Meaning |
+| --- | --- |
+| `min` | Observed value must be greater than or equal to this threshold. |
+| `max` | Observed value must be less than or equal to this threshold. |
+| `required` | Required stability duration in milliseconds, used with `stableFor`. |
 
 Example auto tuning suggestion:
 

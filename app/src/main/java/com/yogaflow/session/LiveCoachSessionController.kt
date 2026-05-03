@@ -62,7 +62,8 @@ class LiveCoachSessionController(
             params = effectiveParams,
             frame = frame,
             fallback = stateMachine,
-            currentPose = currentPose
+            currentPose = currentPose,
+            expectedState = currentStep.state
         )
 
         if (!mapping.matched) {

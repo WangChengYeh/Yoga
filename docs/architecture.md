@@ -264,6 +264,7 @@ frame samples:
   runtime summary
   active runtime overrides
   numeric fail reason
+  plain-language fail explanation
   auto tuning suggestion
 
 cue events:
@@ -278,6 +279,24 @@ Recordings are newline-delimited JSON files saved in:
 ```text
 <app external files>/session-recordings/yogaflow-session-YYYYMMDD-HHMMSS.jsonl
 ```
+
+Numeric fail reasons are stored in both compact and plain-language forms:
+
+```text
+failReason: knee=48.2 < min=155.0
+failExplanation: Observed knee angle was 48.2 degrees; this step requires at least 155.0 degrees.
+```
+
+Interpretation:
+
+```text
+knee=48.2       observed knee angle from hip-knee-ankle landmarks
+<               observed value is below the required threshold
+min=155.0       the active flow step requires at least 155 degrees
+matched=false   this frame does not count toward step completion
+```
+
+Human-facing UI should prefer `failExplanation`. `failReason` exists so tuning tools can parse repeated failures reliably.
 
 Runtime override paths are scoped by flow, step, detect key, and parameter path:
 

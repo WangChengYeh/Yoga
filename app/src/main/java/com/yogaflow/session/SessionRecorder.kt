@@ -77,6 +77,7 @@ class SessionRecorder(private val context: Context) {
                 "runtime" to runtimeSummary,
                 "overrides" to overrideSummary,
                 "failReason" to failReason,
+                "failExplanation" to explainFailReason(failReason),
                 "suggestion" to suggestionSummary
             )
         )
@@ -113,8 +114,33 @@ class SessionRecorder(private val context: Context) {
         if (events.size > MAX_EVENTS) events.removeAt(0)
     }
 
+    private fun explainFailReason(reason: String): String {
+        if (reason.isBlank()) return ""
+        val match = FAIL_REASON_PATTERN.matchEntire(reason) ?: return reason
+        val metric = match.groupValues[1]
+        val observed = match.groupValues[2]
+        val comparison = match.groupValues[3]
+        val boundName = match.groupValues[4]
+        val required = match.groupValues[5]
+        val metricText = when (metric) {
+            "knee" -> "knee angle"
+            "hip" -> "hip/body angle"
+            "twist" -> "torso twist angle"
+            "stableFor" -> "time held steady"
+            else -> metric
+        }
+        val unit = if (metric == "stableFor" || boundName == "required") "ms" else "degrees"
+        val requirementText = when (comparison) {
+            "<" -> "at least"
+            ">" -> "at most"
+            else -> boundName
+        }
+        return "Observed $metricText was $observed $unit; this step requires $requirementText $required $unit."
+    }
+
     private companion object {
         const val FRAME_SAMPLE_INTERVAL_MS = 250L
         const val MAX_EVENTS = 20000
+        val FAIL_REASON_PATTERN = Regex("""([A-Za-z]+)=(-?\d+(?:\.\d+)?)\s*([<>])\s*([A-Za-z]+)=(-?\d+(?:\.\d+)?)""")
     }
 }

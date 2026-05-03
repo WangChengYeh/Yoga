@@ -23,8 +23,8 @@
       "correction": "先把雙腿打開，膝蓋伸長。如果膝蓋彎曲，先不要急著前彎。",
       "runtime": {
         "angles": {
-          "knee": { "ready": { "min": 155 } },
-          "hip": { "ready": { "min": 120 } }
+          "knee": { "ready": { "min": 115 } },
+          "hip": { "ready": { "min": 85 } }
         }
       }
     },
@@ -36,8 +36,8 @@
       "correction": "先不要低頭壓下去，胸口打開，讓背變長。",
       "runtime": {
         "angles": {
-          "knee": { "setup": { "min": 155 } },
-          "hip": { "setup": { "min": 115 } }
+          "knee": { "setup": { "min": 115 } },
+          "hip": { "setup": { "min": 85 } }
         }
       }
     },
@@ -51,7 +51,7 @@
         "stabilityMs": 150,
         "emaAlpha": 0.25,
         "angles": {
-          "knee": { "hinge": { "min": 150 } },
+          "knee": { "hinge": { "min": 110 } },
           "hip": { "hinge": { "max": 140 } }
         }
       }
@@ -65,7 +65,7 @@
       "runtime": {
         "emaAlpha": 0.25,
         "angles": {
-          "knee": { "fold": { "min": 150 } },
+          "knee": { "fold": { "min": 110 } },
           "hip": { "fold": { "min": 55, "max": 135 } }
         }
       }
@@ -80,7 +80,7 @@
         "stabilityMs": 250,
         "emaAlpha": 0.18,
         "angles": {
-          "knee": { "hold": { "min": 145 } },
+          "knee": { "hold": { "min": 110 } },
           "hip": { "hold": { "min": 50, "max": 130 } }
         }
       }
@@ -95,7 +95,7 @@
         "stabilityMs": 250,
         "emaAlpha": 0.18,
         "angles": {
-          "knee": { "hold": { "min": 145 } },
+          "knee": { "hold": { "min": 110 } },
           "hip": { "hold": { "min": 50, "max": 130 } }
         }
       }
@@ -108,8 +108,8 @@
       "correction": "不要突然抬頭或快速起身，慢慢回到中間。",
       "runtime": {
         "angles": {
-          "knee": { "return": { "min": 145 } },
-          "hip": { "return": { "min": 120 } }
+          "knee": { "return": { "min": 110 } },
+          "hip": { "return": { "min": 85 } }
         }
       }
     },
@@ -121,8 +121,8 @@
       "correction": "如果還覺得緊，保持腿伸長，先穩定呼吸。",
       "runtime": {
         "angles": {
-          "knee": { "neutral": { "min": 150 } },
-          "hip": { "neutral": { "min": 120 } }
+          "knee": { "neutral": { "min": 110 } },
+          "hip": { "neutral": { "min": 85 } }
         }
       }
     }

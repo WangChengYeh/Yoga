@@ -18,7 +18,8 @@ class PoseDetectionRouter(
         params: RuntimeParams,
         frame: PoseDetectionResult,
         fallback: PoseStateMachine,
-        currentPose: YogaPose
+        currentPose: YogaPose,
+        expectedState: CoachState
     ): PoseDetectionMappingResult {
 
         return when (poseId) {
@@ -43,7 +44,7 @@ class PoseDetectionRouter(
                 val matched = state != CoachState.CORRECTION
                 PoseDetectionMappingResult(
                     matched = matched,
-                    state = state,
+                    state = if (matched) expectedState else state,
                     cue = cue,
                     reason = if (!matched) cue else ""
                 )

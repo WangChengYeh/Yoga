@@ -365,7 +365,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun speakCoachCue(state: CoachState, cue: String) {
         if (!isCurrentFlowInitialized()) return
-        recordSessionCue(state, cue, "raw_cue")
         coachCueController.speak(currentPose, currentFlow.id, flowEngine.currentStepNumber(), state, cue)
     }
 
