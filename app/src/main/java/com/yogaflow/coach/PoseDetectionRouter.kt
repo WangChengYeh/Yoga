@@ -1,6 +1,7 @@
 package com.yogaflow.coach
 
 import com.yogaflow.flow.DetectKey
+import com.yogaflow.flow.RuntimeParams
 import com.yogaflow.pose.PoseDetectionResult
 import com.yogaflow.yoga.YogaPose
 
@@ -9,7 +10,7 @@ object PoseDetectionRouter {
     fun evaluate(
         poseId: String,
         detect: DetectKey,
-        params: Map<String, Double>,
+        params: RuntimeParams,
         frame: PoseDetectionResult,
         fallback: PoseStateMachine,
         currentPose: YogaPose
