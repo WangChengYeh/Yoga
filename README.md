@@ -1,14 +1,172 @@
 # YogaFlow 3D
 
-> **自己的資訊，自己掌控。數據零離機，專業不妥協。**
+> Visual AI Yoga Coach — see your mistakes, fix them in real time, and keep your movement data on your own device.
 
-YogaFlow 3D is a production-oriented on-device AI yoga coach for Android. It turns live camera frames into 3D pose geometry, maps the user’s body state to structured yoga flow steps, and gives real-time voice coaching through local LLM + TTS.
+YogaFlow 3D is an Android, on-device AI yoga coaching app. It turns live camera frames into pose geometry, evaluates the user against structured yoga flow steps, and gives real-time visual / voice guidance.
+
+**數據自主 • 即時引導 • 個性化成長**
 
 ---
 
-## ✨ Flow DSL
+## Why it matters
 
-YogaFlow uses a **JSON DSL v2**, type-safe, strict Flow DSL.
+Most home yoga practice is still one-way video playback. The user follows a teacher, but cannot see whether their knees are bending, their hips are aligned, or their spine is collapsing.
+
+YogaFlow 3D addresses this visual blind spot:
+
+- Real-time body pose tracking
+- Joint-angle based correction
+- Flow-based lesson progression
+- Local-first privacy model
+- Personalized movement tuning over time
+
+The long-term vision is simple:
+
+> Make expert movement feedback available at home, without sending private camera data to the cloud.
+
+---
+
+## Product vision
+
+YogaFlow 3D starts with yoga, but the underlying system is a motion-intelligence platform.
+
+Potential expansion areas:
+
+- physical therapy
+- mobility training
+- dance learning
+- sports form correction
+- post-injury movement recovery
+
+The current implementation focuses on a practical MVP: live camera pose detection, strict flow execution, angle-based feedback, and voice coaching.
+
+---
+
+## Current capability
+
+```text
+Camera → Pose Detection → Geometry → Strict Mapper → Flow Engine → Coach Cue
+```
+
+Implemented core pieces:
+
+- Android native app
+- CameraX live camera pipeline
+- MediaPipe pose integration
+- 3D / 2D fallback geometry helpers
+- JSON Flow DSL v2
+- strict `DetectKey` validation
+- pose-specific detection mappers
+- runtime tuning overrides
+- auto tuning suggestions from numeric fail reasons
+- debug overlay for explainability
+- LLM-assisted phrase polishing
+- TTS voice coaching
+
+Current limitation:
+
+```text
+YouTube / teacher-video auto extraction is not fully automated yet.
+```
+
+Today, YogaFlow uses structured Flow JSON. Flows can be authored manually or prepared with AI assistance, but the app does not yet provide a complete automatic YouTube-to-flow pipeline.
+
+---
+
+## How it works
+
+### 1. Flow JSON defines the lesson
+
+The lesson sequence is not improvised by the LLM. It is defined by a strict Flow DSL.
+
+```json
+{
+  "state": "HOLD",
+  "durationMs": 8000,
+  "cue": "停在這裡，保持呼吸。",
+  "detect": "forward_hold",
+  "runtime": {
+    "stabilityMs": 650,
+    "emaAlpha": 0.25,
+    "angles": {
+      "knee": { "hold": { "min": 145 } },
+      "hip": { "hold": { "min": 50, "max": 130 } }
+    }
+  }
+}
+```
+
+### 2. Camera frames become pose geometry
+
+```text
+CameraPosePipeline
+        ↓
+PoseDetectionResult
+        ↓
+PoseGeometry
+```
+
+### 3. Pose-specific mappers evaluate body state
+
+```text
+DetectKey + RuntimeParams + PoseDetectionResult
+        ↓
+ForwardFoldDetectionMapper / SquatDetectionMapper / TwistDetectionMapper / BridgeDetectionMapper
+        ↓
+matched / not matched + reason + cue
+```
+
+### 4. The flow engine advances the class
+
+```text
+PoseDetectionRouter
+        ↓
+PoseFlowEngine
+        ↓
+CoachCueController
+        ↓
+CoachSpeaker / LlmCoach / TTS
+```
+
+---
+
+## Architecture
+
+```text
+CameraPosePipeline
+        ↓
+PoseDetectionResult
+        ↓
+MainActivity.handlePoseFrame
+        ↓
+LiveCoachSessionController
+        ↓
+RuntimeOverrideMerger
+        ↓
+PoseDetectionRouter
+        ↓
+Pose-specific Detection Mapper
+        ↓
+PoseFlowEngine
+        ↓
+CoachCueController
+        ↓
+LlmCoach + CoachPhrasePolisher + CoachSpeaker/TTS
+```
+
+Design rule:
+
+```text
+Flow JSON is the source of truth.
+LLM must not plan, reorder, or invent lesson steps.
+LLM can only adapt phrase tone for flow-provided cues.
+```
+
+---
+
+## Flow DSL
+
+YogaFlow uses a type-safe JSON DSL v2.
 
 ```text
 .flow.json
@@ -22,358 +180,7 @@ YogaFlow uses a **JSON DSL v2**, type-safe, strict Flow DSL.
 → PoseFlowEngine
 ```
 
-Supported:
-
-```text
-app/src/main/assets/flows/*.flow.json
-flows/*.flow.json
-```
-
-Each strict detection flow can define flow-level runtime defaults:
-
-```json
-{
-  "defaults": {
-    "runtime": {
-      "stabilityMs": 300,
-      "emaAlpha": 0.35,
-      "deadbandDegrees": 3
-    }
-  }
-}
-```
-
-Each step defines only its detection-specific angles unless it needs to override defaults:
-
-```json
-{
-  "detect": "forward_hold",
-  "runtime": {
-    "stabilityMs": 650,
-    "emaAlpha": 0.25,
-    "angles": {
-      "knee": { "hold": { "min": 145 } },
-      "hip": { "hold": { "min": 50, "max": 130 } }
-    }
-  }
-}
-```
-
-Full spec:
-
-```text
-docs/flow-dsl.md
-```
-
----
-
-## App Controller Architecture
-
-MainActivity is intentionally kept as the Android shell: lifecycle, permissions, view binding, camera lifecycle, and wiring. Live coaching logic is split into controllers.
-
-```text
-CameraPosePipeline
-        ↓
-PoseDetectionResult
-        ↓
-MainActivity.handlePoseFrame
-        ├─ Camera setup gate
-        │      CameraFramingCoach + ViewOrientation
-        │
-        └─ LiveCoachSessionController
-               RuntimeOverrideMerger
-               PoseDetectionRouter
-               PoseFlowEngine
-               AutoTuningAdvisor
-               FlowEvent
-                    ↓
-             CoachCueController
-               LlmCoach + CoachPhrasePolisher + CoachSpeaker/TTS
-```
-
-Current responsibility split:
-
-```text
-MainActivity
-  Android lifecycle, permission, camera start/stop, UI wiring, playlist buttons, controller callbacks
-
-CoachCueController
-  LLM generation, phrase polishing, fallback detection, TTS, cue rate limiting, async request cancellation
-
-LiveCoachSessionController
-  ready pose frame handling, runtime override merge, pose detection routing, flow events, debug/tuning callbacks
-
-CameraSetupController
-  intended owner of full-body framing, orientation, ready gate, setup correction cues, and auto-start wiring
-```
-
-Current integration status:
-
-```text
-CoachCueController: integrated in MainActivity
-LiveCoachSessionController: integrated in MainActivity
-CameraSetupController: file exists; MainActivity still uses handleCameraSetupFrame as the stable pre-integration baseline
-```
-
-Design rule:
-
-```text
-LLM must not plan or reorder lessons.
-LLM is only a phrase / tone adapter for flow-provided cues.
-Flow JSON remains the source of truth for lesson sequence and detection behavior.
-```
-
----
-
-## Runtime Tuning Architecture
-
-```text
-                         ┌──────────────────────────┐
-                         │     Flow JSON (DSL)      │
-                         │  assets/flows/*.json     │
-                         └────────────┬─────────────┘
-                                      │
-                                      ▼
-                         ┌──────────────────────────┐
-                         │       FlowLoader         │
-                         │   parse + validation     │
-                         └────────────┬─────────────┘
-                                      │
-                                      ▼
-                         ┌──────────────────────────┐
-                         │      RuntimeParams       │
-                         │   typed DSL params       │
-                         └────────────┬─────────────┘
-                                      │
-                     ┌────────────────┴────────────────┐
-                     │                                 │
-                     ▼                                 ▼
-     ┌──────────────────────────┐        ┌──────────────────────────┐
-     │ TunableParamExtractor    │        │   RuntimeOverrideStore   │
-     │ DSL → UI params          │        │ user tuning layer        │
-     └────────────┬─────────────┘        └────────────┬─────────────┘
-                  │                                   │
-                  ▼                                   ▼
-        ┌──────────────────────┐           ┌────────────────────────┐
-        │   Slider UI          │           │  RuntimeOverrideKey    │
-        │ dynamic binding      │           │ flow/step/detect/path  │
-        └────────────┬─────────┘           └────────────┬───────────┘
-                     │                                  │
-                     └──────────────┬───────────────────┘
-                                    ▼
-                         ┌──────────────────────────┐
-                         │  RuntimeOverrideMerger   │
-                         │ DSL + override merge     │
-                         └────────────┬─────────────┘
-                                      │
-                                      ▼
-                         ┌──────────────────────────┐
-                         │  EffectiveRuntimeParams  │
-                         │ final detection config   │
-                         └────────────┬─────────────┘
-                                      │
-                                      ▼
-                         ┌──────────────────────────┐
-                         │  PoseDetectionRouter     │
-                         │ detect + mapper logic    │
-                         └────────────┬─────────────┘
-                                      │
-                                      ▼
-                         ┌──────────────────────────┐
-                         │   PoseFlowEngine         │
-                         │ state machine + flow     │
-                         └────────────┬─────────────┘
-                                      │
-                                      ▼
-                         ┌──────────────────────────┐
-                         │     Coach Output         │
-                         │ voice / UI feedback      │
-                         └──────────────────────────┘
-```
-
-Minimal mental model:
-
-```text
-DSL → Runtime → Override → Detection → Explain
-```
-
----
-
-## Runtime Overrides
-
-Runtime tuning is scoped by flow, step, detect key, and parameter path:
-
-```kotlin
-data class RuntimeOverrideKey(
-    val flowId: String,
-    val stepIndex: Int,
-    val detect: DetectKey,
-    val path: String
-)
-```
-
-Example override paths:
-
-```text
-runtime.stabilityMs
-runtime.emaAlpha
-runtime.deadbandDegrees
-runtime.angles.knee.hold.min
-runtime.angles.hip.hold.max
-```
-
-The packaged flow JSON remains the source of truth. User tuning is applied as a runtime override layer and merged into effective runtime params for detection.
-
----
-
-## Adaptive Auto Tuning
-
-YogaFlow can observe numeric fail reasons and propose runtime tuning suggestions without mutating packaged flow JSON.
-
-```text
-numeric FAIL reason
-        ↓
-AutoTuningAdvisor.observeReason(...)
-        ↓
-recent scoped samples
-        ↓
-average actual angle
-        ↓
-AutoTuningSuggestion
-        ↓
-RuntimeOverrideStore apply action
-```
-
-Example fail reason:
-
-```text
-FAIL: knee=138.2 < min=145.0
-```
-
-Example suggestion:
-
-```text
-SUGGEST: knee.min 145.0 → 140.0 (9 samples, medium)
-```
-
-Suggestion confidence is currently based on sample count:
-
-```text
-15+ samples → high
-8+ samples  → medium
-5+ samples  → low
-```
-
-Apply behavior:
-
-```text
-Apply button / restart long-press
-        ↓
-applyLatestSuggestion()
-        ↓
-RuntimeOverrideStore.set(...)
-        ↓
-slider + detection update immediately
-```
-
-Design rules:
-
-```text
-Flow JSON is never mutated
-suggestions are user-in-the-loop
-runtime override is the only write target
-suggestions are scoped by flow / step / detect
-stability timing failures are ignored for angle tuning
-```
-
-Current limitation:
-
-```text
-confidence is sample-count based only
-variance-based confidence is planned
-multi-param apply is planned
-```
-
----
-
-## Product Experience
-
-```text
-Beginner Class
-Mountain → Forward Fold → Twist → Squat → Bridge
-```
-
-- Platform: Android
-- Runtime: On-device camera + pose + coach loop
-- Coaching mode: live correction + flow progression
-- Camera onboarding: setup panel, ready gating, stable auto-start
-- Visual feedback: body framing box + fixed guide frame
-- Debug mode: live pose angle / state / matched overlay
-- Flow language: JSON Flow DSL v2
-- Detection runtime: `DetectKey + RuntimeParams`
-- Privacy: no camera frames or pose landmarks need to leave the device
-
----
-
-## Core Architecture
-
-```text
-CameraPosePipeline
-        ↓
-PoseDetectionResult
-        ↓
-PoseGeometry
-        ↓
-LiveCoachSessionController
-        ↓
-PoseDetectionRouter
-        ↓
-Pose-specific Detection Mapper
-        ↓
-PoseFlowEngine
-        ↓
-CoachCueController
-        ↓
-CoachSpeaker / LlmCoach / TTS
-```
-
-### Flow Runtime
-
-```text
-FlowLoader
-        ↓
-FlowJsonValidator
-        ↓
-FlowParser
-        ↓
-YogaFlow / YogaFlowStep
-        ↓
-FlowValidator
-        ↓
-PoseFlowEngine
-```
-
-### Strict Detection Runtime
-
-```text
-JSON detect string
-        ↓
-DetectKey enum
-        ↓
-RuntimeParams typed model
-        ↓
-RuntimeOverrideStore
-        ↓
-EffectiveRuntimeParams
-        ↓
-Strict mapper evaluation
-```
-
----
-
-## Flow Files
-
-Production flows live in:
+Flow files live in:
 
 ```text
 app/src/main/assets/flows/
@@ -389,118 +196,136 @@ Current production flows:
 05_bridge.flow.json
 ```
 
-Demo flows may live in:
+Full DSL notes:
 
 ```text
-flows/
+docs/flow-dsl.md
 ```
 
 ---
 
-## Detection Mappers
+## Runtime tuning
 
-Pose-specific mappers evaluate typed detect keys and typed runtime params.
+YogaFlow separates packaged lesson design from user-specific runtime tuning.
 
 ```text
-ForwardFoldDetectionMapper
-SquatDetectionMapper
-TwistDetectionMapper
-BridgeDetectionMapper
+Flow JSON defaults
+        ↓
+RuntimeParams
+        ↓
+RuntimeOverrideStore
+        ↓
+RuntimeOverrideMerger
+        ↓
+EffectiveRuntimeParams
+        ↓
+Detection Mapper
 ```
 
-Mapper contract:
+Override keys are scoped by:
 
 ```kotlin
-fun evaluate(
-    detect: DetectKey,
-    frame: PoseDetectionResult,
-    params: RuntimeParams
-): Result
+data class RuntimeOverrideKey(
+    val flowId: String,
+    val stepIndex: Int,
+    val detect: DetectKey,
+    val path: String
+)
 ```
 
-Strict policy:
+Example paths:
 
 ```text
-missing required runtime param → error
-missing required angle param → error
-unsupported detect in mapper → error
+runtime.stabilityMs
+runtime.emaAlpha
+runtime.deadbandDegrees
+runtime.angles.knee.hold.min
+runtime.angles.hip.hold.max
 ```
 
 ---
 
-## Camera Onboarding
+## Explainable feedback
 
-Before a class starts, YogaFlow checks:
+YogaFlow tries to make every correction debuggable.
 
-```text
-full-body framing
-view orientation
-camera readiness stability
-```
-
-When the user is ready and stable, the class can auto-start.
+Example numeric fail reason:
 
 ```text
-CameraFramingCoach
-ViewOrientation
-Ready Gate
-Auto-start Timer
+knee=138.2 < min=145.0
 ```
 
-Current implementation:
+Example auto tuning suggestion:
 
 ```text
-MainActivity.handleCameraSetupFrame is the stable baseline.
-CameraSetupController exists and is intended to own this logic after final integration.
+knee.min 145.0 → 140.0 (9 samples, medium confidence)
 ```
+
+Debug overlay can show:
+
+- detect key
+- coach state
+- matched / not matched
+- runtime params
+- active overrides
+- fail reason
+- tuning suggestion
 
 ---
 
-## Debug Overlay
+## Privacy model
 
-Debug mode displays pose, runtime, override data, fail reason, and tuning suggestions for explainability:
-
-```text
-pose id
-detect key
-coach state
-matched / not matched
-knee angle
-hip angle
-torso twist estimate
-effective runtime params
-active runtime overrides
-numeric fail reason
-auto tuning suggestion
-```
-
-Example:
-
-```text
-runtime=stab=650 ema=0.25 dead=3.0 | knee.hold.min=145 hip.hold.max=130
-overrides=knee.hold.min=150
-FAIL: knee=138.2 < min=145.0
-SUGGEST: knee.min 145.0 → 140.0 (9 samples, medium)
-```
-
-This makes each detection result traceable to pose data, DSL runtime params, user tuning overrides, and adaptive suggestions.
-
----
-
-## Privacy Model
-
-YogaFlow is designed around on-device processing.
+YogaFlow is designed around local-first processing.
 
 ```text
 camera frames stay on device
 pose landmarks stay on device
 flow execution is local
-voice coaching can be local
+coaching can run locally
+```
+
+This is important because yoga practice happens in private spaces.
+
+---
+
+## Pitch deck
+
+The product proposal is available as a Google Slides pitch deck:
+
+```text
+https://docs.google.com/presentation/d/1e0uUybgMie-YGJHSP8k9FjXeGxIeCdmMKvC8RVVI-nk/edit?usp=drivesdk
+```
+
+Pitch theme:
+
+```text
+視覺化智慧：重新定義居家瑜珈
 ```
 
 ---
 
-## Development Notes
+## Roadmap
+
+Near-term engineering priorities:
+
+- restore full CameraSetupController wiring in MainActivity
+- add CI validation for all Flow JSON files
+- persist runtime overrides
+- improve mapper lifecycle tests
+- add strict MountainDetectionMapper
+- add variance-based tuning confidence
+- build a Flow Editor UI
+- explore AI-assisted teacher-video-to-flow authoring
+
+Tracked roadmap:
+
+```text
+docs/detection-refactor-roadmap.md
+```
+
+---
+
+## Development notes
 
 Recommended validation before merging flow changes:
 
@@ -509,36 +334,15 @@ Recommended validation before merging flow changes:
 2. Confirm FlowJsonValidator passes
 3. Confirm FlowValidator passes
 4. Run app and inspect debug overlay
-5. Verify Apply button / restart long-press only writes runtime overrides
+5. Verify suggestions write only to RuntimeOverrideStore
 ```
 
-Safe refactor rule for MainActivity:
+Safe refactor rule:
 
 ```text
 Do not patch MainActivity with placeholder content.
-When using GitHub content API, always fetch current SHA and write a complete Kotlin file.
+When using GitHub contents API, always fetch the current SHA and write a complete Kotlin file.
 Prefer local IDE refactor for controller integration.
-```
-
----
-
-## Roadmap
-
-```text
-Integrate CameraSetupController into MainActivity
-CI validation for all flow JSON files
-Runtime override persistence
-Multi-param tuning UI
-Variance-based confidence
-Multi-param suggestion apply
-Flow Editor UI
-DSL v3 constraint expressions
-```
-
-Example DSL direction:
-
-```text
-knee > 145 && hip in 50..130
 ```
 
 ---
@@ -546,19 +350,23 @@ knee > 145 && hip in 50..130
 ## Status
 
 ```text
-JSON DSL v2
-DetectKey enum
-RuntimeParams typed model
-Strict mappers
-Flow-level defaults
-Runtime override store
-Dynamic tuning UI
-Debug explainability
-Numeric fail reason
-Auto tuning advisor
-Sample-count confidence
-Apply suggestion action
-CoachCueController integrated
-LiveCoachSessionController integrated
-CameraSetupController exists, pending MainActivity integration
+Status: active prototype / architecture hardening
+Platform: Android
+Core: CameraX + MediaPipe + Flow DSL + local coach loop
+Privacy: local-first
+```
+
+Current known gap:
+
+```text
+CameraSetupController exists, but latest main still needs final MainActivity wiring cleanup.
+```
+
+---
+
+## Contact
+
+```text
+GitHub: WangChengYeh/Yoga
+Email: contact@yogaflow3d.ai
 ```
