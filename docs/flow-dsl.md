@@ -20,14 +20,11 @@ The current DSL is **JSON-only DSL v2** with a **type-safe strict runtime**.
 
 ## Current Status
 
-`.flow.txt` is permanently removed.
+Supported format:
 
 ```text
-Supported:   *.flow.json
-Unsupported: *.flow.txt
+*.flow.json
 ```
-
-There is no legacy parser, no text-flow fallback, and no dual-source-of-truth behavior.
 
 Production flows live under:
 
@@ -54,15 +51,11 @@ Flow defines what to detect and which runtime parameters to use. Kotlin code onl
 
 ---
 
-## DSL v2 Only
+## DSL v2
 
 ```text
-No .flow.txt
+Type-safe runtime
 No fallback
-No legacy flat angle keys
-No detect string encoding
-No Map<String, Double> runtime params
-No string detect in runtime
 No ambiguity
 ```
 
@@ -100,13 +93,6 @@ Angles are accessed by typed properties:
 params.angles.hip.hold.min
 params.angles.knee.fold.min
 params.angles.twist.center.max
-```
-
-The old string-based runtime is removed:
-
-```text
-detect|angle.hip.hold.min=50        # removed
-params["angle.hip.hold.min"]        # removed
 ```
 
 ---
@@ -284,141 +270,6 @@ The parser converts JSON runtime values into typed Kotlin objects after merging 
 | `runtime.angles.knee.fold.min` | `params.angles.knee.fold.min` |
 | `runtime.angles.twist.center.max` | `params.angles.twist.center.max` |
 
-Example:
-
-```json
-{
-  "defaults": {
-    "runtime": {
-      "stabilityMs": 300,
-      "emaAlpha": 0.35,
-      "deadbandDegrees": 3
-    }
-  },
-  "steps": [
-    {
-      "runtime": {
-        "stabilityMs": 650,
-        "angles": {
-          "hip": {
-            "hold": { "min": 50, "max": 130 }
-          }
-        }
-      }
-    }
-  ]
-}
-```
-
-Becomes typed runtime access:
-
-```kotlin
-params.angles.hip.hold.min == 50.0
-params.angles.hip.hold.max == 130.0
-params.stabilityMs == 650L
-params.emaAlpha == 0.35
-params.deadbandDegrees == 3.0
-```
-
----
-
-## Angle Model
-
-JSON structure:
-
-```text
-runtime.angles.<joint>.<phase>.<bound>
-```
-
-Kotlin access:
-
-```text
-params.angles.<joint>.<phase>.<bound>
-```
-
-| Segment | Supported values |
-|---|---|
-| joint | `knee`, `hip`, `twist` |
-| phase | `ready`, `setup`, `hinge`, `fold`, `hold`, `return`, `neutral`, `start`, `center`, `descent`, `lift` |
-| bound | `min`, `max` |
-
-Because `return` is a Kotlin keyword, the typed property is:
-
-```kotlin
-params.angles.hip.returnPhase.min
-params.angles.knee.returnPhase.min
-```
-
----
-
-## Required Runtime Params by Detect
-
-### Forward Fold
-
-| detect | Required runtime angles |
-|---|---|
-| `ready_forward_fold` | `knee.ready.min`, `hip.ready.min` |
-| `tall_spine_setup` | `knee.setup.min`, `hip.setup.min` |
-| `hip_hinge` | `knee.hinge.min`, `hip.hinge.max` |
-| `controlled_forward_fold` | `knee.fold.min`, `hip.fold.min`, `hip.fold.max` |
-| `forward_hold` | `knee.hold.min`, `hip.hold.min`, `hip.hold.max` |
-| `return_standing` | `knee.return.min`, `hip.return.min` |
-| `neutral_finish` | `knee.neutral.min`, `hip.neutral.min` |
-
-### Squat
-
-| detect | Required runtime angles |
-|---|---|
-| `squat_setup` | `knee.setup.min` |
-| `squat_descent` | `knee.descent.min`, `knee.descent.max` |
-| `squat_hold` | `knee.hold.min`, `knee.hold.max` |
-| `squat_return` | `knee.return.min` |
-
-### Twist
-
-| detect | Required runtime angles |
-|---|---|
-| `stable_base` | `twist.center.max` |
-| `twist_start` | `twist.start.min`, `twist.start.max` |
-| `twist_hold` | `twist.hold.min`, `twist.hold.max` |
-| `return_center` | `twist.center.max` |
-
-### Bridge
-
-| detect | Required runtime angles |
-|---|---|
-| `bridge_setup` | none |
-| `bridge_lift` | `hip.lift.min`, `hip.lift.max` |
-| `bridge_hold` | `hip.hold.min`, `hip.hold.max` |
-| `bridge_return` | none |
-
----
-
-## Required Runtime Controls
-
-Strict mapper steps require these controls, usually inherited from `defaults.runtime`:
-
-```json
-"stabilityMs": 300,
-"emaAlpha": 0.35,
-"deadbandDegrees": 3
-```
-
-These map to:
-
-```kotlin
-params.stabilityMs
-params.emaAlpha
-params.deadbandDegrees
-```
-
-Mapper behavior is strict:
-
-```text
-missing required runtime param → error
-missing required angle param → error
-```
-
 ---
 
 ## Validation Pipeline
@@ -429,57 +280,9 @@ YogaFlow uses two validators before runtime execution.
 
 Checks JSON shape, type, enum, and numeric ranges before parsing. It also validates `defaults.runtime`.
 
-Examples it catches:
-
-```json
-"min": "abc"
-```
-
-```text
-steps[3].runtime.angles.hip.fold.min must be a number
-```
-
-```json
-"state": "MOVE"
-```
-
-```text
-expected one of SETUP, MOVEMENT, HOLD, TRANSITION, CORRECTION
-```
-
-```json
-"angles": { "hips": {} }
-```
-
-```text
-angles.hips is not a supported joint
-```
-
 ### 2. FlowValidator
 
 Checks semantic requirements after defaults and step runtime have been merged.
-
-Example:
-
-```json
-{
-  "detect": "forward_hold",
-  "runtime": {
-    "angles": {
-      "hip": {
-        "hold": { "min": 50 }
-      }
-    }
-  }
-}
-```
-
-Fails because `forward_hold` also requires:
-
-```text
-knee.hold.min
-hip.hold.max
-```
 
 ---
 
@@ -494,8 +297,6 @@ Invalid DSL semantics → FlowValidator error
 Missing mapper-required param → mapper error
 ```
 
-No silent fallback is allowed.
-
 ---
 
 ## Flow Editor Schema
@@ -506,48 +307,22 @@ The strongly typed schema lives at:
 schemas/flow-editor.schema.json
 ```
 
-Use this schema for:
-
-```text
-Flow Editor form generation
-LLM-generated flow validation
-pre-commit validation
-CI validation
-```
-
 ---
 
-## Current Runtime Guarantees
+## Runtime Guarantees
 
 ```text
-0 .flow.txt files
-0 string detect in runtime
-0 Map<String, Double> runtime params
-0 detect|k=v encoding
-0 fallback defaults in strict mappers
-```
-
-The runtime contract is now:
-
-```text
-DetectKey + RuntimeParams → strict mapper evaluation
+Type-safe runtime params
+Enum-based detect keys
+No silent fallback
 ```
 
 ---
 
 ## Roadmap
 
-Potential DSL v3 syntax:
-
 ```text
-angle.hip.hold.range = 50..130
-constraint.hold = knee > 145 && hip in 50..130
-confidence.min
-hold.frames
-```
-
-Potential next runtime model:
-
-```text
-DetectKey + sealed typed params per detect
+constraint expressions
+flow editor
+runtime visualization
 ```
