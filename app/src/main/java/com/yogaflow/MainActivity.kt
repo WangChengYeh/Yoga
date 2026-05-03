@@ -24,6 +24,8 @@ import com.yogaflow.coach.PoseStateMachine
 import com.yogaflow.coach.SquatDetectionMapper
 import com.yogaflow.coach.ThresholdConfig
 import com.yogaflow.coach.TwistDetectionMapper
+import com.yogaflow.flow.AutoTuningAdvisor
+import com.yogaflow.flow.AutoTuningSuggestion
 import com.yogaflow.flow.FlowLoader
 import com.yogaflow.flow.FlowPlaylistEngine
 import com.yogaflow.flow.RuntimeOverrideKey
@@ -92,6 +94,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private val flowEngine = PoseFlowEngine()
     private val playlist = FlowPlaylistEngine()
     private val runtimeOverrideStore = RuntimeOverrideStore()
+    private val autoTuningAdvisor = AutoTuningAdvisor()
+    private var latestSuggestion: AutoTuningSuggestion? = null
     private var suppressTuningCallbacks = false
 
     private lateinit var currentFlow: YogaFlow
@@ -363,6 +367,10 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             fallback = stateMachine,
             currentPose = currentPose
         )
+        if (!mapping.matched) {
+            autoTuningAdvisor.observeReason(currentFlow.id, stepIndex, currentStep.detect, mapping.reason)
+        }
+        val suggestionSummary = buildSuggestionSummary(currentFlow.id, stepIndex, currentStep.detect)
         val event = flowEngine.update(currentFlow, mapping.state, mapping.matched)
         updateRuntimeTuningControls()
         updateDebugOverlay(
@@ -371,7 +379,9 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             state = mapping.state,
             matched = mapping.matched,
             runtimeSummary = runtimeSummary,
-            overrideSummary = overrideSummary
+            overrideSummary = overrideSummary,
+            failReason = mapping.reason,
+            suggestionSummary = suggestionSummary
         )
 
         when (event) {
@@ -443,7 +453,9 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         state: CoachState,
         matched: Boolean,
         runtimeSummary: String = "",
-        overrideSummary: String = ""
+        overrideSummary: String = "",
+        failReason: String = "",
+        suggestionSummary: String = ""
     ) {
         if (!::debugText.isInitialized) return
         if (!DEBUG_OVERLAY_ENABLED) {
@@ -471,7 +483,9 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             rightHipAngle = rightHip,
             torsoTwistEstimate = torsoTwist,
             effectiveRuntimeSummary = runtimeSummary,
-            overrideSummary = overrideSummary
+            overrideSummary = overrideSummary,
+            failReason = failReason,
+            tuningSuggestionSummary = suggestionSummary
         )
         debugText.text = debugInfo.toDisplayText()
     }
@@ -494,6 +508,23 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             }
             .take(4)
             .joinToString(" ")
+    }
+
+    private fun buildSuggestionSummary(flowId: String, stepIndex: Int, detect: com.yogaflow.flow.DetectKey): String {
+        val suggestions = autoTuningAdvisor.suggestionsFor(flowId, stepIndex, detect)
+        latestSuggestion = suggestions.firstOrNull()
+        return suggestions.take(2).joinToString(" | ") { it.label }
+    }
+
+    private fun applyLatestSuggestion(): Boolean {
+        val suggestion = latestSuggestion ?: return false
+        val binding = currentTuningBindings().firstOrNull {
+            it.param.label.startsWith("${suggestion.metric}.") && it.param.label.endsWith(".${suggestion.boundName}")
+        } ?: return false
+        runtimeOverrideStore.set(binding.key, suggestion.suggestedValue)
+        updateRuntimeTuningControls()
+        coachText.text = "已套用建議：${suggestion.label}"
+        return true
     }
 
     private fun Double?.fmt1(): String {
@@ -577,6 +608,10 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             updateUi(animated = false)
         }
         restartButton.setOnClickListener { restartCurrentPlaylist() }
+        restartButton.setOnLongClickListener {
+            if (!applyLatestSuggestion()) coachText.text = "目前沒有可套用的調參建議。"
+            true
+        }
     }
 
     private fun loadDiscoveredPlaylist(openClassView: Boolean = true) {
@@ -612,6 +647,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         currentPose = resolvePose(currentFlow)
         flowEngine.reset()
         resetDetectionMappers()
+        latestSuggestion = null
         sessionState = SessionState.IDLE
         cameraReady = false
         cameraReadySince = 0L
@@ -644,6 +680,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
         flowEngine.reset()
         resetDetectionMappers()
+        latestSuggestion = null
         currentFlow = flow
         currentPose = resolvePose(currentFlow)
         sessionState = SessionState.IDLE
