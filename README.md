@@ -168,6 +168,76 @@ The packaged flow JSON remains the source of truth. User tuning is applied as a 
 
 ---
 
+## Adaptive Auto Tuning
+
+YogaFlow can observe numeric fail reasons and propose runtime tuning suggestions without mutating packaged flow JSON.
+
+```text
+numeric FAIL reason
+        ↓
+AutoTuningAdvisor.observeReason(...)
+        ↓
+recent scoped samples
+        ↓
+average actual angle
+        ↓
+AutoTuningSuggestion
+        ↓
+RuntimeOverrideStore apply action
+```
+
+Example fail reason:
+
+```text
+FAIL: knee=138.2 < min=145.0
+```
+
+Example suggestion:
+
+```text
+SUGGEST: knee.min 145.0 → 140.0 (9 samples, medium)
+```
+
+Suggestion confidence is currently based on sample count:
+
+```text
+15+ samples → high
+8+ samples  → medium
+5+ samples  → low
+```
+
+Apply behavior:
+
+```text
+Apply button / restart long-press
+        ↓
+applyLatestSuggestion()
+        ↓
+RuntimeOverrideStore.set(...)
+        ↓
+slider + detection update immediately
+```
+
+Design rules:
+
+```text
+Flow JSON is never mutated
+suggestions are user-in-the-loop
+runtime override is the only write target
+suggestions are scoped by flow / step / detect
+stability timing failures are ignored for angle tuning
+```
+
+Current limitation:
+
+```text
+confidence is sample-count based only
+variance-based confidence is planned
+multi-param apply is planned
+```
+
+---
+
 ## Product Experience
 
 ```text
@@ -319,7 +389,7 @@ Auto-start Timer
 
 ## Debug Overlay
 
-Debug mode displays pose, runtime, and override data for explainability:
+Debug mode displays pose, runtime, override data, fail reason, and tuning suggestions for explainability:
 
 ```text
 pose id
@@ -331,6 +401,8 @@ hip angle
 torso twist estimate
 effective runtime params
 active runtime overrides
+numeric fail reason
+auto tuning suggestion
 ```
 
 Example:
@@ -338,9 +410,11 @@ Example:
 ```text
 runtime=stab=650 ema=0.25 dead=3.0 | knee.hold.min=145 hip.hold.max=130
 overrides=knee.hold.min=150
+FAIL: knee=138.2 < min=145.0
+SUGGEST: knee.min 145.0 → 140.0 (9 samples, medium)
 ```
 
-This makes each detection result traceable to pose data, DSL runtime params, and user tuning overrides.
+This makes each detection result traceable to pose data, DSL runtime params, user tuning overrides, and adaptive suggestions.
 
 ---
 
@@ -366,6 +440,7 @@ Recommended validation before merging flow changes:
 2. Confirm FlowJsonValidator passes
 3. Confirm FlowValidator passes
 4. Run app and inspect debug overlay
+5. Verify Apply button / restart long-press only writes runtime overrides
 ```
 
 ---
@@ -376,7 +451,8 @@ Recommended validation before merging flow changes:
 CI validation for all flow JSON files
 Runtime override persistence
 Multi-param tuning UI
-Fail reason detection
+Variance-based confidence
+Multi-param suggestion apply
 Flow Editor UI
 DSL v3 constraint expressions
 ```
@@ -400,4 +476,8 @@ Flow-level defaults
 Runtime override store
 Dynamic tuning UI
 Debug explainability
+Numeric fail reason
+Auto tuning advisor
+Sample-count confidence
+Apply suggestion action
 ```
