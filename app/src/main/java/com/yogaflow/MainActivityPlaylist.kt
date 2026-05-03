@@ -66,6 +66,7 @@ internal fun MainActivity.restartCurrentPlaylist() {
 }
 
 internal fun MainActivity.resetToCameraSetup(message: String) {
+    resetCameraSetupController()
     sessionState = SessionState.IDLE
     cameraReady = false
     cameraReadySince = 0L
@@ -80,4 +81,3 @@ internal fun MainActivity.resetToCameraSetup(message: String) {
     coachRequestId++
     coachText.text = message
 }
-

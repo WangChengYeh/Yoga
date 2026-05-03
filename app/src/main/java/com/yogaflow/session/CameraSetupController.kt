@@ -26,6 +26,10 @@ class CameraSetupController(
     private var readySince = 0L
     private var autoStarted = false
 
+    fun reset() {
+        resetReadyState()
+    }
+
     fun handleFrame(frame: PoseDetectionResult): Boolean {
         val framing = CameraFramingCoach.analyze(frame)
         val orientation = ViewOrientation.analyze(frame)
@@ -41,8 +45,9 @@ class CameraSetupController(
                 return true
             }
             SessionState.PAUSED -> {
-                resetReadyState()
-                setSetupPanelVisible(false)
+                updateReadyState(frameReady)
+                setSetupPanelVisible(true)
+                onUpdateSetupPanel(frameReady, framing.message, orientation.message)
                 onUpdateDebugOverlay(frame, "paused", CoachState.SETUP, frameReady)
                 onUpdateUi(false)
                 return true

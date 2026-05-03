@@ -26,22 +26,17 @@ import com.yogaflow.flow.RuntimeOverrideKey
 import com.yogaflow.flow.RuntimeOverrideStore
 import com.yogaflow.flow.RuntimeParams
 import com.yogaflow.flow.YogaFlow
-import com.yogaflow.pose.CameraFramingCoach
-import com.yogaflow.pose.CameraFramingStatus
 import com.yogaflow.pose.CameraPosePipeline
 import com.yogaflow.pose.PoseDetectionResult
 import com.yogaflow.pose.PoseHelper
 import com.yogaflow.pose.PoseOverlayView
-import com.yogaflow.pose.ViewOrientation
-import com.yogaflow.pose.ViewOrientationStatus
+import com.yogaflow.session.CameraSetupController
 import com.yogaflow.session.LiveCoachSessionController
 import com.yogaflow.yoga.YogaPose
 import com.yogaflow.yoga.YogaPoseCatalog
 import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-
-enum class SessionState { IDLE, RUNNING, PAUSED, COMPLETED }
 
 class MainActivity : AppCompatActivity() {
 
@@ -97,6 +92,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var coachExecutor: ExecutorService
     private lateinit var tts: TextToSpeech
     private lateinit var coachCueController: CoachCueController
+    lateinit var cameraSetupController: CameraSetupController
     private lateinit var liveCoachSessionController: LiveCoachSessionController
     private val stateMachine = PoseStateMachine()
     private val autoTuningAdvisor = AutoTuningAdvisor()
@@ -144,6 +140,36 @@ class MainActivity : AppCompatActivity() {
             }
         )
 
+        cameraSetupController = CameraSetupController(
+            autoStartEnabled = true,
+            autoStartStableMs = CAMERA_AUTO_START_STABLE_MS,
+            getSessionState = { sessionState },
+            onReadyChanged = { ready, readySince, autoStarted ->
+                cameraReady = ready
+                cameraReadySince = readySince
+                autoStartedCurrentSetup = autoStarted
+                startButton.isEnabled = ready
+                startButton.alpha = if (ready) 1f else 0.45f
+            },
+            setSetupPanelVisible = { visible ->
+                cameraSetupPanel.visibility = if (visible) View.VISIBLE else View.GONE
+            },
+            onUpdateSetupPanel = { ready, framingMessage, orientationMessage ->
+                cameraSetupPanel.visibility = View.VISIBLE
+                cameraSetupStatus.text = if (ready) {
+                    "Ready"
+                } else {
+                    listOf(framingMessage, orientationMessage).firstOrNull { it.isNotBlank() }.orEmpty()
+                }
+            },
+            onAutoStartReady = ::beginRunningSession,
+            onSpeakCoachCue = ::speakCoachCue,
+            onUpdateDebugOverlay = { frame, detect, state, matched ->
+                updateDebugOverlay(frame, detect, state, matched)
+            },
+            onUpdateUi = ::updateUi
+        )
+
         liveCoachSessionController = LiveCoachSessionController(
             stateMachine = stateMachine,
             flowEngine = flowEngine,
@@ -183,6 +209,12 @@ class MainActivity : AppCompatActivity() {
             ?: YogaPoseCatalog.poses.first()
     }
 
+    fun resetCameraSetupController() {
+        if (::cameraSetupController.isInitialized) {
+            cameraSetupController.reset()
+        }
+    }
+
     fun updateRuntimeTuningControls() {
         val bindings = computeCurrentTuningBindings()
         val labels = listOf(squatThresholdLabel, bridgeThresholdLabel)
@@ -208,17 +240,10 @@ class MainActivity : AppCompatActivity() {
         startStretchButton.setOnClickListener { loadPlaylist(listOf("flows/02_forward_fold_main.flow.json")) }
         startRecoveryButton.setOnClickListener { loadPlaylist(listOf("flows/03_twist_cooldown.flow.json")) }
         startButton.setOnClickListener {
-            if (cameraReady) {
-                sessionState = SessionState.RUNNING
-                cameraSetupPanel.visibility = View.GONE
-                coachCueController.reset()
-                coachRequestId++
-                updateUi(animated = false)
-            }
+            if (cameraReady) beginRunningSession()
         }
         pauseButton.setOnClickListener {
-            sessionState = if (sessionState == SessionState.RUNNING) SessionState.PAUSED else SessionState.RUNNING
-            updateUi(animated = false)
+            togglePause()
         }
         restartButton.setOnClickListener { restartCurrentPlaylist() }
         applySuggestionButton.setOnClickListener { applyLatestSuggestion() }
@@ -236,26 +261,45 @@ class MainActivity : AppCompatActivity() {
         overlayView.setLandmarks(frame.imageLandmarks)
         if (!isCurrentFlowInitialized()) return
 
-        if (sessionState != SessionState.RUNNING || !cameraReady) {
-            handleCameraSetupFrame(frame)
-            return
-        }
+        if (cameraSetupController.handleFrame(frame)) return
 
         liveCoachSessionController.handleReadyPoseFrame(frame, currentFlow, currentPose)
     }
 
-    private fun handleCameraSetupFrame(frame: PoseDetectionResult) {
-        val framing = CameraFramingCoach.analyze(frame)
-        val orientation = ViewOrientation.analyze(frame)
-        val ready = framing.status == CameraFramingStatus.GOOD && orientation.status == ViewOrientationStatus.GOOD
-        cameraReady = ready
-        cameraReadySince = if (ready && cameraReadySince == 0L) System.currentTimeMillis() else if (ready) cameraReadySince else 0L
-        startButton.isEnabled = ready
-        startButton.alpha = if (ready) 1f else 0.45f
-        cameraSetupPanel.visibility = View.VISIBLE
-        cameraSetupStatus.text = if (ready) "Ready" else listOf(framing.message, orientation.message).firstOrNull { it.isNotBlank() }.orEmpty()
-        updateDebugOverlay(frame, "camera_setup", if (ready) CoachState.SETUP else CoachState.CORRECTION, ready, "", "", "", "")
+    private fun beginRunningSession() {
+        if (!cameraReady) return
+        sessionState = SessionState.RUNNING
+        cameraSetupPanel.visibility = View.GONE
+        coachCueController.reset()
+        coachRequestId++
         updateUi(animated = false)
+    }
+
+    private fun togglePause() {
+        when (sessionState) {
+            SessionState.RUNNING -> {
+                cameraSetupController.reset()
+                sessionState = SessionState.PAUSED
+                cameraReady = false
+                cameraReadySince = 0L
+                autoStartedCurrentSetup = false
+                startButton.isEnabled = false
+                startButton.alpha = 0.45f
+                cameraSetupPanel.visibility = View.VISIBLE
+                cameraSetupStatus.text = "Checking body framing..."
+                updateUi(animated = false)
+            }
+            SessionState.PAUSED -> {
+                if (cameraReady) {
+                    beginRunningSession()
+                } else {
+                    coachText.text = "請先重新完成相機設定。"
+                    updateUi(animated = false)
+                }
+            }
+            SessionState.IDLE,
+            SessionState.COMPLETED -> Unit
+        }
     }
 
     private fun onFlowCompleted(text: String) {
@@ -326,5 +370,6 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         const val TUNING_SLIDER_MAX = 1000
+        private const val CAMERA_AUTO_START_STABLE_MS = 1200L
     }
 }
