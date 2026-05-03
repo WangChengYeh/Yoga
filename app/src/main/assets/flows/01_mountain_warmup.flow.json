@@ -13,32 +13,28 @@
       "durationMs": 3000,
       "cue": "雙腳穩穩踩地，站到墊子的中央。",
       "detect": "standing_centered",
-      "correction": "如果身體晃動，提醒使用者把重量平均放在雙腳。",
-      "runtime": {}
+      "correction": "如果身體晃動，提醒使用者把重量平均放在雙腳。"
     },
     {
       "state": "MOVEMENT",
       "durationMs": 4000,
       "cue": "吸氣，把脊椎慢慢往上延伸，肩膀放鬆。",
       "detect": "spine_lengthened",
-      "correction": "如果肩膀聳起，提醒肩膀往下放鬆。",
-      "runtime": {}
+      "correction": "如果肩膀聳起，提醒肩膀往下放鬆。"
     },
     {
       "state": "HOLD",
       "durationMs": 8000,
       "cue": "保持站姿，感覺頭頂往上，腳掌穩定往下。",
       "detect": "mountain_hold",
-      "correction": "如果膝蓋鎖死，提醒膝蓋保持微微彈性。",
-      "runtime": {}
+      "correction": "如果膝蓋鎖死，提醒膝蓋保持微微彈性。"
     },
     {
       "state": "TRANSITION",
       "durationMs": 3000,
       "cue": "維持呼吸，準備進入下一個動作。",
       "detect": "ready_for_next_pose",
-      "correction": "如果呼吸急促，提醒慢慢吸氣吐氣。",
-      "runtime": {}
+      "correction": "如果呼吸急促，提醒慢慢吸氣吐氣。"
     }
   ],
   "end": {
