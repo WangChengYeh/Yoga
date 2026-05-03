@@ -8,7 +8,7 @@ import kotlin.math.abs
 
 object TwistDetectionMapper {
 
-    data class Result(val matched: Boolean, val state: CoachState, val cue: String)
+    data class Result(val matched: Boolean, val state: CoachState, val cue: String, val reason: String = "")
 
     private var smoothedTwist: Double? = null
     private var stableDetect: DetectKey? = null
@@ -26,7 +26,7 @@ object TwistDetectionMapper {
 
         if (leftShoulder.confidence == PoseGeometry.Confidence.INVALID || rightShoulder.confidence == PoseGeometry.Confidence.INVALID) {
             reset()
-            return Result(false, CoachState.CORRECTION, "請讓上半身完整進入畫面，保持肩膀可見。")
+            return Result(false, CoachState.CORRECTION, "請讓上半身完整進入畫面，保持肩膀可見。", "required landmarks invalid")
         }
 
         val twist = smooth(abs(leftShoulder.degrees - rightShoulder.degrees), detect, params)
@@ -52,7 +52,7 @@ object TwistDetectionMapper {
             stableSince = now
         }
         val stabilityMs = required(params.stabilityMs, detect, "runtime.stabilityMs")
-        return if (now - stableSince >= stabilityMs) result else result.copy(matched = false, cue = "穩住這個扭轉位置，再保持一下。")
+        return if (now - stableSince >= stabilityMs) result else result.copy(matched = false, cue = "穩住這個扭轉位置，再保持一下。", reason = "stableFor=${now - stableSince}ms < required=${stabilityMs}ms")
     }
 
     private fun smooth(raw: Double, detect: DetectKey, params: RuntimeParams): Double {
@@ -67,15 +67,15 @@ object TwistDetectionMapper {
 
     private fun stableBase(twist: Double, params: RuntimeParams): Result {
         val centerMax = required(params.angles.twist.center.max, DetectKey.STABLE_BASE, "runtime.angles.twist.center.max")
-        return if (twist > centerMax) Result(false, CoachState.CORRECTION, "先回到正中間，讓身體穩定再開始。") else Result(true, CoachState.SETUP, "很好，身體穩定，準備開始扭轉。")
+        return if (twist > centerMax) fail(CoachState.CORRECTION, "先回到正中間，讓身體穩定再開始。", "twist", twist, ">", "max", centerMax) else Result(true, CoachState.SETUP, "很好，身體穩定，準備開始扭轉。")
     }
 
     private fun twistStart(twist: Double, params: RuntimeParams): Result {
         val min = required(params.angles.twist.start.min, DetectKey.TWIST_START, "runtime.angles.twist.start.min")
         val max = required(params.angles.twist.start.max, DetectKey.TWIST_START, "runtime.angles.twist.start.max")
         return when {
-            twist < min -> Result(false, CoachState.MOVEMENT, "慢慢開始扭轉，從脊椎帶動。")
-            twist > max -> Result(false, CoachState.CORRECTION, "不要用力過猛，輕柔一點。")
+            twist < min -> fail(CoachState.MOVEMENT, "慢慢開始扭轉，從脊椎帶動。", "twist", twist, "<", "min", min)
+            twist > max -> fail(CoachState.CORRECTION, "不要用力過猛，輕柔一點。", "twist", twist, ">", "max", max)
             else -> Result(true, CoachState.MOVEMENT, "很好，持續溫和扭轉。")
         }
     }
@@ -84,16 +84,22 @@ object TwistDetectionMapper {
         val min = required(params.angles.twist.hold.min, DetectKey.TWIST_HOLD, "runtime.angles.twist.hold.min")
         val max = required(params.angles.twist.hold.max, DetectKey.TWIST_HOLD, "runtime.angles.twist.hold.max")
         return when {
-            twist < min -> Result(false, CoachState.MOVEMENT, "再多一點扭轉，但保持舒適。")
-            twist > max -> Result(false, CoachState.CORRECTION, "稍微退回一點，避免過度拉扯。")
+            twist < min -> fail(CoachState.MOVEMENT, "再多一點扭轉，但保持舒適。", "twist", twist, "<", "min", min)
+            twist > max -> fail(CoachState.CORRECTION, "稍微退回一點，避免過度拉扯。", "twist", twist, ">", "max", max)
             else -> Result(true, CoachState.HOLD, "很好，維持扭轉，放鬆呼吸。")
         }
     }
 
     private fun returnCenter(twist: Double, params: RuntimeParams): Result {
         val centerMax = required(params.angles.twist.center.max, DetectKey.RETURN_CENTER, "runtime.angles.twist.center.max")
-        return if (twist > centerMax) Result(false, CoachState.TRANSITION, "慢慢回到中間，不要急。") else Result(true, CoachState.TRANSITION, "很好，已回到中間。")
+        return if (twist > centerMax) fail(CoachState.TRANSITION, "慢慢回到中間，不要急。", "twist", twist, ">", "max", centerMax) else Result(true, CoachState.TRANSITION, "很好，已回到中間。")
     }
+
+    private fun fail(state: CoachState, cue: String, metric: String, actual: Double, op: String, boundName: String, expected: Double): Result {
+        return Result(false, state, cue, "$metric=${actual.fmt()} $op $boundName=${expected.fmt()}")
+    }
+
+    private fun Double.fmt(): String = "%.1f".format(this)
 
     private fun required(value: Double?, detect: DetectKey, key: String): Double {
         return value ?: error("Missing required param for ${detect.jsonKey}: $key")
