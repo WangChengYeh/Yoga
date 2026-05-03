@@ -330,7 +330,7 @@ Because 48.2 is too low, the frame did not count toward completing the step.
 In session recordings, the same event also includes `failExplanation`:
 
 ```text
-Observed knee angle was 48.2 degrees; this step requires at least 155.0 degrees.
+Observed knee angle (膝蓋角度) was 48.2 degrees; this step requires at least 155.0 degrees.
 ```
 
 Machine-readable format:
@@ -341,12 +341,12 @@ Machine-readable format:
 
 Common metrics:
 
-| Metric | Unit | Meaning |
-| --- | --- | --- |
-| `knee` | degrees | Knee joint angle estimated from hip-knee-ankle landmarks. Larger values mean a straighter leg; smaller values mean a more bent knee. |
-| `hip` | degrees | Hip/body angle estimated from shoulder-hip-knee landmarks. The interpretation depends on the pose and detect phase. |
-| `twist` | degrees | Approximate torso twist derived from left/right upper-body geometry. Larger values mean more rotation. |
-| `stableFor` | milliseconds | How long the detector has continuously seen the required pose. |
+| Metric | Chinese (Taiwan) | Unit | Meaning |
+| --- | --- | --- | --- |
+| `knee` | 膝蓋角度 | degrees | Knee joint angle estimated from hip-knee-ankle landmarks. Larger values mean a straighter leg; smaller values mean a more bent knee. |
+| `hip` | 髖部/身體角度 | degrees | Hip/body angle estimated from shoulder-hip-knee landmarks. The interpretation depends on the pose and detect phase. |
+| `twist` | 軀幹扭轉角度 | degrees | Approximate torso twist derived from left/right upper-body geometry. Larger values mean more rotation. |
+| `stableFor` | 穩定維持時間 | milliseconds | How long the detector has continuously seen the required pose. |
 
 Common bounds:
 

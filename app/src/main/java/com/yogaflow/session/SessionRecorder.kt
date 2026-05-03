@@ -123,10 +123,10 @@ class SessionRecorder(private val context: Context) {
         val boundName = match.groupValues[4]
         val required = match.groupValues[5]
         val metricText = when (metric) {
-            "knee" -> "knee angle"
-            "hip" -> "hip/body angle"
-            "twist" -> "torso twist angle"
-            "stableFor" -> "time held steady"
+            "knee" -> "knee angle (膝蓋角度)"
+            "hip" -> "hip/body angle (髖部/身體角度)"
+            "twist" -> "torso twist angle (軀幹扭轉角度)"
+            "stableFor" -> "time held steady (穩定維持時間)"
             else -> metric
         }
         val unit = if (metric == "stableFor" || boundName == "required") "ms" else "degrees"

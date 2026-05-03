@@ -284,19 +284,28 @@ Numeric fail reasons are stored in both compact and plain-language forms:
 
 ```text
 failReason: knee=48.2 < min=155.0
-failExplanation: Observed knee angle was 48.2 degrees; this step requires at least 155.0 degrees.
+failExplanation: Observed knee angle (膝蓋角度) was 48.2 degrees; this step requires at least 155.0 degrees.
 ```
 
 Interpretation:
 
 ```text
-knee=48.2       observed knee angle from hip-knee-ankle landmarks
+knee=48.2       observed knee angle (膝蓋角度) from hip-knee-ankle landmarks
 <               observed value is below the required threshold
 min=155.0       the active flow step requires at least 155 degrees
 matched=false   this frame does not count toward step completion
 ```
 
 Human-facing UI should prefer `failExplanation`. `failReason` exists so tuning tools can parse repeated failures reliably.
+
+Metric glossary:
+
+| Metric | Chinese (Taiwan) | Unit | Meaning |
+| --- | --- | --- | --- |
+| `knee` | 膝蓋角度 | degrees | Knee joint angle from hip-knee-ankle landmarks. |
+| `hip` | 髖部/身體角度 | degrees | Hip/body angle from shoulder-hip-knee landmarks. |
+| `twist` | 軀幹扭轉角度 | degrees | Approximate torso rotation. |
+| `stableFor` | 穩定維持時間 | milliseconds | Time the required pose has been continuously detected. |
 
 Runtime override paths are scoped by flow, step, detect key, and parameter path:
 
