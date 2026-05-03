@@ -19,26 +19,28 @@ object PoseDetectionRouter {
         return when (poseId) {
             "forward_fold" -> {
                 val r = ForwardFoldDetectionMapper.evaluate(detect, frame, params)
-                PoseDetectionMappingResult(r.matched, r.state, r.cue)
+                PoseDetectionMappingResult(r.matched, r.state, r.cue, if (!r.matched) r.cue else "")
             }
             "twist" -> {
                 val r = TwistDetectionMapper.evaluate(detect, frame, params)
-                PoseDetectionMappingResult(r.matched, r.state, r.cue)
+                PoseDetectionMappingResult(r.matched, r.state, r.cue, if (!r.matched) r.cue else "")
             }
             "squat" -> {
                 val r = SquatDetectionMapper.evaluate(detect, frame, params)
-                PoseDetectionMappingResult(r.matched, r.state, r.cue)
+                PoseDetectionMappingResult(r.matched, r.state, r.cue, if (!r.matched) r.cue else "")
             }
             "bridge" -> {
                 val r = BridgeDetectionMapper.evaluate(detect, frame, params)
-                PoseDetectionMappingResult(r.matched, r.state, r.cue)
+                PoseDetectionMappingResult(r.matched, r.state, r.cue, if (!r.matched) r.cue else "")
             }
             else -> {
                 val (state, cue) = fallback.update(currentPose, frame)
+                val matched = state != CoachState.CORRECTION
                 PoseDetectionMappingResult(
-                    matched = state != CoachState.CORRECTION,
+                    matched = matched,
                     state = state,
-                    cue = cue
+                    cue = cue,
+                    reason = if (!matched) cue else ""
                 )
             }
         }
