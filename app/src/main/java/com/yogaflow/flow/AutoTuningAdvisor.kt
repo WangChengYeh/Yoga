@@ -31,8 +31,15 @@ data class AutoTuningSuggestion(
     val sampleCount: Int,
     val reason: String
 ) {
+    val confidence: String
+        get() = when {
+            sampleCount >= 15 -> "high"
+            sampleCount >= 8 -> "medium"
+            else -> "low"
+        }
+
     val label: String
-        get() = "$metric.$boundName ${currentValue.fmt()} → ${suggestedValue.fmt()}"
+        get() = "$metric.$boundName ${currentValue.fmt()} → ${suggestedValue.fmt()} ($sampleCount samples, $confidence)"
 }
 
 class AutoTuningAdvisor(
@@ -78,7 +85,6 @@ class AutoTuningAdvisor(
         val avgActual = scopedSamples.map { it.actual }.average()
         val suggested = avgActual.roundToNearestHalfDegree()
 
-        // Avoid noisy suggestions that do not actually change the configured value.
         if (kotlin.math.abs(suggested - latest.expected) < MIN_SUGGESTION_DELTA) return null
 
         return AutoTuningSuggestion(
@@ -138,7 +144,6 @@ class AutoTuningAdvisor(
             val boundName = match.groupValues[4]
             val expected = match.groupValues[5].toDoubleOrNull() ?: return null
 
-            // Stability window is useful for debug but should not tune angle thresholds.
             if (metric == "stableFor" || boundName == "required") return null
 
             return AutoTuningSample(
