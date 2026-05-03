@@ -91,14 +91,14 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private lateinit var llmCoach: LlmCoach
 
     private val stateMachine = PoseStateMachine()
-    private val flowEngine = PoseFlowEngine()
+    internal val flowEngine = PoseFlowEngine()
     private val playlist = FlowPlaylistEngine()
     private val runtimeOverrideStore = RuntimeOverrideStore()
     private val autoTuningAdvisor = AutoTuningAdvisor()
     private var latestSuggestion: AutoTuningSuggestion? = null
     private var suppressTuningCallbacks = false
 
-    private lateinit var currentFlow: YogaFlow
+    internal lateinit var currentFlow: YogaFlow
     private lateinit var currentPose: YogaPose
     private var sessionState = SessionState.IDLE
     private var cameraReady = false
@@ -108,6 +108,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private var lastCoachCue = ""
     private var lastCoachAt = 0L
     private var coachRequestId = 0L
+
+    internal fun isCurrentFlowInitialized(): Boolean = ::currentFlow.isInitialized
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -178,83 +180,14 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         return object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 if (!fromUser || suppressTuningCallbacks) return
-                val binding = currentTuningBindings().getOrNull(index) ?: return
-                val value = sliderProgressToValue(progress, binding.param)
+                val binding = computeCurrentTuningBindings().getOrNull(index) ?: return
+                val value = sliderProgressToValue(progress, binding.param, TUNING_SLIDER_MAX)
                 runtimeOverrideStore.set(binding.key, value)
                 updateRuntimeTuningControls()
             }
             override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
             override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
         }
-    }
-
-    private data class RuntimeTuningBinding(
-        val key: RuntimeOverrideKey,
-        val param: TunableRuntimeParam
-    )
-
-    private fun currentTuningBindings(): List<RuntimeTuningBinding> {
-        if (!::currentFlow.isInitialized) return emptyList()
-        val stepIndex = flowEngine.currentStepNumber() - 1
-        val step = currentFlow.steps.getOrNull(stepIndex) ?: return emptyList()
-        return TunableRuntimeParamExtractor.extract(step.params).map { param ->
-            RuntimeTuningBinding(
-                key = RuntimeOverrideKey(
-                    flowId = currentFlow.id,
-                    stepIndex = stepIndex,
-                    detect = step.detect,
-                    path = param.path
-                ),
-                param = param
-            )
-        }
-    }
-
-    private fun updateRuntimeTuningControls() {
-        val bindings = currentTuningBindings()
-        applyRuntimeTuningBinding(
-            label = squatThresholdLabel,
-            seekBar = squatThresholdSeekBar,
-            binding = bindings.getOrNull(0)
-        )
-        applyRuntimeTuningBinding(
-            label = bridgeThresholdLabel,
-            seekBar = bridgeThresholdSeekBar,
-            binding = bindings.getOrNull(1)
-        )
-    }
-
-    private fun applyRuntimeTuningBinding(label: TextView, seekBar: SeekBar, binding: RuntimeTuningBinding?) {
-        suppressTuningCallbacks = true
-        if (binding == null) {
-            label.text = "DSL tuning: no param"
-            seekBar.isEnabled = false
-            seekBar.alpha = 0.35f
-            seekBar.progress = 0
-        } else {
-            val value = runtimeOverrideStore.valueFor(binding.key) ?: binding.param.value
-            label.text = "${binding.param.label}: ${formatTuningValue(value, binding.param)}"
-            seekBar.isEnabled = true
-            seekBar.alpha = 1.0f
-            seekBar.progress = valueToSliderProgress(value, binding.param)
-        }
-        suppressTuningCallbacks = false
-    }
-
-    private fun valueToSliderProgress(value: Double, param: TunableRuntimeParam): Int {
-        val clamped = value.coerceIn(param.min, param.max)
-        val ratio = if (param.max == param.min) 0.0 else (clamped - param.min) / (param.max - param.min)
-        return (ratio * TUNING_SLIDER_MAX).toInt().coerceIn(0, TUNING_SLIDER_MAX)
-    }
-
-    private fun sliderProgressToValue(progress: Int, param: TunableRuntimeParam): Double {
-        val ratio = progress.coerceIn(0, TUNING_SLIDER_MAX).toDouble() / TUNING_SLIDER_MAX.toDouble()
-        val raw = param.min + ratio * (param.max - param.min)
-        return if (param.isInteger) raw.toLong().toDouble() else raw
-    }
-
-    private fun formatTuningValue(value: Double, param: TunableRuntimeParam): String {
-        return if (param.isInteger) value.toLong().toString() else "%.2f".format(value)
     }
 
     private fun loadThresholdPreferences() {
@@ -500,7 +433,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun buildOverrideSummary(): String {
-        return currentTuningBindings()
+        return computeCurrentTuningBindings()
             .mapNotNull { binding ->
                 runtimeOverrideStore.valueFor(binding.key)?.let { value ->
                     "${binding.param.label}=${formatTuningValue(value, binding.param)}"
@@ -518,7 +451,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     private fun applyLatestSuggestion(): Boolean {
         val suggestion = latestSuggestion ?: return false
-        val binding = currentTuningBindings().firstOrNull {
+        val binding = computeCurrentTuningBindings().firstOrNull {
             it.param.label.startsWith("${suggestion.metric}.") && it.param.label.endsWith(".${suggestion.boundName}")
         } ?: return false
         runtimeOverrideStore.set(binding.key, suggestion.suggestedValue)
@@ -791,6 +724,6 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         private const val THRESHOLD_PREFS = "threshold_prefs"
         private const val KEY_SQUAT_HOLD_KNEE_MAX = "squat_hold_knee_max"
         private const val KEY_BRIDGE_LIFT_HIP_MAX = "bridge_lift_hip_max"
-        private const val TUNING_SLIDER_MAX = 1000
+        internal const val TUNING_SLIDER_MAX = 1000
     }
 }
