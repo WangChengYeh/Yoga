@@ -18,7 +18,12 @@ object FlowLoader {
             .orEmpty()
 
         return flowFiles.map { fileName ->
-            loadFromAssets(context, "$FLOW_ASSET_DIR/$fileName")
+            val path = "$FLOW_ASSET_DIR/$fileName"
+            runCatching {
+                loadFromAssets(context, path)
+            }.getOrElse { e ->
+                error("Failed to load flow asset '$path': ${e.message}")
+            }
         }
     }
 }

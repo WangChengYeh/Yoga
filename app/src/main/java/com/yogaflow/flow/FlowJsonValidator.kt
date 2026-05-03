@@ -12,6 +12,7 @@ object FlowJsonValidator {
     private val validPoses = setOf("mountain", "forward_fold", "twist", "squat", "bridge")
     private val validLevels = setOf("beginner", "intermediate", "advanced")
     private val validLanguages = setOf("zh-TW", "en-US")
+    private val validDetectKeys = DetectKey.jsonKeys()
 
     fun validate(root: JSONObject): JSONObject {
         requireObject(root, "flow")
@@ -61,7 +62,7 @@ object FlowJsonValidator {
         requireEnum(step, "state", validStates, path = path)
         requireNumber(step, "durationMs", min = 100.0, max = 60000.0, path = path)
         requireString(step, "cue", path = path)
-        requireString(step, "detect", path = path)
+        requireEnum(step, "detect", validDetectKeys, path = path)
 
         if (step.has("correction") && !isString(step, "correction")) {
             error("Invalid Flow JSON: $path.correction must be a string")
