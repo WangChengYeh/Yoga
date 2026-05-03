@@ -41,19 +41,7 @@ internal fun MainActivity.applyPlaylist(flows: List<YogaFlow>, openClassView: Bo
     flowEngine.reset()
     resetDetectionMappers()
     latestSuggestion = null
-    sessionState = SessionState.IDLE
-    cameraReady = false
-    cameraReadySince = 0L
-    autoStartedCurrentSetup = false
-    startButton.isEnabled = false
-    startButton.alpha = 0.45f
-    cameraSetupPanel.visibility = android.view.View.VISIBLE
-    cameraSetupStatus.text = "Checking body framing..."
-    lastCountdownText = ""
-    lastCoachCue = ""
-    lastCoachAt = 0L
-    coachRequestId++
-    coachText.text = "請先完成相機設定。"
+    resetToCameraSetup("請先完成相機設定。")
     llmStatus.text = "LLM: OFF"
     updateRuntimeTuningControls()
 
@@ -76,6 +64,12 @@ internal fun MainActivity.restartCurrentPlaylist() {
     latestSuggestion = null
     currentFlow = flow
     currentPose = resolvePose(currentFlow)
+    resetToCameraSetup("已重新開始。請先完成相機設定。")
+    updateRuntimeTuningControls()
+    updateUi(animated = false)
+}
+
+internal fun MainActivity.resetToCameraSetup(message: String) {
     sessionState = SessionState.IDLE
     cameraReady = false
     cameraReadySince = 0L
@@ -88,9 +82,7 @@ internal fun MainActivity.restartCurrentPlaylist() {
     lastCoachCue = ""
     lastCoachAt = 0L
     coachRequestId++
-    coachText.text = "已重新開始。請先完成相機設定。"
-    updateRuntimeTuningControls()
-    updateUi(animated = false)
+    coachText.text = message
 }
 
 internal fun MainActivity.resetDetectionMappers() {
