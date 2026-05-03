@@ -11,7 +11,9 @@ data class DebugPoseInfo(
     val rightKneeAngle: Double?,
     val leftHipAngle: Double?,
     val rightHipAngle: Double?,
-    val torsoTwistEstimate: Double?
+    val torsoTwistEstimate: Double?,
+    val effectiveRuntimeSummary: String = "",
+    val overrideSummary: String = ""
 ) {
     fun toDisplayText(): String {
         return buildString {
@@ -22,6 +24,12 @@ data class DebugPoseInfo(
             appendLine("L knee=${leftKneeAngle.fmt()} R knee=${rightKneeAngle.fmt()}")
             appendLine("L hip=${leftHipAngle.fmt()} R hip=${rightHipAngle.fmt()}")
             appendLine("twist=${torsoTwistEstimate.fmt()}")
+            if (effectiveRuntimeSummary.isNotBlank()) {
+                appendLine("runtime=$effectiveRuntimeSummary")
+            }
+            if (overrideSummary.isNotBlank()) {
+                appendLine("overrides=$overrideSummary")
+            }
         }
     }
 
