@@ -1,7 +1,6 @@
 package com.yogaflow.session
 
 import com.yogaflow.coach.CoachState
-import com.yogaflow.coach.PoseDetectionRouter
 import com.yogaflow.coach.PoseFlowEngine
 import com.yogaflow.coach.PoseStateMachine
 import com.yogaflow.flow.AutoTuningAdvisor
@@ -15,6 +14,7 @@ import com.yogaflow.flow.YogaFlow
 class LiveCoachSessionController(
     private val stateMachine: PoseStateMachine,
     private val flowEngine: PoseFlowEngine,
+    private val poseDetectionRouter: PoseDetectionRouter,
     private val runtimeOverrideStore: RuntimeOverrideStore,
     private val autoTuningAdvisor: AutoTuningAdvisor,
     private val onFlowCompleted: (String) -> Unit,
@@ -55,7 +55,7 @@ class LiveCoachSessionController(
         val runtimeSummary = buildRuntimeSummary(effectiveParams)
         val overrideSummary = buildOverrideSummary()
 
-        val mapping = PoseDetectionRouter.evaluate(
+        val mapping = poseDetectionRouter.evaluate(
             poseId = currentPose.id,
             detect = currentStep.detect,
             params = effectiveParams,

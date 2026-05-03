@@ -5,7 +5,12 @@ import com.yogaflow.flow.RuntimeParams
 import com.yogaflow.pose.PoseDetectionResult
 import com.yogaflow.yoga.YogaPose
 
-object PoseDetectionRouter {
+class PoseDetectionRouter(
+    private val forwardFoldDetectionMapper: ForwardFoldDetectionMapper = ForwardFoldDetectionMapper(),
+    private val twistDetectionMapper: TwistDetectionMapper = TwistDetectionMapper(),
+    private val squatDetectionMapper: SquatDetectionMapper = SquatDetectionMapper(),
+    private val bridgeDetectionMapper: BridgeDetectionMapper = BridgeDetectionMapper()
+) {
 
     fun evaluate(
         poseId: String,
@@ -18,19 +23,19 @@ object PoseDetectionRouter {
 
         return when (poseId) {
             "forward_fold" -> {
-                val r = ForwardFoldDetectionMapper.evaluate(detect, frame, params)
+                val r = forwardFoldDetectionMapper.evaluate(detect, frame, params)
                 PoseDetectionMappingResult(r.matched, r.state, r.cue, if (!r.matched) r.reason else "")
             }
             "twist" -> {
-                val r = TwistDetectionMapper.evaluate(detect, frame, params)
+                val r = twistDetectionMapper.evaluate(detect, frame, params)
                 PoseDetectionMappingResult(r.matched, r.state, r.cue, if (!r.matched) r.reason else "")
             }
             "squat" -> {
-                val r = SquatDetectionMapper.evaluate(detect, frame, params)
+                val r = squatDetectionMapper.evaluate(detect, frame, params)
                 PoseDetectionMappingResult(r.matched, r.state, r.cue, if (!r.matched) r.reason else "")
             }
             "bridge" -> {
-                val r = BridgeDetectionMapper.evaluate(detect, frame, params)
+                val r = bridgeDetectionMapper.evaluate(detect, frame, params)
                 PoseDetectionMappingResult(r.matched, r.state, r.cue, if (!r.matched) r.reason else "")
             }
             "mountain" -> {
