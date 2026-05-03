@@ -7,6 +7,7 @@ import com.yogaflow.coach.CoachSpeaker
 import com.yogaflow.coach.CoachState
 import com.yogaflow.llm.LlmCoach
 import com.yogaflow.yoga.YogaPose
+import java.util.concurrent.Executor
 
 /**
  * Handles:
@@ -18,6 +19,7 @@ import com.yogaflow.yoga.YogaPose
 class CoachRuntimeEngine(
     private val llmCoach: LlmCoach,
     private val speaker: CoachSpeaker,
+    private val executor: Executor,
     private val getCurrentPose: () -> YogaPose,
     private val getFlowId: () -> String,
     private val getStep: () -> Int,
@@ -39,7 +41,7 @@ class CoachRuntimeEngine(
         val step = getStep()
         val id = ++requestId
 
-        Thread {
+        executor.execute {
             val generated = llmCoach.generate(pose, state, cue)
             val isFallback = generated == cue
 
@@ -54,7 +56,7 @@ class CoachRuntimeEngine(
                 updateUi(display, !isFallback)
                 speaker.speakIfNeeded(spoken)
             }
-        }.start()
+        }
     }
 
     private fun shouldEmit(cue: String): Boolean {
