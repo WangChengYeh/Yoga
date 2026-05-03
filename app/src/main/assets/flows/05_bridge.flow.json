@@ -7,13 +7,19 @@
     "language": "zh-TW",
     "level": "beginner"
   },
+  "defaults": {
+    "runtime": {
+      "stabilityMs": 300,
+      "emaAlpha": 0.35,
+      "deadbandDegrees": 3
+    }
+  },
   "steps": [
     {
       "state": "SETUP",
       "durationMs": 4000,
       "cue": "躺下，雙腳踩地。",
-      "detect": "bridge_setup",
-      "runtime": {}
+      "detect": "bridge_setup"
     },
     {
       "state": "MOVEMENT",
@@ -41,8 +47,7 @@
       "state": "TRANSITION",
       "durationMs": 4000,
       "cue": "慢慢放下。",
-      "detect": "bridge_return",
-      "runtime": {}
+      "detect": "bridge_return"
     }
   ],
   "end": {
