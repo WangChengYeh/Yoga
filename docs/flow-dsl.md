@@ -2,15 +2,17 @@
 
 YogaFlow Flow DSL is the runtime language for class content, step progression, coaching cues, and pose detection behavior.
 
-The current DSL is **JSON-only DSL v2**.
+The current DSL is **JSON-only DSL v2** with a **type-safe strict runtime**.
 
 ```text
 .flow.json
-→ FlowJsonValidator        # JSON shape / type validation
+→ FlowJsonValidator        # JSON shape / type / enum validation
 → FlowParser               # JSON → YogaFlow / YogaFlowStep
+→ DetectKey                # detect string → enum
+→ RuntimeParams            # runtime JSON → typed params
 → FlowValidator            # semantic DSL validation
-→ PoseDetectionRouter      # typed detect + params dispatch
-→ Detection Mapper         # pose-specific evaluation
+→ PoseDetectionRouter      # DetectKey + RuntimeParams dispatch
+→ Detection Mapper         # strict pose-specific evaluation
 → PoseFlowEngine           # step progression
 ```
 
@@ -34,6 +36,8 @@ No .flow.txt
 No fallback
 No legacy flat angle keys
 No detect string encoding
+No Map<String, Double> runtime params
+No string detect in runtime
 No ambiguity
 ```
 
@@ -43,37 +47,82 @@ All flow files must use:
 app/src/main/assets/flows/*.flow.json
 ```
 
+Optional demo flows may also exist under:
+
+```text
+flows/*.flow.json
+```
+
 ---
 
 ## Runtime Contract
 
-A flow step is parsed into:
+A flow step is parsed into a fully typed Kotlin model:
 
 ```kotlin
 data class YogaFlowStep(
     val state: CoachState,
     val durationMs: Long,
     val cue: String,
-    val detect: String,
+    val detect: DetectKey,
     val correction: String,
-    val params: Map<String, Double> = emptyMap()
+    val params: RuntimeParams = RuntimeParams.EMPTY
 )
 ```
 
-The runtime dispatch path is typed:
+Runtime params are typed:
 
-```text
-currentStep.detect
-currentStep.params
-→ PoseDetectionRouter.evaluate(...)
-→ Mapper.evaluate(detect, frame, params)
+```kotlin
+data class RuntimeParams(
+    val stabilityMs: Long? = null,
+    val emaAlpha: Double? = null,
+    val deadbandDegrees: Double? = null,
+    val angles: AngleParams = AngleParams()
+)
 ```
 
-The old string format is removed:
+Angles are accessed by typed properties:
+
+```kotlin
+params.angles.hip.hold.min
+params.angles.knee.fold.min
+params.angles.twist.center.max
+```
+
+The old string-based runtime is removed:
 
 ```text
-detect|angle.hip.hold.min=50    # removed
+detect|angle.hip.hold.min=50        # removed
+params["angle.hip.hold.min"]        # removed
 ```
+
+---
+
+## Type-safe DetectKey
+
+JSON uses snake_case strings:
+
+```json
+"detect": "forward_hold"
+```
+
+Runtime uses enum values:
+
+```kotlin
+DetectKey.FORWARD_HOLD
+```
+
+Examples:
+
+| JSON detect | Kotlin enum |
+|---|---|
+| `ready_forward_fold` | `DetectKey.READY_FORWARD_FOLD` |
+| `forward_hold` | `DetectKey.FORWARD_HOLD` |
+| `twist_hold` | `DetectKey.TWIST_HOLD` |
+| `squat_hold` | `DetectKey.SQUAT_HOLD` |
+| `bridge_hold` | `DetectKey.BRIDGE_HOLD` |
+
+Invalid detect strings fail during parsing.
 
 ---
 
@@ -126,23 +175,24 @@ detect|angle.hip.hold.min=50    # removed
 | `state` | `state` | Yes | `SETUP`, `MOVEMENT`, `HOLD`, `TRANSITION`, `CORRECTION` |
 | `durationMs` | `durationMs` | Yes | Step duration in milliseconds |
 | `cue` | `cue` | Yes | Coaching cue |
-| `detect` | `detect` | Yes | Detection key routed to mapper |
+| `detect` | `DetectKey` | Yes | Type-safe detection key routed to mapper |
 | `correction` | `correction` | Recommended | Correction cue |
-| `runtime` | `params` | Required for validated detect keys | Detection thresholds and stability behavior |
+| `runtime` | `RuntimeParams` | Required for validated detect keys | Detection thresholds and stability behavior |
 
 ---
 
-## Runtime JSON → Runtime Params
+## Runtime JSON → RuntimeParams
 
-The parser flattens JSON runtime values into typed params.
+The parser converts JSON runtime values into typed Kotlin objects.
 
-| JSON | Runtime param |
+| JSON | Kotlin access |
 |---|---|
-| `runtime.stabilityMs` | `stability.ms` |
-| `runtime.emaAlpha` | `ema.alpha` |
-| `runtime.deadbandDegrees` | `deadband.degrees` |
-| `runtime.angles.hip.hold.min` | `angle.hip.hold.min` |
-| `runtime.angles.knee.fold.min` | `angle.knee.fold.min` |
+| `runtime.stabilityMs` | `params.stabilityMs` |
+| `runtime.emaAlpha` | `params.emaAlpha` |
+| `runtime.deadbandDegrees` | `params.deadbandDegrees` |
+| `runtime.angles.hip.hold.min` | `params.angles.hip.hold.min` |
+| `runtime.angles.knee.fold.min` | `params.angles.knee.fold.min` |
+| `runtime.angles.twist.center.max` | `params.angles.twist.center.max` |
 
 Example:
 
@@ -159,17 +209,17 @@ Example:
 }
 ```
 
-Becomes:
+Becomes typed runtime access:
 
-```text
-params["angle.hip.hold.min"] = 50
-params["angle.hip.hold.max"] = 130
-params["stability.ms"] = 650
+```kotlin
+params.angles.hip.hold.min == 50.0
+params.angles.hip.hold.max == 130.0
+params.stabilityMs == 650L
 ```
 
 ---
 
-## Angle Key Model
+## Angle Model
 
 JSON structure:
 
@@ -177,10 +227,10 @@ JSON structure:
 runtime.angles.<joint>.<phase>.<bound>
 ```
 
-Runtime param:
+Kotlin access:
 
 ```text
-angle.<joint>.<phase>.<bound>
+params.angles.<joint>.<phase>.<bound>
 ```
 
 | Segment | Supported values |
@@ -189,59 +239,88 @@ angle.<joint>.<phase>.<bound>
 | phase | `ready`, `setup`, `hinge`, `fold`, `hold`, `return`, `neutral`, `start`, `center`, `descent`, `lift` |
 | bound | `min`, `max` |
 
----
+Because `return` is a Kotlin keyword, the typed property is:
 
-## Forward Fold Phase Table
-
-| detect | phase | Required runtime angles |
-|---|---|---|
-| `ready_forward_fold` | `ready` | `knee.ready.min`, `hip.ready.min` |
-| `tall_spine_setup` | `setup` | `knee.setup.min`, `hip.setup.min` |
-| `hip_hinge` | `hinge` | `knee.hinge.min`, `hip.hinge.max` |
-| `controlled_forward_fold` | `fold` | `knee.fold.min`, `hip.fold.min`, `hip.fold.max` |
-| `forward_hold` | `hold` | `knee.hold.min`, `hip.hold.min`, `hip.hold.max` |
-| `return_standing` | `return` | `knee.return.min`, `hip.return.min` |
-| `neutral_finish` | `neutral` | `knee.neutral.min`, `hip.neutral.min` |
+```kotlin
+params.angles.hip.returnPhase.min
+params.angles.knee.returnPhase.min
+```
 
 ---
 
-## Runtime Controls
+## Required Runtime Params by Detect
 
-### Stability
+### Forward Fold
+
+| detect | Required runtime angles |
+|---|---|
+| `ready_forward_fold` | `knee.ready.min`, `hip.ready.min` |
+| `tall_spine_setup` | `knee.setup.min`, `hip.setup.min` |
+| `hip_hinge` | `knee.hinge.min`, `hip.hinge.max` |
+| `controlled_forward_fold` | `knee.fold.min`, `hip.fold.min`, `hip.fold.max` |
+| `forward_hold` | `knee.hold.min`, `hip.hold.min`, `hip.hold.max` |
+| `return_standing` | `knee.return.min`, `hip.return.min` |
+| `neutral_finish` | `knee.neutral.min`, `hip.neutral.min` |
+
+### Squat
+
+| detect | Required runtime angles |
+|---|---|
+| `squat_setup` | `knee.setup.min` |
+| `squat_descent` | `knee.descent.min`, `knee.descent.max` |
+| `squat_hold` | `knee.hold.min`, `knee.hold.max` |
+| `squat_return` | `knee.return.min` |
+
+### Twist
+
+| detect | Required runtime angles |
+|---|---|
+| `stable_base` | `twist.center.max` |
+| `twist_start` | `twist.start.min`, `twist.start.max` |
+| `twist_hold` | `twist.hold.min`, `twist.hold.max` |
+| `return_center` | `twist.center.max` |
+
+### Bridge
+
+| detect | Required runtime angles |
+|---|---|
+| `bridge_setup` | none |
+| `bridge_lift` | `hip.lift.min`, `hip.lift.max` |
+| `bridge_hold` | `hip.hold.min`, `hip.hold.max` |
+| `bridge_return` | none |
+
+---
+
+## Required Runtime Controls
+
+For strict mappers, pose-detection steps should include:
 
 ```json
-"stabilityMs": 500
-```
-
-Controls how long a matched state must remain stable before the mapper accepts it.
-
-### Smoothing
-
-```json
-"emaAlpha": 0.35
-```
-
-Controls angle smoothing.
-
-| Value | Behavior |
-|---:|---|
-| `0.2` | More stable, slower response |
-| `0.35` | Balanced |
-| `0.6` | More responsive, more jitter-sensitive |
-
-### Deadband
-
-```json
+"stabilityMs": 300,
+"emaAlpha": 0.35,
 "deadbandDegrees": 3
 ```
 
-Ignores tiny angle changes below the configured degree threshold.
+These map to:
+
+```kotlin
+params.stabilityMs
+params.emaAlpha
+params.deadbandDegrees
+```
+
+Mapper behavior is strict:
+
+```text
+missing required runtime param → error
+missing required angle param → error
+```
 
 ---
 
 ## Validation Pipeline
 
-YogaFlow uses two validators.
+YogaFlow uses two validators before runtime execution.
 
 ### 1. FlowJsonValidator
 
@@ -295,19 +374,21 @@ Example:
 Fails because `forward_hold` also requires:
 
 ```text
-angle.knee.hold.min
-angle.hip.hold.max
+knee.hold.min
+hip.hold.max
 ```
 
 ---
 
-## Failure Policy
+## Strict Runtime Policy
 
 Invalid DSL should fail fast.
 
 ```text
 Invalid JSON shape → FlowJsonValidator error
+Invalid detect string → DetectKey parse error
 Invalid DSL semantics → FlowValidator error
+Missing mapper-required param → mapper error
 ```
 
 No silent fallback is allowed.
@@ -333,6 +414,23 @@ CI validation
 
 ---
 
+## Current Runtime Guarantees
+
+```text
+0 string detect in runtime
+0 Map<String, Double> runtime params
+0 detect|k=v encoding
+0 fallback defaults in strict mappers
+```
+
+The runtime contract is now:
+
+```text
+DetectKey + RuntimeParams → strict mapper evaluation
+```
+
+---
+
 ## Roadmap
 
 Potential DSL v3 syntax:
@@ -342,4 +440,10 @@ angle.hip.hold.range = 50..130
 constraint.hold = knee > 145 && hip in 50..130
 confidence.min
 hold.frames
+```
+
+Potential next runtime model:
+
+```text
+DetectKey + sealed typed params per detect
 ```
