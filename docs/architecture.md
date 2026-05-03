@@ -283,8 +283,8 @@ Recordings are newline-delimited JSON files saved in:
 Numeric fail reasons are stored in both compact and plain-language forms:
 
 ```text
-failReason: knee=48.2 < min=155.0
-failExplanation: Observed knee angle (膝蓋角度) was 48.2 degrees; this step requires at least 155.0 degrees.
+failReason: knee=48.2 < min=120.0
+failExplanation: Observed knee angle (膝蓋角度) was 48.2 degrees; this step requires at least 120.0 degrees.
 ```
 
 Interpretation:
@@ -292,7 +292,7 @@ Interpretation:
 ```text
 knee=48.2       observed knee angle (膝蓋角度) from hip-knee-ankle landmarks
 <               observed value is below the required threshold
-min=155.0       the active flow step requires at least 155 degrees
+min=120.0       the active flow step requires at least 120 degrees
 matched=false   this frame does not count toward step completion
 ```
 

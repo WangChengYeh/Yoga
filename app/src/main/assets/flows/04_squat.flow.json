@@ -22,7 +22,7 @@
       "detect": "squat_setup",
       "runtime": {
         "angles": {
-          "knee": { "setup": { "min": 155 } }
+          "knee": { "setup": { "min": 120 } }
         }
       }
     },

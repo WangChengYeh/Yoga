@@ -23,7 +23,7 @@
       "correction": "先把雙腿打開，膝蓋伸長。如果膝蓋彎曲，先不要急著前彎。",
       "runtime": {
         "angles": {
-          "knee": { "ready": { "min": 115 } },
+          "knee": { "ready": { "min": 120 } },
           "hip": { "ready": { "min": 85 } }
         }
       }
@@ -36,7 +36,7 @@
       "correction": "先不要低頭壓下去，胸口打開，讓背變長。",
       "runtime": {
         "angles": {
-          "knee": { "setup": { "min": 115 } },
+          "knee": { "setup": { "min": 120 } },
           "hip": { "setup": { "min": 85 } }
         }
       }

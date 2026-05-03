@@ -316,21 +316,21 @@ Numeric fail reasons are compact diagnostics. They are meant for tuning, not for
 Plain-language example:
 
 ```text
-knee=48.2 < min=155.0
+knee=48.2 < min=120.0
 ```
 
 Means:
 
 ```text
 The app estimated the user's knee angle as 48.2 degrees.
-This step required the knee angle to be at least 155.0 degrees.
+This step required the knee angle to be at least 120.0 degrees.
 Because 48.2 is too low, the frame did not count toward completing the step.
 ```
 
 In session recordings, the same event also includes `failExplanation`:
 
 ```text
-Observed knee angle (膝蓋角度) was 48.2 degrees; this step requires at least 155.0 degrees.
+Observed knee angle (膝蓋角度) was 48.2 degrees; this step requires at least 120.0 degrees.
 ```
 
 Machine-readable format:
