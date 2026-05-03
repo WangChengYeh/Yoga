@@ -18,6 +18,31 @@ The current DSL is **JSON-only DSL v2** with a **type-safe strict runtime**.
 
 ---
 
+## Current Status
+
+`.flow.txt` is permanently removed.
+
+```text
+Supported:   *.flow.json
+Unsupported: *.flow.txt
+```
+
+There is no legacy parser, no text-flow fallback, and no dual-source-of-truth behavior.
+
+Production flows live under:
+
+```text
+app/src/main/assets/flows/*.flow.json
+```
+
+Optional demo flows may live under:
+
+```text
+flows/*.flow.json
+```
+
+---
+
 ## Core Principle
 
 ```text
@@ -39,18 +64,6 @@ No detect string encoding
 No Map<String, Double> runtime params
 No string detect in runtime
 No ambiguity
-```
-
-All flow files must use:
-
-```text
-app/src/main/assets/flows/*.flow.json
-```
-
-Optional demo flows may also exist under:
-
-```text
-flows/*.flow.json
 ```
 
 ---
@@ -98,6 +111,78 @@ params["angle.hip.hold.min"]        # removed
 
 ---
 
+## Flow-level Default Runtime
+
+Strict mappers require runtime controls:
+
+```json
+"stabilityMs": 300,
+"emaAlpha": 0.35,
+"deadbandDegrees": 3
+```
+
+To avoid repeating those values in every step, use flow-level defaults:
+
+```json
+{
+  "defaults": {
+    "runtime": {
+      "stabilityMs": 300,
+      "emaAlpha": 0.35,
+      "deadbandDegrees": 3
+    }
+  }
+}
+```
+
+Step runtime is merged on top of defaults:
+
+```text
+step.runtime > defaults.runtime
+```
+
+Recommended pattern:
+
+```json
+{
+  "defaults": {
+    "runtime": {
+      "stabilityMs": 300,
+      "emaAlpha": 0.35,
+      "deadbandDegrees": 3
+    }
+  },
+  "steps": [
+    {
+      "state": "HOLD",
+      "durationMs": 8000,
+      "cue": "停在這裡，保持呼吸。",
+      "detect": "forward_hold",
+      "runtime": {
+        "stabilityMs": 650,
+        "emaAlpha": 0.25,
+        "angles": {
+          "knee": { "hold": { "min": 145 } },
+          "hip": { "hold": { "min": 50, "max": 130 } }
+        }
+      }
+    }
+  ]
+}
+```
+
+In this example:
+
+```text
+stabilityMs = 650       # step override
+emaAlpha = 0.25         # step override
+deadbandDegrees = 3     # inherited from defaults
+```
+
+For cue-only / generic flows that do not use strict mappers, omit `defaults.runtime` and omit step `runtime` entirely.
+
+---
+
 ## Type-safe DetectKey
 
 JSON uses snake_case strings:
@@ -138,6 +223,13 @@ Invalid detect strings fail during parsing.
     "language": "zh-TW",
     "level": "beginner"
   },
+  "defaults": {
+    "runtime": {
+      "stabilityMs": 300,
+      "emaAlpha": 0.35,
+      "deadbandDegrees": 3
+    }
+  },
   "steps": [
     {
       "state": "MOVEMENT",
@@ -146,6 +238,7 @@ Invalid detect strings fail during parsing.
       "detect": "controlled_forward_fold",
       "correction": "如果膝蓋彎了，先減少前傾深度，把腿重新伸長。",
       "runtime": {
+        "emaAlpha": 0.4,
         "angles": {
           "knee": {
             "fold": { "min": 150 }
@@ -153,10 +246,7 @@ Invalid detect strings fail during parsing.
           "hip": {
             "fold": { "min": 55, "max": 135 }
           }
-        },
-        "stabilityMs": 300,
-        "emaAlpha": 0.4,
-        "deadbandDegrees": 3
+        }
       }
     }
   ],
@@ -177,19 +267,19 @@ Invalid detect strings fail during parsing.
 | `cue` | `cue` | Yes | Coaching cue |
 | `detect` | `DetectKey` | Yes | Type-safe detection key routed to mapper |
 | `correction` | `correction` | Recommended | Correction cue |
-| `runtime` | `RuntimeParams` | Required for validated detect keys | Detection thresholds and stability behavior |
+| `runtime` | `RuntimeParams` | Required for strict mapper steps | Detection thresholds and optional runtime overrides |
 
 ---
 
 ## Runtime JSON → RuntimeParams
 
-The parser converts JSON runtime values into typed Kotlin objects.
+The parser converts JSON runtime values into typed Kotlin objects after merging defaults.
 
 | JSON | Kotlin access |
 |---|---|
-| `runtime.stabilityMs` | `params.stabilityMs` |
-| `runtime.emaAlpha` | `params.emaAlpha` |
-| `runtime.deadbandDegrees` | `params.deadbandDegrees` |
+| `defaults.runtime.stabilityMs` or `runtime.stabilityMs` | `params.stabilityMs` |
+| `defaults.runtime.emaAlpha` or `runtime.emaAlpha` | `params.emaAlpha` |
+| `defaults.runtime.deadbandDegrees` or `runtime.deadbandDegrees` | `params.deadbandDegrees` |
 | `runtime.angles.hip.hold.min` | `params.angles.hip.hold.min` |
 | `runtime.angles.knee.fold.min` | `params.angles.knee.fold.min` |
 | `runtime.angles.twist.center.max` | `params.angles.twist.center.max` |
@@ -198,14 +288,25 @@ Example:
 
 ```json
 {
-  "runtime": {
-    "angles": {
-      "hip": {
-        "hold": { "min": 50, "max": 130 }
+  "defaults": {
+    "runtime": {
+      "stabilityMs": 300,
+      "emaAlpha": 0.35,
+      "deadbandDegrees": 3
+    }
+  },
+  "steps": [
+    {
+      "runtime": {
+        "stabilityMs": 650,
+        "angles": {
+          "hip": {
+            "hold": { "min": 50, "max": 130 }
+          }
+        }
       }
-    },
-    "stabilityMs": 650
-  }
+    }
+  ]
 }
 ```
 
@@ -215,6 +316,8 @@ Becomes typed runtime access:
 params.angles.hip.hold.min == 50.0
 params.angles.hip.hold.max == 130.0
 params.stabilityMs == 650L
+params.emaAlpha == 0.35
+params.deadbandDegrees == 3.0
 ```
 
 ---
@@ -293,7 +396,7 @@ params.angles.knee.returnPhase.min
 
 ## Required Runtime Controls
 
-For strict mappers, pose-detection steps should include:
+Strict mapper steps require these controls, usually inherited from `defaults.runtime`:
 
 ```json
 "stabilityMs": 300,
@@ -324,7 +427,7 @@ YogaFlow uses two validators before runtime execution.
 
 ### 1. FlowJsonValidator
 
-Checks JSON shape, type, enum, and numeric ranges before parsing.
+Checks JSON shape, type, enum, and numeric ranges before parsing. It also validates `defaults.runtime`.
 
 Examples it catches:
 
@@ -354,7 +457,7 @@ angles.hips is not a supported joint
 
 ### 2. FlowValidator
 
-Checks semantic requirements after parsing.
+Checks semantic requirements after defaults and step runtime have been merged.
 
 Example:
 
@@ -417,6 +520,7 @@ CI validation
 ## Current Runtime Guarantees
 
 ```text
+0 .flow.txt files
 0 string detect in runtime
 0 Map<String, Double> runtime params
 0 detect|k=v encoding
