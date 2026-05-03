@@ -1,11 +1,9 @@
 package com.yogaflow
 
-import android.animation.ObjectAnimator
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import android.view.View
-import android.view.animation.DecelerateInterpolator
 import android.widget.Button
 import android.widget.ProgressBar
 import android.widget.SeekBar
@@ -13,41 +11,22 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.view.PreviewView
 import androidx.core.app.ActivityCompat
-import com.yogaflow.coach.BridgeDetectionMapper
 import com.yogaflow.coach.CoachCueController
 import com.yogaflow.coach.CoachSpeaker
-import com.yogaflow.coach.CoachState
-import com.yogaflow.coach.ForwardFoldDetectionMapper
 import com.yogaflow.coach.PoseFlowEngine
 import com.yogaflow.coach.PoseStateMachine
-import com.yogaflow.coach.SquatDetectionMapper
-import com.yogaflow.coach.ThresholdConfig
-import com.yogaflow.coach.TwistDetectionMapper
 import com.yogaflow.flow.AutoTuningAdvisor
 import com.yogaflow.flow.AutoTuningSuggestion
-import com.yogaflow.flow.FlowLoader
 import com.yogaflow.flow.FlowPlaylistEngine
-import com.yogaflow.flow.RuntimeOverrideKey
 import com.yogaflow.flow.RuntimeOverrideStore
-import com.yogaflow.flow.RuntimeParams
-import com.yogaflow.flow.TunableRuntimeParam
-import com.yogaflow.flow.TunableRuntimeParamExtractor
 import com.yogaflow.flow.YogaFlow
 import com.yogaflow.llm.LlmCoach
-import com.yogaflow.pose.CameraFramingCoach
-import com.yogaflow.pose.CameraFramingStatus
 import com.yogaflow.pose.CameraPosePipeline
-import com.yogaflow.pose.DebugPoseInfo
 import com.yogaflow.pose.PoseDetectionResult
-import com.yogaflow.pose.PoseGeometry
 import com.yogaflow.pose.PoseHelper
 import com.yogaflow.pose.PoseOverlayView
-import com.yogaflow.pose.ViewOrientation
-import com.yogaflow.pose.ViewOrientationStatus
 import com.yogaflow.session.LiveCoachSessionController
 import com.yogaflow.yoga.YogaPose
-import com.yogaflow.yoga.YogaPoseCatalog
-import kotlin.math.abs
 import java.util.Locale
 import java.util.concurrent.Executors
 
@@ -114,10 +93,10 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        bindViews()
-        loadThresholdPreferences()
+        bindViewsMain()
+        loadThresholdPreferencesMain()
         initRuntime()
-        setupThresholdControls()
+        setupThresholdControlsMain()
         setupButtons()
         showHome()
 
@@ -140,21 +119,6 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             coachText.text = "Camera permission is required to start pose coaching."
         }
     }
-
-
-    private fun bindViews() = bindViewsImpl()
-
-    private fun setupThresholdControls() = setupThresholdControlsImpl()
-
-    internal fun runtimeTuningListener(index: Int): SeekBar.OnSeekBarChangeListener = runtimeTuningListenerImpl(index)
-
-    private fun loadThresholdPreferences() = loadThresholdPreferencesImpl()
-
-    internal fun saveThresholdPreferences() = saveThresholdPreferencesImpl()
-
-    internal fun thresholdProgress(value: Double, min: Double, maxProgress: Int): Int = thresholdProgressImpl(value, min, maxProgress)
-
-    internal fun clampThreshold(value: Double, min: Double, range: Int): Double = clampThresholdImpl(value, min, range)
 
 
     private fun initRuntime() {
