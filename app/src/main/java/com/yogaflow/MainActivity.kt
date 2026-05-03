@@ -298,7 +298,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             currentPose = currentPose
         )
         val event = flowEngine.update(currentFlow, mapping.state, mapping.matched)
-        updateDebugOverlay(frame, detect = currentStep.detect, state = mapping.state, matched = mapping.matched)
+        updateDebugOverlay(frame, detect = currentStep.detect.jsonKey, state = mapping.state, matched = mapping.matched)
 
         when (event) {
             is PoseFlowEngine.FlowEvent.Cue -> speakCoachCue(mapping.state, if (mapping.matched) event.text else mapping.cue)
