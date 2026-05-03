@@ -8,7 +8,7 @@ import kotlin.math.abs
 
 object SquatDetectionMapper {
 
-    data class Result(val matched: Boolean, val state: CoachState, val cue: String)
+    data class Result(val matched: Boolean, val state: CoachState, val cue: String, val reason: String = "")
 
     private var smoothedKnee: Double? = null
     private var stableDetect: DetectKey? = null
@@ -28,7 +28,7 @@ object SquatDetectionMapper {
 
         if (listOf(leftKnee, rightKnee, leftHip, rightHip).any { it.confidence == PoseGeometry.Confidence.INVALID }) {
             reset()
-            return Result(false, CoachState.CORRECTION, "請讓髖部、膝蓋和腳踝都進入畫面。")
+            return Result(false, CoachState.CORRECTION, "請讓髖部、膝蓋和腳踝都進入畫面。", "required landmarks invalid")
         }
 
         val knee = smooth(minOf(leftKnee.degrees, rightKnee.degrees), detect, params)
@@ -54,7 +54,7 @@ object SquatDetectionMapper {
             stableSince = now
         }
         val stabilityMs = required(params.stabilityMs, detect, "runtime.stabilityMs")
-        return if (now - stableSince >= stabilityMs) result else result.copy(matched = false, cue = "穩住這個深蹲位置，再保持一下。")
+        return if (now - stableSince >= stabilityMs) result else result.copy(matched = false, cue = "穩住這個深蹲位置，再保持一下。", reason = "stableFor=${now - stableSince}ms < required=${stabilityMs}ms")
     }
 
     private fun smooth(raw: Double, detect: DetectKey, params: RuntimeParams): Double {
@@ -69,15 +69,15 @@ object SquatDetectionMapper {
 
     private fun squatSetup(knee: Double, params: RuntimeParams): Result {
         val min = required(params.angles.knee.setup.min, DetectKey.SQUAT_SETUP, "runtime.angles.knee.setup.min")
-        return if (knee < min) Result(false, CoachState.CORRECTION, "先站穩，膝蓋伸長，準備下蹲。") else Result(true, CoachState.SETUP, "很好，雙腳穩定，準備慢慢下蹲。")
+        return if (knee < min) fail(CoachState.CORRECTION, "先站穩，膝蓋伸長，準備下蹲。", "knee", knee, "<", "min", min) else Result(true, CoachState.SETUP, "很好，雙腳穩定，準備慢慢下蹲。")
     }
 
     private fun squatDescent(knee: Double, params: RuntimeParams): Result {
         val min = required(params.angles.knee.descent.min, DetectKey.SQUAT_DESCENT, "runtime.angles.knee.descent.min")
         val max = required(params.angles.knee.descent.max, DetectKey.SQUAT_DESCENT, "runtime.angles.knee.descent.max")
         return when {
-            knee > max -> Result(false, CoachState.MOVEMENT, "慢慢往下蹲，膝蓋跟腳尖方向一致。")
-            knee < min -> Result(false, CoachState.CORRECTION, "不要蹲太低，先往上回一點。")
+            knee > max -> fail(CoachState.MOVEMENT, "慢慢往下蹲，膝蓋跟腳尖方向一致。", "knee", knee, ">", "max", max)
+            knee < min -> fail(CoachState.CORRECTION, "不要蹲太低，先往上回一點。", "knee", knee, "<", "min", min)
             else -> Result(true, CoachState.MOVEMENT, "很好，深度可以，保持控制。")
         }
     }
@@ -86,16 +86,22 @@ object SquatDetectionMapper {
         val min = required(params.angles.knee.hold.min, DetectKey.SQUAT_HOLD, "runtime.angles.knee.hold.min")
         val max = required(params.angles.knee.hold.max, DetectKey.SQUAT_HOLD, "runtime.angles.knee.hold.max")
         return when {
-            knee > max -> Result(false, CoachState.MOVEMENT, "再往下一點，找到穩定深蹲位置。")
-            knee < min -> Result(false, CoachState.CORRECTION, "深度太多了，往上回一點。")
+            knee > max -> fail(CoachState.MOVEMENT, "再往下一點，找到穩定深蹲位置。", "knee", knee, ">", "max", max)
+            knee < min -> fail(CoachState.CORRECTION, "深度太多了，往上回一點。", "knee", knee, "<", "min", min)
             else -> Result(true, CoachState.HOLD, "很好，穩住，保持呼吸。")
         }
     }
 
     private fun squatReturn(knee: Double, params: RuntimeParams): Result {
         val min = required(params.angles.knee.returnPhase.min, DetectKey.SQUAT_RETURN, "runtime.angles.knee.return.min")
-        return if (knee < min) Result(false, CoachState.TRANSITION, "慢慢站起來，不要突然彈起。") else Result(true, CoachState.TRANSITION, "很好，回到站姿。")
+        return if (knee < min) fail(CoachState.TRANSITION, "慢慢站起來，不要突然彈起。", "knee", knee, "<", "min", min) else Result(true, CoachState.TRANSITION, "很好，回到站姿。")
     }
+
+    private fun fail(state: CoachState, cue: String, metric: String, actual: Double, op: String, boundName: String, expected: Double): Result {
+        return Result(false, state, cue, "$metric=${actual.fmt()} $op $boundName=${expected.fmt()}")
+    }
+
+    private fun Double.fmt(): String = "%.1f".format(this)
 
     private fun required(value: Double?, detect: DetectKey, key: String): Double {
         return value ?: error("Missing required param for ${detect.jsonKey}: $key")
