@@ -183,42 +183,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private fun handlePoseFrame(frame: PoseDetectionResult) {
         overlayView.setLandmarks(frame.imageLandmarks)
 
-        val framing = CameraFramingCoach.analyze(frame)
-        val orientation = ViewOrientation.analyze(frame)
-        val ready = framing.status == CameraFramingStatus.GOOD && orientation.status == ViewOrientationStatus.GOOD
-
-        when (sessionState) {
-            SessionState.IDLE -> {
-                updateCameraSetupPanel(ready, framing.message, orientation.message)
-                maybeAutoStartClass()
-                updateDebugOverlay(frame, detect = "camera_setup", state = CoachState.SETUP, matched = ready)
-                updateUi(animated = false)
-                return
-            }
-            SessionState.PAUSED -> {
-                cameraSetupPanel.visibility = View.GONE
-                updateDebugOverlay(frame, detect = "paused", state = CoachState.SETUP, matched = ready)
-                updateUi(animated = false)
-                return
-            }
-            SessionState.COMPLETED -> {
-                cameraSetupPanel.visibility = View.GONE
-                updateDebugOverlay(frame, detect = "completed", state = CoachState.HOLD, matched = true)
-                updateUi(animated = false)
-                return
-            }
-            SessionState.RUNNING -> Unit
-        }
-
-        cameraSetupPanel.visibility = View.GONE
-
-        if (!ready) {
-            val setupCue = cameraSetupCue(framing, orientation)
-            speakCoachCue(CoachState.CORRECTION, setupCue)
-            updateDebugOverlay(frame, detect = "camera_setup", state = CoachState.CORRECTION, matched = false)
-            updateUi(animated = false)
-            return
-        }
+        if (handleCameraSetupFrame(frame)) return
 
         val currentStep = currentFlow.steps.getOrNull(flowEngine.currentStepNumber() - 1)
         if (currentStep == null) {
@@ -269,6 +234,47 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
 
         updateUi(animated = true)
+    }
+
+    private fun handleCameraSetupFrame(frame: PoseDetectionResult): Boolean {
+        val framing = CameraFramingCoach.analyze(frame)
+        val orientation = ViewOrientation.analyze(frame)
+        val ready = framing.status == CameraFramingStatus.GOOD && orientation.status == ViewOrientationStatus.GOOD
+
+        when (sessionState) {
+            SessionState.IDLE -> {
+                updateCameraSetupPanel(ready, framing.message, orientation.message)
+                maybeAutoStartClass()
+                updateDebugOverlay(frame, detect = "camera_setup", state = CoachState.SETUP, matched = ready)
+                updateUi(animated = false)
+                return true
+            }
+            SessionState.PAUSED -> {
+                cameraSetupPanel.visibility = View.GONE
+                updateDebugOverlay(frame, detect = "paused", state = CoachState.SETUP, matched = ready)
+                updateUi(animated = false)
+                return true
+            }
+            SessionState.COMPLETED -> {
+                cameraSetupPanel.visibility = View.GONE
+                updateDebugOverlay(frame, detect = "completed", state = CoachState.HOLD, matched = true)
+                updateUi(animated = false)
+                return true
+            }
+            SessionState.RUNNING -> Unit
+        }
+
+        cameraSetupPanel.visibility = View.GONE
+
+        if (!ready) {
+            val setupCue = cameraSetupCue(framing, orientation)
+            speakCoachCue(CoachState.CORRECTION, setupCue)
+            updateDebugOverlay(frame, detect = "camera_setup", state = CoachState.CORRECTION, matched = false)
+            updateUi(animated = false)
+            return true
+        }
+
+        return false
     }
 
     private fun updateCameraSetupPanel(ready: Boolean, framingMessage: String, orientationMessage: String) {
