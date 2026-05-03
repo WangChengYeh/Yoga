@@ -60,6 +60,7 @@ Implemented core pieces:
 - runtime tuning overrides
 - auto tuning suggestions from numeric fail reasons
 - debug overlay for explainability
+- session recorder for pose data and coach cues
 - LLM-assisted phrase polishing
 - TTS voice coaching
 
@@ -126,6 +127,33 @@ PoseFlowEngine
 CoachCueController
         ↓
 CoachSpeaker / LlmCoach / TTS
+```
+
+### 5. Session recording captures what happened
+
+The class view includes a `Record Session` control. When enabled, the app records sampled pose evaluation data and coach cue events, then saves a JSONL file when recording stops.
+
+Recorded frame events include:
+
+```text
+flow id
+step number
+detect key
+CoachState
+matched
+landmark count
+frame size
+runtime summary
+numeric fail reason
+auto tuning suggestion
+```
+
+Recorded cue events include the raw flow cue, displayed/polished cue, completion cue, flow id, step, and source.
+
+Files are saved under the app external files directory:
+
+```text
+session-recordings/yogaflow-session-YYYYMMDD-HHMMSS.jsonl
 ```
 
 ---

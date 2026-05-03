@@ -71,6 +71,32 @@
             android:textSize="10sp" />
 
         <LinearLayout
+            android:id="@+id/sessionRecordPanel"
+            android:layout_width="220dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|start"
+            android:layout_marginStart="12dp"
+            android:layout_marginBottom="116dp"
+            android:orientation="vertical"
+            android:background="#88000000"
+            android:padding="8dp">
+
+            <TextView
+                android:id="@+id/sessionRecordStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Session recorder idle"
+                android:textColor="#FFFFFFFF"
+                android:textSize="11sp" />
+
+            <Button
+                android:id="@+id/sessionRecordButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Record Session" />
+        </LinearLayout>
+
+        <LinearLayout
             android:id="@+id/thresholdPanel"
             android:layout_width="260dp"
             android:layout_height="wrap_content"

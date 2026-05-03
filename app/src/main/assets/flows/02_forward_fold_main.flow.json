@@ -9,9 +9,9 @@
   },
   "defaults": {
     "runtime": {
-      "stabilityMs": 300,
-      "emaAlpha": 0.35,
-      "deadbandDegrees": 3
+      "stabilityMs": 150,
+      "emaAlpha": 0.2,
+      "deadbandDegrees": 6
     }
   },
   "steps": [
@@ -48,8 +48,8 @@
       "detect": "hip_hinge",
       "correction": "你現在有點用背彎，先停一下，背打直，再從髖部往前。",
       "runtime": {
-        "stabilityMs": 250,
-        "emaAlpha": 0.4,
+        "stabilityMs": 150,
+        "emaAlpha": 0.25,
         "angles": {
           "knee": { "hinge": { "min": 150 } },
           "hip": { "hinge": { "max": 140 } }
@@ -63,7 +63,7 @@
       "detect": "controlled_forward_fold",
       "correction": "如果膝蓋彎了，先減少前傾深度，把腿重新伸長。",
       "runtime": {
-        "emaAlpha": 0.4,
+        "emaAlpha": 0.25,
         "angles": {
           "knee": { "fold": { "min": 150 } },
           "hip": { "fold": { "min": 55, "max": 135 } }
@@ -77,8 +77,8 @@
       "detect": "forward_hold",
       "correction": "不需要再壓更深，先穩住呼吸，讓背和大腿慢慢放鬆。",
       "runtime": {
-        "stabilityMs": 650,
-        "emaAlpha": 0.25,
+        "stabilityMs": 250,
+        "emaAlpha": 0.18,
         "angles": {
           "knee": { "hold": { "min": 145 } },
           "hip": { "hold": { "min": 50, "max": 130 } }
@@ -92,8 +92,8 @@
       "detect": "forward_hold",
       "correction": "如果感覺拉扯太強，身體退回一點，保持安全伸展。",
       "runtime": {
-        "stabilityMs": 650,
-        "emaAlpha": 0.25,
+        "stabilityMs": 250,
+        "emaAlpha": 0.18,
         "angles": {
           "knee": { "hold": { "min": 145 } },
           "hip": { "hold": { "min": 50, "max": 130 } }

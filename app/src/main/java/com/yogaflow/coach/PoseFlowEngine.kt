@@ -12,11 +12,15 @@ class PoseFlowEngine {
 
     private var currentFlowId: String? = null
     private var currentStepIndex = 0
-    private var stepStartTime = System.currentTimeMillis()
+    private var matchedStepMs = 0L
+    private var lastUpdateTime = System.currentTimeMillis()
     private var completedFlowId: String? = null
 
     fun update(flow: YogaFlow, detectedState: CoachState, matched: Boolean): FlowEvent {
         resetIfFlowChanged(flow.id)
+        val now = System.currentTimeMillis()
+        val frameDeltaMs = (now - lastUpdateTime).coerceIn(0L, MAX_FRAME_DELTA_MS)
+        lastUpdateTime = now
 
         if (flow.steps.isEmpty()) {
             completedFlowId = flow.id
@@ -30,12 +34,11 @@ class PoseFlowEngine {
         val currentStep = flow.steps[currentStepIndex]
 
         if (!matched || detectedState != currentStep.state) {
-            stepStartTime = System.currentTimeMillis()
             return FlowEvent.Cue(currentStep.state, currentStep.correction.ifBlank { currentStep.cue })
         }
 
-        val elapsed = System.currentTimeMillis() - stepStartTime
-        if (elapsed < currentStep.durationMs) {
+        matchedStepMs += frameDeltaMs
+        if (matchedStepMs < currentStep.durationMs) {
             return FlowEvent.Cue(currentStep.state, currentStep.cue)
         }
 
@@ -45,7 +48,7 @@ class PoseFlowEngine {
         }
 
         currentStepIndex++
-        stepStartTime = System.currentTimeMillis()
+        resetStepProgress()
         val nextStep = flow.steps[currentStepIndex]
         return FlowEvent.StepCompleted(nextStep.state, nextStep.cue)
     }
@@ -58,8 +61,7 @@ class PoseFlowEngine {
         if (flow.steps.isEmpty()) return 0
         if (completedFlowId == flow.id) return 0
         val step = flow.steps[currentStepIndex]
-        val elapsed = System.currentTimeMillis() - stepStartTime
-        val remainingMs = (step.durationMs - elapsed).coerceAtLeast(0)
+        val remainingMs = (step.durationMs - matchedStepMs).coerceAtLeast(0)
         return (remainingMs + 999) / 1000
     }
 
@@ -71,7 +73,12 @@ class PoseFlowEngine {
 
     private fun resetStepState() {
         currentStepIndex = 0
-        stepStartTime = System.currentTimeMillis()
+        resetStepProgress()
+    }
+
+    private fun resetStepProgress() {
+        matchedStepMs = 0L
+        lastUpdateTime = System.currentTimeMillis()
     }
 
     private fun resetIfFlowChanged(flowId: String) {
@@ -80,5 +87,9 @@ class PoseFlowEngine {
             completedFlowId = null
             resetStepState()
         }
+    }
+
+    private companion object {
+        const val MAX_FRAME_DELTA_MS = 250L
     }
 }

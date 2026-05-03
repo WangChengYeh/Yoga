@@ -97,14 +97,14 @@ object CameraFramingCoach {
     private const val MIN_VISIBILITY = 0.45f
     private const val MIN_VISIBLE_LANDMARKS = 16
 
-    private const val TOP_MARGIN = 0.05
-    private const val BOTTOM_MARGIN = 0.95
+    private const val TOP_MARGIN = 0.03
+    private const val BOTTOM_MARGIN = 0.97
 
-    private const val TOO_CLOSE_HEIGHT = 0.90
-    private const val TOO_FAR_HEIGHT = 0.42
-    private const val MIN_BODY_WIDTH = 0.18
+    private const val TOO_CLOSE_HEIGHT = 0.96
+    private const val TOO_FAR_HEIGHT = 0.30
+    private const val MIN_BODY_WIDTH = 0.10
 
-    private const val LEFT_CENTER_LIMIT = 0.38
-    private const val RIGHT_CENTER_LIMIT = 0.62
-    private const val CENTER_TOLERANCE = 0.12
+    private const val LEFT_CENTER_LIMIT = 0.28
+    private const val RIGHT_CENTER_LIMIT = 0.72
+    private const val CENTER_TOLERANCE = 0.22
 }

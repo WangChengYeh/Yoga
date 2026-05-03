@@ -206,7 +206,7 @@ LLM cannot invent, remove, or reorder flow steps.
 
 ## Observability + Tuning Pipeline
 
-The runtime exposes a debug overlay and threshold tuning panel for validation and calibration:
+The runtime exposes a debug overlay, threshold tuning panel, and session recorder for validation, calibration, and later review:
 
 ```text
 PoseDetectionResult
@@ -214,10 +214,12 @@ PoseDetectionResult
 PoseGeometry
   ↓
 DebugPoseInfo
+  ↓                  ↓
+debugText overlay    SessionRecorder
+  ↓                  ↓
+Threshold UI         JSONL session file
   ↓
-debugText overlay
-  ↓
-Threshold UI / Runtime Override UI
+Runtime Override UI
   ↓
 RuntimeOverrideStore
   ↓
@@ -246,6 +248,35 @@ effective runtime params
 active runtime overrides
 numeric fail reason
 auto tuning suggestion
+```
+
+Session recordings capture:
+
+```text
+frame samples:
+  flow id
+  step number
+  detect key
+  CoachState
+  matched
+  landmark count
+  frame size
+  runtime summary
+  active runtime overrides
+  numeric fail reason
+  auto tuning suggestion
+
+cue events:
+  raw flow cue
+  displayed/polished cue
+  flow completion cue
+  source
+```
+
+Recordings are newline-delimited JSON files saved in:
+
+```text
+<app external files>/session-recordings/yogaflow-session-YYYYMMDD-HHMMSS.jsonl
 ```
 
 Runtime override paths are scoped by flow, step, detect key, and parameter path:
@@ -360,7 +391,7 @@ The runtime uses stability windows at two levels:
 
 ```text
 Ready = framing GOOD + orientation GOOD
-Ready must stay stable for ~1500ms before auto-start
+Ready must stay stable for ~600ms before auto-start
 ```
 
 Purpose:
@@ -518,7 +549,7 @@ Partially integrated / known gaps:
 ### Perception Quality
 
 - Add variance-based stability scoring
-- Add record / replay debugging
+- Add replay for saved session recordings
 - Add auto calibration from observed range of motion
 - Add scoring system for pose quality
 

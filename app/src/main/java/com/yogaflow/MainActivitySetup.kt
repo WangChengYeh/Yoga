@@ -28,6 +28,8 @@ internal fun MainActivity.bindViewsMain() {
     startButton = findViewById(R.id.startButton)
     pauseButton = findViewById(R.id.pauseButton)
     restartButton = findViewById(R.id.restartButton)
+    sessionRecordButton = findViewById(R.id.sessionRecordButton)
+    sessionRecordStatus = findViewById(R.id.sessionRecordStatus)
 }
 
 internal fun MainActivity.setupThresholdControlsMain() {

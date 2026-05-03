@@ -9,9 +9,9 @@
   },
   "defaults": {
     "runtime": {
-      "stabilityMs": 300,
-      "emaAlpha": 0.35,
-      "deadbandDegrees": 3
+      "stabilityMs": 150,
+      "emaAlpha": 0.2,
+      "deadbandDegrees": 6
     }
   },
   "steps": [

@@ -1,6 +1,7 @@
 package com.yogaflow
 
 import android.Manifest
+import android.media.AudioAttributes
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
@@ -32,6 +33,7 @@ import com.yogaflow.pose.PoseHelper
 import com.yogaflow.pose.PoseOverlayView
 import com.yogaflow.session.CameraSetupController
 import com.yogaflow.session.LiveCoachSessionController
+import com.yogaflow.session.SessionRecorder
 import com.yogaflow.yoga.YogaPose
 import com.yogaflow.yoga.YogaPoseCatalog
 import java.util.Locale
@@ -63,6 +65,8 @@ class MainActivity : AppCompatActivity() {
     lateinit var startButton: Button
     lateinit var pauseButton: Button
     lateinit var restartButton: Button
+    lateinit var sessionRecordButton: Button
+    lateinit var sessionRecordStatus: TextView
     private lateinit var applySuggestionButton: Button
 
     lateinit var cameraPipeline: CameraPosePipeline
@@ -91,6 +95,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var coachCueController: CoachCueController
     lateinit var cameraSetupController: CameraSetupController
     private lateinit var liveCoachSessionController: LiveCoachSessionController
+    private lateinit var sessionRecorder: SessionRecorder
+    private var pendingTtsReady: Boolean? = null
     private val stateMachine = PoseStateMachine()
     private val autoTuningAdvisor = AutoTuningAdvisor()
 
@@ -106,14 +112,18 @@ class MainActivity : AppCompatActivity() {
 
         bindViewsMain()
         applySuggestionButton = findViewById(R.id.applySuggestionButton)
+        sessionRecorder = SessionRecorder(this)
         loadThresholdPreferencesMain()
 
         cameraExecutor = Executors.newSingleThreadExecutor()
         coachExecutor = Executors.newSingleThreadExecutor()
         tts = TextToSpeech(this) { status ->
-            if (status == TextToSpeech.SUCCESS) tts.language = Locale.TRADITIONAL_CHINESE
+            val isReady = status == TextToSpeech.SUCCESS && configureTts()
+            pendingTtsReady = isReady
+            if (::speaker.isInitialized) speaker.setReady(isReady)
         }
         speaker = CoachSpeaker(tts)
+        pendingTtsReady?.let { speaker.setReady(it) }
         poseHelper = PoseHelper(this)
         poseHelper.onResult = { frame -> runOnUiThread { handlePoseFrame(frame) } }
         cameraPipeline = CameraPosePipeline(this, this, previewView, poseHelper, cameraExecutor) {
@@ -125,11 +135,12 @@ class MainActivity : AppCompatActivity() {
             speaker = speaker,
             executor = coachExecutor,
             uiExecutor = { runnable -> runOnUiThread(runnable) },
-            minCueIntervalMs = 1200L,
-            sameCueIntervalMs = 3500L,
+            minCueIntervalMs = 5000L,
+            sameCueIntervalMs = 5000L,
             onDisplay = { displayText, llmEnabled ->
                 coachText.text = displayText
                 llmStatus.text = if (llmEnabled) "LLM: ON" else "LLM: OFF"
+                recordSessionCue(null, displayText, "display")
             },
             isRequestCurrent = { flowId, step ->
                 isCurrentFlowInitialized() &&
@@ -201,6 +212,41 @@ class MainActivity : AppCompatActivity() {
 
     fun isCurrentFlowInitialized(): Boolean = ::currentFlow.isInitialized && ::currentPose.isInitialized
 
+    private fun configureTts(): Boolean {
+        tts.setAudioAttributes(
+            AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                .build()
+        )
+        val locale = supportedTtsLocales().firstOrNull { locale ->
+            when (tts.isLanguageAvailable(locale)) {
+                TextToSpeech.LANG_AVAILABLE,
+                TextToSpeech.LANG_COUNTRY_AVAILABLE,
+                TextToSpeech.LANG_COUNTRY_VAR_AVAILABLE -> true
+                else -> false
+            }
+        } ?: return false
+
+        return when (tts.setLanguage(locale)) {
+            TextToSpeech.LANG_AVAILABLE,
+            TextToSpeech.LANG_COUNTRY_AVAILABLE,
+            TextToSpeech.LANG_COUNTRY_VAR_AVAILABLE -> true
+            else -> false
+        }
+    }
+
+    private fun supportedTtsLocales(): List<Locale> {
+        return listOf(
+            Locale.TRADITIONAL_CHINESE,
+            Locale.TAIWAN,
+            Locale("zh", "TW"),
+            Locale.CHINESE,
+            Locale.getDefault(),
+            Locale.US
+        ).distinct()
+    }
+
     fun resolvePose(flow: YogaFlow): YogaPose {
         return YogaPoseCatalog.poses.firstOrNull { it.id == flow.pose }
             ?: YogaPoseCatalog.poses.first()
@@ -244,6 +290,7 @@ class MainActivity : AppCompatActivity() {
         }
         restartButton.setOnClickListener { restartCurrentPlaylist() }
         applySuggestionButton.setOnClickListener { applyLatestSuggestion() }
+        sessionRecordButton.setOnClickListener { toggleSessionRecording() }
     }
 
     internal fun requestCameraIfNeeded() {
@@ -299,6 +346,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun onFlowCompleted(text: String) {
+        recordSessionCue(CoachState.HOLD, text, "flow_completed")
         val next = playlist.moveNext()
         if (next == null) {
             sessionState = SessionState.COMPLETED
@@ -317,6 +365,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun speakCoachCue(state: CoachState, cue: String) {
         if (!isCurrentFlowInitialized()) return
+        recordSessionCue(state, cue, "raw_cue")
         coachCueController.speak(currentPose, currentFlow.id, flowEngine.currentStepNumber(), state, cue)
     }
 
@@ -338,6 +387,53 @@ class MainActivity : AppCompatActivity() {
             failReason,
             suggestionSummary
         ).filter { it.isNotBlank() }.joinToString("\n")
+        if (isCurrentFlowInitialized()) {
+            sessionRecorder.recordFrame(
+                frame = frame,
+                flowId = currentFlow.id,
+                stepNumber = flowEngine.currentStepNumber(),
+                detect = detect,
+                state = state,
+                matched = matched,
+                runtimeSummary = runtimeSummary,
+                overrideSummary = overrideSummary,
+                failReason = failReason,
+                suggestionSummary = suggestionSummary
+            )
+            updateSessionRecordStatus()
+        }
+    }
+
+    private fun toggleSessionRecording() {
+        if (sessionRecorder.isRecording) {
+            val file = sessionRecorder.stopAndSave()
+            sessionRecordButton.text = "Record Session"
+            sessionRecordStatus.text = if (file == null) {
+                "Session recorder idle"
+            } else {
+                "Saved ${sessionRecorder.eventCount} events\n${file.absolutePath}"
+            }
+        } else {
+            sessionRecorder.start()
+            sessionRecordButton.text = "Stop Recording"
+            updateSessionRecordStatus()
+        }
+    }
+
+    private fun updateSessionRecordStatus() {
+        if (!sessionRecorder.isRecording) return
+        sessionRecordStatus.text = "Recording session events: ${sessionRecorder.eventCount}"
+    }
+
+    private fun recordSessionCue(state: CoachState?, cue: String, source: String) {
+        sessionRecorder.recordCue(
+            flowId = if (isCurrentFlowInitialized()) currentFlow.id else null,
+            stepNumber = if (isCurrentFlowInitialized()) flowEngine.currentStepNumber() else null,
+            state = state,
+            cue = cue,
+            source = source
+        )
+        updateSessionRecordStatus()
     }
 
     private fun buildRuntimeSummary(params: RuntimeParams): String {
@@ -365,6 +461,6 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         const val TUNING_SLIDER_MAX = 1000
-        private const val CAMERA_AUTO_START_STABLE_MS = 1200L
+        private const val CAMERA_AUTO_START_STABLE_MS = 600L
     }
 }
