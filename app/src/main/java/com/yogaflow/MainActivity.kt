@@ -158,37 +158,11 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun setupThresholdControls() {
-        squatThresholdSeekBar.progress = thresholdProgress(
-            value = ThresholdConfig.squatHoldKneeMaxDegrees,
-            min = SQUAT_THRESHOLD_MIN,
-            maxProgress = SQUAT_THRESHOLD_RANGE
-        )
-        bridgeThresholdSeekBar.progress = thresholdProgress(
-            value = ThresholdConfig.bridgeLiftHipMaxDegrees,
-            min = BRIDGE_THRESHOLD_MIN,
-            maxProgress = BRIDGE_THRESHOLD_RANGE
-        )
+        squatThresholdSeekBar.isEnabled = false
+        bridgeThresholdSeekBar.isEnabled = false
+        squatThresholdSeekBar.alpha = 0.35f
+        bridgeThresholdSeekBar.alpha = 0.35f
         updateThresholdLabels()
-
-        squatThresholdSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                ThresholdConfig.squatHoldKneeMaxDegrees = clampThreshold(SQUAT_THRESHOLD_MIN + progress, SQUAT_THRESHOLD_MIN, SQUAT_THRESHOLD_RANGE)
-                updateThresholdLabels()
-                saveThresholdPreferences()
-            }
-            override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
-            override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
-        })
-
-        bridgeThresholdSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                ThresholdConfig.bridgeLiftHipMaxDegrees = clampThreshold(BRIDGE_THRESHOLD_MIN + progress, BRIDGE_THRESHOLD_MIN, BRIDGE_THRESHOLD_RANGE)
-                updateThresholdLabels()
-                saveThresholdPreferences()
-            }
-            override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
-            override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
-        })
     }
 
     private fun loadThresholdPreferences() {
@@ -216,8 +190,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun updateThresholdLabels() {
-        squatThresholdLabel.text = "Squat knee: ${ThresholdConfig.squatHoldKneeMaxDegrees.toInt()}°"
-        bridgeThresholdLabel.text = "Bridge hip: ${ThresholdConfig.bridgeLiftHipMaxDegrees.toInt()}°"
+        squatThresholdLabel.text = "DSL tuning: pending"
+        bridgeThresholdLabel.text = "Runtime override UI: pending"
     }
 
     private fun initRuntime() {
