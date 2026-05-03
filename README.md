@@ -6,6 +6,20 @@ YogaFlow 3D is a production-oriented on-device AI yoga coach for Android. It tur
 
 ---
 
+## Release 0.4 · JSON DSL v2
+
+This release focuses on the Flow DSL runtime:
+
+```text
+JSON Flow DSL v2
+DetectKey enum
+RuntimeParams typed model
+Flow-level defaults
+Strict detection mappers
+```
+
+---
+
 ## ✨ Flow DSL
 
 YogaFlow uses a **JSON-only, type-safe, strict Flow DSL**.
@@ -63,28 +77,6 @@ Full spec:
 
 ```text
 docs/flow-dsl.md
-```
-
----
-
-## Product Milestone
-
-```text
-v0.3-camera-onboarding
-Camera setup screen + ready gating + stable auto-start + visual framing box
-```
-
-This milestone adds a complete onboarding loop:
-
-```text
-Camera → Framing + Orientation → Setup Panel → Visual Framing Box → Ready Gate → Auto-start → FlowEngine
-```
-
-Previous milestone:
-
-```text
-v0.2-threshold-ui
-Runtime threshold tuning + persistent user calibration
 ```
 
 ---
@@ -296,6 +288,8 @@ knee > 145 && hip in 50..130
 ## Status
 
 ```text
+Release: 0.4
+Focus: JSON DSL v2
 JSON DSL
 DetectKey enum
 RuntimeParams typed model
