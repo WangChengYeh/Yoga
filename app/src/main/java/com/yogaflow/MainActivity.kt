@@ -14,7 +14,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.view.PreviewView
 import androidx.core.app.ActivityCompat
 import com.yogaflow.coach.BridgeDetectionMapper
-import com.yogaflow.coach.CoachPhrasePolisher
+import com.yogaflow.coach.CoachCueController
 import com.yogaflow.coach.CoachSpeaker
 import com.yogaflow.coach.CoachState
 import com.yogaflow.coach.ForwardFoldDetectionMapper
@@ -87,6 +87,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private lateinit var tts: TextToSpeech
     internal lateinit var speaker: CoachSpeaker
     private lateinit var llmCoach: LlmCoach
+    private lateinit var coachCueController: CoachCueController
 
     private val stateMachine = PoseStateMachine()
     internal val flowEngine = PoseFlowEngine()
@@ -172,6 +173,23 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         tts = TextToSpeech(this, this)
         speaker = CoachSpeaker(tts)
         llmCoach = LlmCoach(this)
+        coachCueController = CoachCueController(
+            llmCoach = llmCoach,
+            speaker = speaker,
+            executor = coachExecutor,
+            uiExecutor = { runOnUiThread(it) },
+            minCueIntervalMs = MIN_CUE_INTERVAL_MS,
+            sameCueIntervalMs = SAME_CUE_INTERVAL_MS,
+            onDisplay = { text, llmOn ->
+                llmStatus.text = if (llmOn) "LLM: ON" else "LLM: OFF"
+                coachText.text = text
+            },
+            isRequestCurrent = { requestId, flowId, step ->
+                requestId == coachRequestId &&
+                    flowId == currentFlow.id &&
+                    step == flowEngine.currentStepNumber()
+            }
+        )
 
         if (!poseHelper.isReady) {
             coachText.text = "Pose model not found. Please add pose_landmarker_lite.task to assets."
@@ -441,40 +459,20 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
     }
 
-    private fun shouldEmitCoach(cue: String): Boolean {
-        val now = System.currentTimeMillis()
-        if (cue == lastCoachCue && now - lastCoachAt < SAME_CUE_INTERVAL_MS) return false
-        if (now - lastCoachAt < MIN_CUE_INTERVAL_MS) return false
-        lastCoachCue = cue
-        lastCoachAt = now
-        return true
-    }
-
     private fun speakCoachCue(state: CoachState, cue: String) {
-        if (cue.isBlank() || !shouldEmitCoach(cue)) return
-        val pose = currentPose
-        val requestId = ++coachRequestId
-        val flowId = currentFlow.id
-        val step = flowEngine.currentStepNumber()
-
-        coachExecutor.execute {
-            val generated = llmCoach.generate(pose, state, cue)
-            val isFallback = generated == cue
-            val spokenText = CoachPhrasePolisher.polish(generated)
-            val displayText = if (isFallback) "(fallback) $spokenText" else spokenText
-
-            runOnUiThread {
-                if (requestId != coachRequestId || flowId != currentFlow.id || step != flowEngine.currentStepNumber()) return@runOnUiThread
-                llmStatus.text = if (isFallback) "LLM: OFF" else "LLM: ON"
-                coachText.text = displayText
-                speaker.speakIfNeeded(spokenText)
-            }
-        }
+        if (!::coachCueController.isInitialized) return
+        coachCueController.speak(
+            pose = currentPose,
+            flowId = currentFlow.id,
+            step = flowEngine.currentStepNumber(),
+            state = state,
+            cue = cue
+        )
     }
 
     private fun speakRawCue(cue: String) {
-        if (cue.isBlank()) return
-        speaker.speakIfNeeded(cue)
+        if (!::coachCueController.isInitialized) return
+        coachCueController.speakRaw(cue)
     }
 
     private fun setupButtons() {
