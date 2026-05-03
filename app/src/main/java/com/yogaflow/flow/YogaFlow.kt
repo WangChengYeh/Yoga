@@ -16,7 +16,7 @@ data class YogaFlowStep(
     val state: CoachState,
     val durationMs: Long,
     val cue: String,
-    val detect: String,
+    val detect: DetectKey,
     val correction: String,
     val params: Map<String, Double> = emptyMap()
 )
