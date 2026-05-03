@@ -216,6 +216,14 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="Restart" />
+
+                <Button
+                    android:id="@+id/applySuggestionButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Apply" />
+
             </LinearLayout>
         </LinearLayout>
     </FrameLayout>
