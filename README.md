@@ -8,7 +8,7 @@ YogaFlow 3D is a production-oriented on-device AI yoga coach for Android. It tur
 
 ## ✨ Flow DSL
 
-YogaFlow uses a **JSON-only, type-safe, strict Flow DSL**.
+YogaFlow uses a **JSON DSL v2**, type-safe, strict Flow DSL.
 
 ```text
 .flow.json
@@ -67,25 +67,104 @@ docs/flow-dsl.md
 
 ---
 
-## Product Milestone
+## Runtime Tuning Architecture
 
 ```text
-v0.3-camera-onboarding
-Camera setup screen + ready gating + stable auto-start + visual framing box
+                         ┌──────────────────────────┐
+                         │     Flow JSON (DSL)      │
+                         │  assets/flows/*.json     │
+                         └────────────┬─────────────┘
+                                      │
+                                      ▼
+                         ┌──────────────────────────┐
+                         │       FlowLoader         │
+                         │   parse + validation     │
+                         └────────────┬─────────────┘
+                                      │
+                                      ▼
+                         ┌──────────────────────────┐
+                         │      RuntimeParams       │
+                         │   typed DSL params       │
+                         └────────────┬─────────────┘
+                                      │
+                     ┌────────────────┴────────────────┐
+                     │                                 │
+                     ▼                                 ▼
+     ┌──────────────────────────┐        ┌──────────────────────────┐
+     │ TunableParamExtractor    │        │   RuntimeOverrideStore   │
+     │ DSL → UI params          │        │ user tuning layer        │
+     └────────────┬─────────────┘        └────────────┬─────────────┘
+                  │                                   │
+                  ▼                                   ▼
+        ┌──────────────────────┐           ┌────────────────────────┐
+        │   Slider UI          │           │  RuntimeOverrideKey    │
+        │ dynamic binding      │           │ flow/step/detect/path  │
+        └────────────┬─────────┘           └────────────┬───────────┘
+                     │                                  │
+                     └──────────────┬───────────────────┘
+                                    ▼
+                         ┌──────────────────────────┐
+                         │  RuntimeOverrideMerger   │
+                         │ DSL + override merge     │
+                         └────────────┬─────────────┘
+                                      │
+                                      ▼
+                         ┌──────────────────────────┐
+                         │  EffectiveRuntimeParams  │
+                         │ final detection config   │
+                         └────────────┬─────────────┘
+                                      │
+                                      ▼
+                         ┌──────────────────────────┐
+                         │  PoseDetectionRouter     │
+                         │ detect + mapper logic    │
+                         └────────────┬─────────────┘
+                                      │
+                                      ▼
+                         ┌──────────────────────────┐
+                         │   PoseFlowEngine         │
+                         │ state machine + flow     │
+                         └────────────┬─────────────┘
+                                      │
+                                      ▼
+                         ┌──────────────────────────┐
+                         │     Coach Output         │
+                         │ voice / UI feedback      │
+                         └──────────────────────────┘
 ```
 
-This milestone adds a complete onboarding loop:
+Minimal mental model:
 
 ```text
-Camera → Framing + Orientation → Setup Panel → Visual Framing Box → Ready Gate → Auto-start → FlowEngine
+DSL → Runtime → Override → Detection → Explain
 ```
 
-Previous milestone:
+---
+
+## Runtime Overrides
+
+Runtime tuning is scoped by flow, step, detect key, and parameter path:
+
+```kotlin
+data class RuntimeOverrideKey(
+    val flowId: String,
+    val stepIndex: Int,
+    val detect: DetectKey,
+    val path: String
+)
+```
+
+Example override paths:
 
 ```text
-v0.2-threshold-ui
-Runtime threshold tuning + persistent user calibration
+runtime.stabilityMs
+runtime.emaAlpha
+runtime.deadbandDegrees
+runtime.angles.knee.hold.min
+runtime.angles.hip.hold.max
 ```
+
+The packaged flow JSON remains the source of truth. User tuning is applied as a runtime override layer and merged into effective runtime params for detection.
 
 ---
 
@@ -150,6 +229,10 @@ JSON detect string
 DetectKey enum
         ↓
 RuntimeParams typed model
+        ↓
+RuntimeOverrideStore
+        ↓
+EffectiveRuntimeParams
         ↓
 Strict mapper evaluation
 ```
@@ -236,7 +319,7 @@ Auto-start Timer
 
 ## Debug Overlay
 
-Debug mode displays live runtime information such as:
+Debug mode displays pose, runtime, and override data for explainability:
 
 ```text
 pose id
@@ -246,7 +329,18 @@ matched / not matched
 knee angle
 hip angle
 torso twist estimate
+effective runtime params
+active runtime overrides
 ```
+
+Example:
+
+```text
+runtime=stab=650 ema=0.25 dead=3.0 | knee.hold.min=145 hip.hold.max=130
+overrides=knee.hold.min=150
+```
+
+This makes each detection result traceable to pose data, DSL runtime params, and user tuning overrides.
 
 ---
 
@@ -280,7 +374,9 @@ Recommended validation before merging flow changes:
 
 ```text
 CI validation for all flow JSON files
-Debug overlay for merged RuntimeParams
+Runtime override persistence
+Multi-param tuning UI
+Fail reason detection
 Flow Editor UI
 DSL v3 constraint expressions
 ```
@@ -296,9 +392,12 @@ knee > 145 && hip in 50..130
 ## Status
 
 ```text
-JSON DSL
+JSON DSL v2
 DetectKey enum
 RuntimeParams typed model
 Strict mappers
 Flow-level defaults
+Runtime override store
+Dynamic tuning UI
+Debug explainability
 ```
