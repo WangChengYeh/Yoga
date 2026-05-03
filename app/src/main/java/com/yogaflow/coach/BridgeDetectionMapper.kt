@@ -1,5 +1,7 @@
 package com.yogaflow.coach
 
+import com.yogaflow.flow.DetectKey
+import com.yogaflow.flow.RuntimeParams
 import com.yogaflow.pose.PoseDetectionResult
 import com.yogaflow.pose.PoseGeometry
 import kotlin.math.abs
@@ -9,7 +11,7 @@ object BridgeDetectionMapper {
     data class Result(val matched: Boolean, val state: CoachState, val cue: String)
 
     private var smoothedHip: Double? = null
-    private var stableDetect: String? = null
+    private var stableDetect: DetectKey? = null
     private var stableSince = 0L
 
     fun reset() {
@@ -18,7 +20,7 @@ object BridgeDetectionMapper {
         stableSince = 0L
     }
 
-    fun evaluate(detect: String, frame: PoseDetectionResult, params: Map<String, Double> = emptyMap()): Result {
+    fun evaluate(detect: DetectKey, frame: PoseDetectionResult, params: RuntimeParams): Result {
         val leftHip = PoseGeometry.angle(frame, 11, 23, 25)
         val rightHip = PoseGeometry.angle(frame, 12, 24, 26)
 
@@ -27,18 +29,18 @@ object BridgeDetectionMapper {
             return Result(false, CoachState.CORRECTION, "請讓髖部與膝蓋進入畫面。")
         }
 
-        val hip = smooth(minOf(leftHip.degrees, rightHip.degrees), params)
+        val hip = smooth(minOf(leftHip.degrees, rightHip.degrees), detect, params)
         val rawResult = when (detect) {
-            "bridge_setup" -> setup()
-            "bridge_lift" -> lift(hip, params)
-            "bridge_hold" -> hold(hip, params)
-            "bridge_return" -> ret()
-            else -> Result(true, CoachState.HOLD, "維持姿勢")
+            DetectKey.BRIDGE_SETUP -> setup()
+            DetectKey.BRIDGE_LIFT -> lift(hip, params)
+            DetectKey.BRIDGE_HOLD -> hold(hip, params)
+            DetectKey.BRIDGE_RETURN -> ret()
+            else -> error("BridgeDetectionMapper received unsupported detect=${detect.jsonKey}")
         }
         return applyStabilityWindow(detect, rawResult, params)
     }
 
-    private fun applyStabilityWindow(detect: String, result: Result, params: Map<String, Double>): Result {
+    private fun applyStabilityWindow(detect: DetectKey, result: Result, params: RuntimeParams): Result {
         if (!result.matched) {
             stableDetect = null
             stableSince = 0L
@@ -49,14 +51,14 @@ object BridgeDetectionMapper {
             stableDetect = detect
             stableSince = now
         }
-        val stabilityMs = params["stability.ms"]?.toLong() ?: STABILITY_WINDOW_MS
+        val stabilityMs = required(params.stabilityMs, detect, "runtime.stabilityMs")
         return if (now - stableSince >= stabilityMs) result else result.copy(matched = false, cue = "穩住這個橋式位置，再保持一下。")
     }
 
-    private fun smooth(raw: Double, params: Map<String, Double>): Double {
+    private fun smooth(raw: Double, detect: DetectKey, params: RuntimeParams): Double {
         val prev = smoothedHip
-        val deadband = params["deadband.degrees"] ?: ANGLE_DEADBAND_DEGREES
-        val alpha = params["ema.alpha"] ?: HIP_EMA_ALPHA
+        val deadband = required(params.deadbandDegrees, detect, "runtime.deadbandDegrees")
+        val alpha = required(params.emaAlpha, detect, "runtime.emaAlpha")
         if (prev != null && abs(raw - prev) <= deadband) return prev
         val next = if (prev == null) raw else prev + alpha * (raw - prev)
         smoothedHip = next
@@ -67,22 +69,22 @@ object BridgeDetectionMapper {
         return Result(true, CoachState.SETUP, "很好，腳踩穩，準備慢慢抬起臀部。")
     }
 
-    private fun lift(hip: Double, params: Map<String, Double>): Result {
-        val liftMin = params["angle.hip.lift.min"] ?: BRIDGE_MIN_HIP_DEGREES
-        val liftMax = params["angle.hip.lift.max"] ?: ThresholdConfig.bridgeLiftHipMaxDegrees
+    private fun lift(hip: Double, params: RuntimeParams): Result {
+        val min = required(params.angles.hip.lift.min, DetectKey.BRIDGE_LIFT, "runtime.angles.hip.lift.min")
+        val max = required(params.angles.hip.lift.max, DetectKey.BRIDGE_LIFT, "runtime.angles.hip.lift.max")
         return when {
-            hip > liftMax -> Result(false, CoachState.MOVEMENT, "慢慢抬起臀部，從骨盆帶動。")
-            hip < liftMin -> Result(false, CoachState.CORRECTION, "不要抬太高，稍微放低一點，避免壓腰。")
+            hip > max -> Result(false, CoachState.MOVEMENT, "慢慢抬起臀部，從骨盆帶動。")
+            hip < min -> Result(false, CoachState.CORRECTION, "不要抬太高，稍微放低一點，避免壓腰。")
             else -> Result(true, CoachState.MOVEMENT, "很好，持續抬起，保持控制。")
         }
     }
 
-    private fun hold(hip: Double, params: Map<String, Double>): Result {
-        val holdMin = params["angle.hip.hold.min"] ?: BRIDGE_MIN_HIP_DEGREES
-        val holdMax = params["angle.hip.hold.max"] ?: ThresholdConfig.bridgeLiftHipMaxDegrees
+    private fun hold(hip: Double, params: RuntimeParams): Result {
+        val min = required(params.angles.hip.hold.min, DetectKey.BRIDGE_HOLD, "runtime.angles.hip.hold.min")
+        val max = required(params.angles.hip.hold.max, DetectKey.BRIDGE_HOLD, "runtime.angles.hip.hold.max")
         return when {
-            hip > holdMax -> Result(false, CoachState.MOVEMENT, "再抬高一點臀部，但不要拱腰。")
-            hip < holdMin -> Result(false, CoachState.CORRECTION, "稍微放低一點，讓腰保持舒服。")
+            hip > max -> Result(false, CoachState.MOVEMENT, "再抬高一點臀部，但不要拱腰。")
+            hip < min -> Result(false, CoachState.CORRECTION, "稍微放低一點，讓腰保持舒服。")
             else -> Result(true, CoachState.HOLD, "很好，維持橋式，保持呼吸。")
         }
     }
@@ -91,8 +93,11 @@ object BridgeDetectionMapper {
         return Result(true, CoachState.TRANSITION, "很好，慢慢回到地面。")
     }
 
-    private const val BRIDGE_MIN_HIP_DEGREES = 75.0
-    private const val HIP_EMA_ALPHA = 0.35
-    private const val ANGLE_DEADBAND_DEGREES = 2.0
-    private const val STABILITY_WINDOW_MS = 300L
+    private fun required(value: Double?, detect: DetectKey, key: String): Double {
+        return value ?: error("Missing required param for ${detect.jsonKey}: $key")
+    }
+
+    private fun required(value: Long?, detect: DetectKey, key: String): Long {
+        return value ?: error("Missing required param for ${detect.jsonKey}: $key")
+    }
 }
