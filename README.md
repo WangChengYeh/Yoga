@@ -67,6 +67,64 @@ docs/flow-dsl.md
 
 ---
 
+## App Controller Architecture
+
+MainActivity is intentionally kept as the Android shell: lifecycle, permissions, view binding, camera lifecycle, and wiring. Live coaching logic is split into controllers.
+
+```text
+CameraPosePipeline
+        ↓
+PoseDetectionResult
+        ↓
+MainActivity.handlePoseFrame
+        ├─ Camera setup gate
+        │      CameraFramingCoach + ViewOrientation
+        │
+        └─ LiveCoachSessionController
+               RuntimeOverrideMerger
+               PoseDetectionRouter
+               PoseFlowEngine
+               AutoTuningAdvisor
+               FlowEvent
+                    ↓
+             CoachCueController
+               LlmCoach + CoachPhrasePolisher + CoachSpeaker/TTS
+```
+
+Current responsibility split:
+
+```text
+MainActivity
+  Android lifecycle, permission, camera start/stop, UI wiring, playlist buttons, controller callbacks
+
+CoachCueController
+  LLM generation, phrase polishing, fallback detection, TTS, cue rate limiting, async request cancellation
+
+LiveCoachSessionController
+  ready pose frame handling, runtime override merge, pose detection routing, flow events, debug/tuning callbacks
+
+CameraSetupController
+  intended owner of full-body framing, orientation, ready gate, setup correction cues, and auto-start wiring
+```
+
+Current integration status:
+
+```text
+CoachCueController: integrated in MainActivity
+LiveCoachSessionController: integrated in MainActivity
+CameraSetupController: file exists; MainActivity still uses handleCameraSetupFrame as the stable pre-integration baseline
+```
+
+Design rule:
+
+```text
+LLM must not plan or reorder lessons.
+LLM is only a phrase / tone adapter for flow-provided cues.
+Flow JSON remains the source of truth for lesson sequence and detection behavior.
+```
+
+---
+
 ## Runtime Tuning Architecture
 
 ```text
@@ -266,11 +324,15 @@ PoseDetectionResult
         ↓
 PoseGeometry
         ↓
+LiveCoachSessionController
+        ↓
 PoseDetectionRouter
         ↓
 Pose-specific Detection Mapper
         ↓
 PoseFlowEngine
+        ↓
+CoachCueController
         ↓
 CoachSpeaker / LlmCoach / TTS
 ```
@@ -385,6 +447,13 @@ Ready Gate
 Auto-start Timer
 ```
 
+Current implementation:
+
+```text
+MainActivity.handleCameraSetupFrame is the stable baseline.
+CameraSetupController exists and is intended to own this logic after final integration.
+```
+
 ---
 
 ## Debug Overlay
@@ -443,11 +512,20 @@ Recommended validation before merging flow changes:
 5. Verify Apply button / restart long-press only writes runtime overrides
 ```
 
+Safe refactor rule for MainActivity:
+
+```text
+Do not patch MainActivity with placeholder content.
+When using GitHub content API, always fetch current SHA and write a complete Kotlin file.
+Prefer local IDE refactor for controller integration.
+```
+
 ---
 
 ## Roadmap
 
 ```text
+Integrate CameraSetupController into MainActivity
 CI validation for all flow JSON files
 Runtime override persistence
 Multi-param tuning UI
@@ -480,4 +558,7 @@ Numeric fail reason
 Auto tuning advisor
 Sample-count confidence
 Apply suggestion action
+CoachCueController integrated
+LiveCoachSessionController integrated
+CameraSetupController exists, pending MainActivity integration
 ```
