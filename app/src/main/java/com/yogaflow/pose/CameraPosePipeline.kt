@@ -20,8 +20,11 @@ class CameraPosePipeline(
     private val onError: (Throwable) -> Unit = {}
 ) {
     private var cameraProvider: ProcessCameraProvider? = null
+    private var started = false
 
     fun start() {
+        if (started) return
+        started = true
         val providerFuture = ProcessCameraProvider.getInstance(context)
         providerFuture.addListener({
             runCatching {
@@ -47,12 +50,16 @@ class CameraPosePipeline(
                     preview,
                     analyzer
                 )
-            }.onFailure(onError)
+            }.onFailure {
+                started = false
+                onError(it)
+            }
         }, ContextCompat.getMainExecutor(context))
     }
 
     fun stop() {
         cameraProvider?.unbindAll()
         cameraProvider = null
+        started = false
     }
 }

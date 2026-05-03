@@ -246,7 +246,7 @@ class MainActivity : AppCompatActivity() {
         applySuggestionButton.setOnClickListener { applyLatestSuggestion() }
     }
 
-    private fun requestCameraIfNeeded() {
+    internal fun requestCameraIfNeeded() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
             startCamera()
         } else {

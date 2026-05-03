@@ -57,8 +57,10 @@ internal fun MainActivity.showHome() {
 internal fun MainActivity.showClass() {
     homeView.visibility = View.GONE
     classView.visibility = View.VISIBLE
+    classView.post { requestCameraIfNeeded() }
 }
 
 internal fun MainActivity.startCamera() {
+    if (classView.visibility != View.VISIBLE) return
     cameraPipeline.start()
 }

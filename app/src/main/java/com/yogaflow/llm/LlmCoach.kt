@@ -5,6 +5,7 @@ import android.util.Log
 import com.google.mediapipe.tasks.genai.llminference.LlmInference
 import com.yogaflow.coach.CoachState
 import com.yogaflow.yoga.YogaPose
+import java.io.File
 
 class LlmCoach(context: Context) {
 
@@ -12,13 +13,17 @@ class LlmCoach(context: Context) {
 
     init {
         try {
-            val options = LlmInference.LlmInferenceOptions.builder()
-                .setModelPath(LlmConfig.DEFAULT_MODEL_PATH)
-                .setMaxTopK(LlmConfig.MAX_TOP_K)
-                .build()
+            if (File(LlmConfig.DEFAULT_MODEL_PATH).isFile) {
+                val options = LlmInference.LlmInferenceOptions.builder()
+                    .setModelPath(LlmConfig.DEFAULT_MODEL_PATH)
+                    .setMaxTopK(LlmConfig.MAX_TOP_K)
+                    .build()
 
-            llm = LlmInference.createFromOptions(context, options)
-            Log.d("LLM", "Gemma loaded")
+                llm = LlmInference.createFromOptions(context, options)
+                Log.d("LLM", "Gemma loaded")
+            } else {
+                Log.d("LLM", "LLM model not found, fallback mode")
+            }
 
         } catch (e: Exception) {
             Log.e("LLM", "LLM init failed, fallback mode", e)
