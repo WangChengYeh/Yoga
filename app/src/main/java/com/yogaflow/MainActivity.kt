@@ -26,8 +26,11 @@ import com.yogaflow.coach.ThresholdConfig
 import com.yogaflow.coach.TwistDetectionMapper
 import com.yogaflow.flow.FlowLoader
 import com.yogaflow.flow.FlowPlaylistEngine
+import com.yogaflow.flow.RuntimeOverrideKey
 import com.yogaflow.flow.RuntimeOverrideMerger
-import com.yogaflow.flow.UserRuntimeOverrides
+import com.yogaflow.flow.RuntimeOverrideStore
+import com.yogaflow.flow.TunableRuntimeParam
+import com.yogaflow.flow.TunableRuntimeParamExtractor
 import com.yogaflow.flow.YogaFlow
 import com.yogaflow.llm.LlmCoach
 import com.yogaflow.pose.CameraFramingCoach
@@ -87,7 +90,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private val stateMachine = PoseStateMachine()
     private val flowEngine = PoseFlowEngine()
     private val playlist = FlowPlaylistEngine()
-    private val userRuntimeOverrides = UserRuntimeOverrides.EMPTY
+    private val runtimeOverrideStore = RuntimeOverrideStore()
+    private var suppressTuningCallbacks = false
 
     private lateinit var currentFlow: YogaFlow
     private lateinit var currentPose: YogaPose
@@ -158,11 +162,94 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun setupThresholdControls() {
-        squatThresholdSeekBar.isEnabled = false
-        bridgeThresholdSeekBar.isEnabled = false
-        squatThresholdSeekBar.alpha = 0.35f
-        bridgeThresholdSeekBar.alpha = 0.35f
-        updateThresholdLabels()
+        squatThresholdSeekBar.max = TUNING_SLIDER_MAX
+        bridgeThresholdSeekBar.max = TUNING_SLIDER_MAX
+        squatThresholdSeekBar.setOnSeekBarChangeListener(runtimeTuningListener(0))
+        bridgeThresholdSeekBar.setOnSeekBarChangeListener(runtimeTuningListener(1))
+        updateRuntimeTuningControls()
+    }
+
+    private fun runtimeTuningListener(index: Int): SeekBar.OnSeekBarChangeListener {
+        return object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                if (!fromUser || suppressTuningCallbacks) return
+                val binding = currentTuningBindings().getOrNull(index) ?: return
+                val value = sliderProgressToValue(progress, binding.param)
+                runtimeOverrideStore.set(binding.key, value)
+                updateRuntimeTuningControls()
+            }
+            override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+            override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
+        }
+    }
+
+    private data class RuntimeTuningBinding(
+        val key: RuntimeOverrideKey,
+        val param: TunableRuntimeParam
+    )
+
+    private fun currentTuningBindings(): List<RuntimeTuningBinding> {
+        if (!::currentFlow.isInitialized) return emptyList()
+        val stepIndex = flowEngine.currentStepNumber() - 1
+        val step = currentFlow.steps.getOrNull(stepIndex) ?: return emptyList()
+        return TunableRuntimeParamExtractor.extract(step.params).map { param ->
+            RuntimeTuningBinding(
+                key = RuntimeOverrideKey(
+                    flowId = currentFlow.id,
+                    stepIndex = stepIndex,
+                    detect = step.detect,
+                    path = param.path
+                ),
+                param = param
+            )
+        }
+    }
+
+    private fun updateRuntimeTuningControls() {
+        val bindings = currentTuningBindings()
+        applyRuntimeTuningBinding(
+            label = squatThresholdLabel,
+            seekBar = squatThresholdSeekBar,
+            binding = bindings.getOrNull(0)
+        )
+        applyRuntimeTuningBinding(
+            label = bridgeThresholdLabel,
+            seekBar = bridgeThresholdSeekBar,
+            binding = bindings.getOrNull(1)
+        )
+    }
+
+    private fun applyRuntimeTuningBinding(label: TextView, seekBar: SeekBar, binding: RuntimeTuningBinding?) {
+        suppressTuningCallbacks = true
+        if (binding == null) {
+            label.text = "DSL tuning: no param"
+            seekBar.isEnabled = false
+            seekBar.alpha = 0.35f
+            seekBar.progress = 0
+        } else {
+            val value = runtimeOverrideStore.valueFor(binding.key) ?: binding.param.value
+            label.text = "${binding.param.label}: ${formatTuningValue(value, binding.param)}"
+            seekBar.isEnabled = true
+            seekBar.alpha = 1.0f
+            seekBar.progress = valueToSliderProgress(value, binding.param)
+        }
+        suppressTuningCallbacks = false
+    }
+
+    private fun valueToSliderProgress(value: Double, param: TunableRuntimeParam): Int {
+        val clamped = value.coerceIn(param.min, param.max)
+        val ratio = if (param.max == param.min) 0.0 else (clamped - param.min) / (param.max - param.min)
+        return (ratio * TUNING_SLIDER_MAX).toInt().coerceIn(0, TUNING_SLIDER_MAX)
+    }
+
+    private fun sliderProgressToValue(progress: Int, param: TunableRuntimeParam): Double {
+        val ratio = progress.coerceIn(0, TUNING_SLIDER_MAX).toDouble() / TUNING_SLIDER_MAX.toDouble()
+        val raw = param.min + ratio * (param.max - param.min)
+        return if (param.isInteger) raw.toLong().toDouble() else raw
+    }
+
+    private fun formatTuningValue(value: Double, param: TunableRuntimeParam): String {
+        return if (param.isInteger) value.toLong().toString() else "%.2f".format(value)
     }
 
     private fun loadThresholdPreferences() {
@@ -187,11 +274,6 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     private fun clampThreshold(value: Double, min: Double, range: Int): Double {
         return value.coerceIn(min, min + range)
-    }
-
-    private fun updateThresholdLabels() {
-        squatThresholdLabel.text = "DSL tuning: pending"
-        bridgeThresholdLabel.text = "Runtime override UI: pending"
     }
 
     private fun initRuntime() {
@@ -266,7 +348,9 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             return
         }
 
-        val effectiveParams = RuntimeOverrideMerger.apply(currentStep.params, userRuntimeOverrides)
+        val stepIndex = flowEngine.currentStepNumber() - 1
+        val overrides = runtimeOverrideStore.overridesFor(currentFlow.id, stepIndex, currentStep.detect)
+        val effectiveParams = RuntimeOverrideMerger.apply(currentStep.params, overrides)
         val mapping = PoseDetectionRouter.evaluate(
             poseId = currentPose.id,
             detect = currentStep.detect,
@@ -276,6 +360,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             currentPose = currentPose
         )
         val event = flowEngine.update(currentFlow, mapping.state, mapping.matched)
+        updateRuntimeTuningControls()
         updateDebugOverlay(frame, detect = currentStep.detect.jsonKey, state = mapping.state, matched = mapping.matched)
 
         when (event) {
@@ -337,6 +422,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         cameraSetupPanel.visibility = View.GONE
         coachText.text = if (auto) "相機設定完成，自動開始練習。" else "開始練習，跟著我的節奏。"
         speaker.speakIfNeeded(if (auto) "相機設定完成，開始練習。" else "開始練習，跟著我的節奏。")
+        updateRuntimeTuningControls()
         updateUi(animated = true)
     }
 
@@ -492,6 +578,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         coachRequestId++
         coachText.text = "請先完成相機設定。"
         llmStatus.text = "LLM: OFF"
+        updateRuntimeTuningControls()
 
         if (openClassView) showClass()
         updateUi(animated = false)
@@ -524,6 +611,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         lastCoachAt = 0L
         coachRequestId++
         coachText.text = "已重新開始。請先完成相機設定。"
+        updateRuntimeTuningControls()
         updateUi(animated = false)
     }
 
@@ -618,5 +706,6 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         private const val THRESHOLD_PREFS = "threshold_prefs"
         private const val KEY_SQUAT_HOLD_KNEE_MAX = "squat_hold_knee_max"
         private const val KEY_BRIDGE_LIFT_HIP_MAX = "bridge_lift_hip_max"
+        private const val TUNING_SLIDER_MAX = 1000
     }
 }
