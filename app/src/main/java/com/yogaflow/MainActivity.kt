@@ -91,10 +91,10 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private val stateMachine = PoseStateMachine()
     internal val flowEngine = PoseFlowEngine()
     internal val playlist = FlowPlaylistEngine()
-    private val runtimeOverrideStore = RuntimeOverrideStore()
+    internal val runtimeOverrideStore = RuntimeOverrideStore()
     private val autoTuningAdvisor = AutoTuningAdvisor()
     internal var latestSuggestion: AutoTuningSuggestion? = null
-    private var suppressTuningCallbacks = false
+    internal var suppressTuningCallbacks = false
 
     internal lateinit var currentFlow: YogaFlow
     internal lateinit var currentPose: YogaPose
@@ -140,77 +140,21 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
     }
 
-    private fun bindViews() {
-        homeView = findViewById(R.id.homeView)
-        classView = findViewById(R.id.classView)
-        previewView = findViewById(R.id.previewView)
-        overlayView = findViewById(R.id.overlayView)
-        cameraSetupPanel = findViewById(R.id.cameraSetupPanel)
-        cameraSetupStatus = findViewById(R.id.cameraSetupStatus)
-        debugText = findViewById(R.id.debugText)
-        coachText = findViewById(R.id.coachText)
-        flowName = findViewById(R.id.flowName)
-        progressText = findViewById(R.id.progressText)
-        countdownText = findViewById(R.id.countdownText)
-        llmStatus = findViewById(R.id.llmStatus)
-        progressBar = findViewById(R.id.progressBar)
-        squatThresholdLabel = findViewById(R.id.squatThresholdLabel)
-        bridgeThresholdLabel = findViewById(R.id.bridgeThresholdLabel)
-        squatThresholdSeekBar = findViewById(R.id.squatThresholdSeekBar)
-        bridgeThresholdSeekBar = findViewById(R.id.bridgeThresholdSeekBar)
-        startClassButton = findViewById(R.id.startClassButton)
-        startStretchButton = findViewById(R.id.startStretchButton)
-        startRecoveryButton = findViewById(R.id.startRecoveryButton)
-        startButton = findViewById(R.id.startButton)
-        pauseButton = findViewById(R.id.pauseButton)
-        restartButton = findViewById(R.id.restartButton)
-    }
 
-    private fun setupThresholdControls() {
-        squatThresholdSeekBar.max = TUNING_SLIDER_MAX
-        bridgeThresholdSeekBar.max = TUNING_SLIDER_MAX
-        squatThresholdSeekBar.setOnSeekBarChangeListener(runtimeTuningListener(0))
-        bridgeThresholdSeekBar.setOnSeekBarChangeListener(runtimeTuningListener(1))
-        updateRuntimeTuningControls()
-    }
+    private fun bindViews() = bindViewsImpl()
 
-    private fun runtimeTuningListener(index: Int): SeekBar.OnSeekBarChangeListener {
-        return object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                if (!fromUser || suppressTuningCallbacks) return
-                val binding = computeCurrentTuningBindings().getOrNull(index) ?: return
-                val value = sliderProgressToValue(progress, binding.param, TUNING_SLIDER_MAX)
-                runtimeOverrideStore.set(binding.key, value)
-                updateRuntimeTuningControls()
-            }
-            override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
-            override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
-        }
-    }
+    private fun setupThresholdControls() = setupThresholdControlsImpl()
 
-    private fun loadThresholdPreferences() {
-        val prefs = getSharedPreferences(THRESHOLD_PREFS, MODE_PRIVATE)
-        val squat = prefs.getFloat(KEY_SQUAT_HOLD_KNEE_MAX, ThresholdConfig.squatHoldKneeMaxDegrees.toFloat()).toDouble()
-        val bridge = prefs.getFloat(KEY_BRIDGE_LIFT_HIP_MAX, ThresholdConfig.bridgeLiftHipMaxDegrees.toFloat()).toDouble()
-        ThresholdConfig.squatHoldKneeMaxDegrees = clampThreshold(squat, SQUAT_THRESHOLD_MIN, SQUAT_THRESHOLD_RANGE)
-        ThresholdConfig.bridgeLiftHipMaxDegrees = clampThreshold(bridge, BRIDGE_THRESHOLD_MIN, BRIDGE_THRESHOLD_RANGE)
-    }
+    internal fun runtimeTuningListener(index: Int): SeekBar.OnSeekBarChangeListener = runtimeTuningListenerImpl(index)
 
-    private fun saveThresholdPreferences() {
-        getSharedPreferences(THRESHOLD_PREFS, MODE_PRIVATE)
-            .edit()
-            .putFloat(KEY_SQUAT_HOLD_KNEE_MAX, ThresholdConfig.squatHoldKneeMaxDegrees.toFloat())
-            .putFloat(KEY_BRIDGE_LIFT_HIP_MAX, ThresholdConfig.bridgeLiftHipMaxDegrees.toFloat())
-            .apply()
-    }
+    private fun loadThresholdPreferences() = loadThresholdPreferencesImpl()
 
-    private fun thresholdProgress(value: Double, min: Double, maxProgress: Int): Int {
-        return (value - min).toInt().coerceIn(0, maxProgress)
-    }
+    internal fun saveThresholdPreferences() = saveThresholdPreferencesImpl()
 
-    private fun clampThreshold(value: Double, min: Double, range: Int): Double {
-        return value.coerceIn(min, min + range)
-    }
+    internal fun thresholdProgress(value: Double, min: Double, maxProgress: Int): Int = thresholdProgressImpl(value, min, maxProgress)
+
+    internal fun clampThreshold(value: Double, min: Double, range: Int): Double = clampThresholdImpl(value, min, range)
+
 
     private fun initRuntime() {
         loadDiscoveredPlaylist(openClassView = false)
