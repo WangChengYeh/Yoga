@@ -29,6 +29,7 @@ import com.yogaflow.flow.FlowPlaylistEngine
 import com.yogaflow.flow.RuntimeOverrideKey
 import com.yogaflow.flow.RuntimeOverrideMerger
 import com.yogaflow.flow.RuntimeOverrideStore
+import com.yogaflow.flow.RuntimeParams
 import com.yogaflow.flow.TunableRuntimeParam
 import com.yogaflow.flow.TunableRuntimeParamExtractor
 import com.yogaflow.flow.YogaFlow
@@ -351,6 +352,9 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         val stepIndex = flowEngine.currentStepNumber() - 1
         val overrides = runtimeOverrideStore.overridesFor(currentFlow.id, stepIndex, currentStep.detect)
         val effectiveParams = RuntimeOverrideMerger.apply(currentStep.params, overrides)
+        val runtimeSummary = buildRuntimeSummary(effectiveParams)
+        val overrideSummary = buildOverrideSummary()
+
         val mapping = PoseDetectionRouter.evaluate(
             poseId = currentPose.id,
             detect = currentStep.detect,
@@ -361,7 +365,14 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         )
         val event = flowEngine.update(currentFlow, mapping.state, mapping.matched)
         updateRuntimeTuningControls()
-        updateDebugOverlay(frame, detect = currentStep.detect.jsonKey, state = mapping.state, matched = mapping.matched)
+        updateDebugOverlay(
+            frame = frame,
+            detect = currentStep.detect.jsonKey,
+            state = mapping.state,
+            matched = mapping.matched,
+            runtimeSummary = runtimeSummary,
+            overrideSummary = overrideSummary
+        )
 
         when (event) {
             is PoseFlowEngine.FlowEvent.Cue -> speakCoachCue(mapping.state, if (mapping.matched) event.text else mapping.cue)
@@ -426,7 +437,14 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         updateUi(animated = true)
     }
 
-    private fun updateDebugOverlay(frame: PoseDetectionResult, detect: String, state: CoachState, matched: Boolean) {
+    private fun updateDebugOverlay(
+        frame: PoseDetectionResult,
+        detect: String,
+        state: CoachState,
+        matched: Boolean,
+        runtimeSummary: String = "",
+        overrideSummary: String = ""
+    ) {
         if (!::debugText.isInitialized) return
         if (!DEBUG_OVERLAY_ENABLED) {
             debugText.visibility = View.GONE
@@ -451,9 +469,39 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             rightKneeAngle = rightKnee,
             leftHipAngle = leftHip,
             rightHipAngle = rightHip,
-            torsoTwistEstimate = torsoTwist
+            torsoTwistEstimate = torsoTwist,
+            effectiveRuntimeSummary = runtimeSummary,
+            overrideSummary = overrideSummary
         )
         debugText.text = debugInfo.toDisplayText()
+    }
+
+    private fun buildRuntimeSummary(params: RuntimeParams): String {
+        val controls = "stab=${params.stabilityMs ?: "--"} ema=${params.emaAlpha.fmt2()} dead=${params.deadbandDegrees.fmt1()}"
+        val activeAngles = TunableRuntimeParamExtractor.extract(params)
+            .filter { it.path.startsWith("runtime.angles") }
+            .take(3)
+            .joinToString(" ") { "${it.label}=${formatTuningValue(it.value, it)}" }
+        return listOf(controls, activeAngles).filter { it.isNotBlank() }.joinToString(" | ")
+    }
+
+    private fun buildOverrideSummary(): String {
+        return currentTuningBindings()
+            .mapNotNull { binding ->
+                runtimeOverrideStore.valueFor(binding.key)?.let { value ->
+                    "${binding.param.label}=${formatTuningValue(value, binding.param)}"
+                }
+            }
+            .take(4)
+            .joinToString(" ")
+    }
+
+    private fun Double?.fmt1(): String {
+        return this?.let { "%.1f".format(it) } ?: "--"
+    }
+
+    private fun Double?.fmt2(): String {
+        return this?.let { "%.2f".format(it) } ?: "--"
     }
 
     private fun completeCurrentFlow(cue: String) {
