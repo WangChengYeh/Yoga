@@ -82,9 +82,6 @@ class MainActivity : AppCompatActivity() {
     var autoStartedCurrentSetup = false
     var suppressTuningCallbacks = false
     var lastCountdownText = ""
-    var lastCoachCue = ""
-    var lastCoachAt = 0L
-    var coachRequestId = 0L
     var latestSuggestion: AutoTuningSuggestion? = null
 
     private lateinit var poseHelper: PoseHelper
@@ -134,8 +131,8 @@ class MainActivity : AppCompatActivity() {
                 coachText.text = displayText
                 llmStatus.text = if (llmEnabled) "LLM: ON" else "LLM: OFF"
             },
-            isRequestCurrent = { requestId, flowId, step ->
-                requestId == coachRequestId && isCurrentFlowInitialized() &&
+            isRequestCurrent = { flowId, step ->
+                isCurrentFlowInitialized() &&
                     currentFlow.id == flowId && flowEngine.currentStepNumber() == step
             }
         )
@@ -271,7 +268,6 @@ class MainActivity : AppCompatActivity() {
         sessionState = SessionState.RUNNING
         cameraSetupPanel.visibility = View.GONE
         coachCueController.reset()
-        coachRequestId++
         updateUi(animated = false)
     }
 
@@ -360,9 +356,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun applyLatestSuggestion() {
         val suggestion = latestSuggestion ?: return
-        val path = "runtime.angles.${suggestion.metric}.${suggestion.boundName}"
         runtimeOverrideStore.set(
-            RuntimeOverrideKey(suggestion.flowId, suggestion.stepIndex, suggestion.detect, path),
+            RuntimeOverrideKey(suggestion.flowId, suggestion.stepIndex, suggestion.detect, suggestion.path),
             suggestion.suggestedValue
         )
         updateRuntimeTuningControls()

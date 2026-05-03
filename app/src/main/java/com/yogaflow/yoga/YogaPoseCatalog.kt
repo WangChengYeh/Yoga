@@ -30,6 +30,13 @@ object YogaPoseCatalog {
             category = "Balance",
             setupCue = "下蹲，腳跟穩定",
             correctionFocus = "膝蓋方向"
+        ),
+        YogaPose(
+            id = "bridge",
+            displayName = "Bridge Pose",
+            category = "Backbend",
+            setupCue = "躺下，雙腳踩地，準備抬起臀部",
+            correctionFocus = "骨盆抬起與腰部舒適"
         )
     )
 }

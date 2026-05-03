@@ -24,6 +24,7 @@ data class AutoTuningSuggestion(
     val flowId: String,
     val stepIndex: Int,
     val detect: DetectKey,
+    val path: String,
     val metric: String,
     val boundName: String,
     val currentValue: Double,
@@ -82,6 +83,7 @@ class AutoTuningAdvisor(
         if (scopedSamples.size < minSamples) return null
 
         val latest = scopedSamples.last()
+        val path = overridePathFor(detect, latest.metric, latest.boundName) ?: return null
         val avgActual = scopedSamples.map { it.actual }.average()
         val suggested = avgActual.roundToNearestHalfDegree()
 
@@ -91,6 +93,7 @@ class AutoTuningAdvisor(
             flowId = flowId,
             stepIndex = stepIndex,
             detect = detect,
+            path = path,
             metric = latest.metric,
             boundName = latest.boundName,
             currentValue = latest.expected,
@@ -98,6 +101,40 @@ class AutoTuningAdvisor(
             sampleCount = scopedSamples.size,
             reason = "${latest.metric}.${latest.boundName}: recent average actual=${avgActual.fmt()} from ${scopedSamples.size} failed samples"
         )
+    }
+
+    private fun overridePathFor(detect: DetectKey, metric: String, boundName: String): String? {
+        if (boundName !in setOf("min", "max")) return null
+        val phase = when (detect) {
+            DetectKey.READY_FORWARD_FOLD -> "ready"
+            DetectKey.TALL_SPINE_SETUP,
+            DetectKey.SQUAT_SETUP -> "setup"
+            DetectKey.HIP_HINGE -> "hinge"
+            DetectKey.CONTROLLED_FORWARD_FOLD -> "fold"
+            DetectKey.FORWARD_HOLD,
+            DetectKey.TWIST_HOLD,
+            DetectKey.SQUAT_HOLD,
+            DetectKey.BRIDGE_HOLD -> "hold"
+            DetectKey.RETURN_STANDING,
+            DetectKey.SQUAT_RETURN -> "return"
+            DetectKey.NEUTRAL_FINISH -> "neutral"
+            DetectKey.STABLE_BASE,
+            DetectKey.RETURN_CENTER -> "center"
+            DetectKey.TWIST_START -> "start"
+            DetectKey.SQUAT_DESCENT -> "descent"
+            DetectKey.BRIDGE_LIFT -> "lift"
+            DetectKey.BRIDGE_SETUP,
+            DetectKey.BRIDGE_RETURN,
+            DetectKey.STANDING_CENTERED,
+            DetectKey.SPINE_LENGTHENED,
+            DetectKey.MOUNTAIN_HOLD,
+            DetectKey.READY_FOR_NEXT_POSE -> return null
+        }
+        val joint = when (metric) {
+            "knee", "hip", "twist" -> metric
+            else -> return null
+        }
+        return "runtime.angles.$joint.$phase.$boundName"
     }
 
     private fun prune() {

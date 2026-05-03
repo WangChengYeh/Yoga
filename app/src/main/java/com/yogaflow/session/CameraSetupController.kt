@@ -62,10 +62,10 @@ class CameraSetupController(
             SessionState.RUNNING -> Unit
         }
 
-        resetReadyState()
-        setSetupPanelVisible(false)
-
         if (!frameReady) {
+            updateReadyState(false)
+            setSetupPanelVisible(true)
+            onUpdateSetupPanel(false, framing.message, orientation.message)
             val setupCue = cameraSetupCue(framing, orientation)
             onSpeakCoachCue(CoachState.CORRECTION, setupCue)
             onUpdateDebugOverlay(frame, "camera_setup", CoachState.CORRECTION, false)
@@ -73,6 +73,8 @@ class CameraSetupController(
             return true
         }
 
+        updateReadyState(true)
+        setSetupPanelVisible(false)
         return false
     }
 

@@ -12,7 +12,7 @@ class CoachCueController(
     private val minCueIntervalMs: Long,
     private val sameCueIntervalMs: Long,
     private val onDisplay: (displayText: String, llmEnabled: Boolean) -> Unit,
-    private val isRequestCurrent: (requestId: Long, flowId: String, step: Int) -> Boolean
+    private val isRequestCurrent: (flowId: String, step: Int) -> Boolean
 ) {
     private var lastCoachCue = ""
     private var lastCoachAt = 0L
@@ -39,7 +39,7 @@ class CoachCueController(
             val displayText = if (isFallback) "(fallback) $spokenText" else spokenText
 
             uiExecutor(Runnable {
-                if (!isRequestCurrent(currentRequestId, flowId, step)) return@Runnable
+                if (currentRequestId != requestId || !isRequestCurrent(flowId, step)) return@Runnable
                 onDisplay(displayText, !isFallback)
                 speaker.speakIfNeeded(spokenText)
             })

@@ -76,8 +76,5 @@ internal fun MainActivity.resetToCameraSetup(message: String) {
     cameraSetupPanel.visibility = android.view.View.VISIBLE
     cameraSetupStatus.text = "Checking body framing..."
     lastCountdownText = ""
-    lastCoachCue = ""
-    lastCoachAt = 0L
-    coachRequestId++
     coachText.text = message
 }
