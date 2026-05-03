@@ -8,7 +8,7 @@ import kotlin.math.abs
 
 object BridgeDetectionMapper {
 
-    data class Result(val matched: Boolean, val state: CoachState, val cue: String)
+    data class Result(val matched: Boolean, val state: CoachState, val cue: String, val reason: String = "")
 
     private var smoothedHip: Double? = null
     private var stableDetect: DetectKey? = null
@@ -26,7 +26,7 @@ object BridgeDetectionMapper {
 
         if (leftHip.confidence == PoseGeometry.Confidence.INVALID || rightHip.confidence == PoseGeometry.Confidence.INVALID) {
             reset()
-            return Result(false, CoachState.CORRECTION, "請讓髖部與膝蓋進入畫面。")
+            return Result(false, CoachState.CORRECTION, "請讓髖部與膝蓋進入畫面。", "required landmarks invalid")
         }
 
         val hip = smooth(minOf(leftHip.degrees, rightHip.degrees), detect, params)
@@ -52,7 +52,7 @@ object BridgeDetectionMapper {
             stableSince = now
         }
         val stabilityMs = required(params.stabilityMs, detect, "runtime.stabilityMs")
-        return if (now - stableSince >= stabilityMs) result else result.copy(matched = false, cue = "穩住這個橋式位置，再保持一下。")
+        return if (now - stableSince >= stabilityMs) result else result.copy(matched = false, cue = "穩住這個橋式位置，再保持一下。", reason = "stableFor=${now - stableSince}ms < required=${stabilityMs}ms")
     }
 
     private fun smooth(raw: Double, detect: DetectKey, params: RuntimeParams): Double {
@@ -73,8 +73,8 @@ object BridgeDetectionMapper {
         val min = required(params.angles.hip.lift.min, DetectKey.BRIDGE_LIFT, "runtime.angles.hip.lift.min")
         val max = required(params.angles.hip.lift.max, DetectKey.BRIDGE_LIFT, "runtime.angles.hip.lift.max")
         return when {
-            hip > max -> Result(false, CoachState.MOVEMENT, "慢慢抬起臀部，從骨盆帶動。")
-            hip < min -> Result(false, CoachState.CORRECTION, "不要抬太高，稍微放低一點，避免壓腰。")
+            hip > max -> fail(CoachState.MOVEMENT, "慢慢抬起臀部，從骨盆帶動。", "hip", hip, ">", "max", max)
+            hip < min -> fail(CoachState.CORRECTION, "不要抬太高，稍微放低一點，避免壓腰。", "hip", hip, "<", "min", min)
             else -> Result(true, CoachState.MOVEMENT, "很好，持續抬起，保持控制。")
         }
     }
@@ -83,8 +83,8 @@ object BridgeDetectionMapper {
         val min = required(params.angles.hip.hold.min, DetectKey.BRIDGE_HOLD, "runtime.angles.hip.hold.min")
         val max = required(params.angles.hip.hold.max, DetectKey.BRIDGE_HOLD, "runtime.angles.hip.hold.max")
         return when {
-            hip > max -> Result(false, CoachState.MOVEMENT, "再抬高一點臀部，但不要拱腰。")
-            hip < min -> Result(false, CoachState.CORRECTION, "稍微放低一點，讓腰保持舒服。")
+            hip > max -> fail(CoachState.MOVEMENT, "再抬高一點臀部，但不要拱腰。", "hip", hip, ">", "max", max)
+            hip < min -> fail(CoachState.CORRECTION, "稍微放低一點，讓腰保持舒服。", "hip", hip, "<", "min", min)
             else -> Result(true, CoachState.HOLD, "很好，維持橋式，保持呼吸。")
         }
     }
@@ -92,6 +92,12 @@ object BridgeDetectionMapper {
     private fun ret(): Result {
         return Result(true, CoachState.TRANSITION, "很好，慢慢回到地面。")
     }
+
+    private fun fail(state: CoachState, cue: String, metric: String, actual: Double, op: String, boundName: String, expected: Double): Result {
+        return Result(false, state, cue, "$metric=${actual.fmt()} $op $boundName=${expected.fmt()}")
+    }
+
+    private fun Double.fmt(): String = "%.1f".format(this)
 
     private fun required(value: Double?, detect: DetectKey, key: String): Double {
         return value ?: error("Missing required param for ${detect.jsonKey}: $key")
