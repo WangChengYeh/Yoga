@@ -14,7 +14,8 @@ data class DebugPoseInfo(
     val torsoTwistEstimate: Double?,
     val effectiveRuntimeSummary: String = "",
     val overrideSummary: String = "",
-    val failReason: String = ""
+    val failReason: String = "",
+    val tuningSuggestionSummary: String = ""
 ) {
     fun toDisplayText(): String {
         return buildString {
@@ -28,6 +29,7 @@ data class DebugPoseInfo(
             if (effectiveRuntimeSummary.isNotBlank()) appendLine("runtime=$effectiveRuntimeSummary")
             if (overrideSummary.isNotBlank()) appendLine("overrides=$overrideSummary")
             if (!matched && failReason.isNotBlank()) appendLine("FAIL: $failReason")
+            if (tuningSuggestionSummary.isNotBlank()) appendLine("SUGGEST: $tuningSuggestionSummary")
         }
     }
 
