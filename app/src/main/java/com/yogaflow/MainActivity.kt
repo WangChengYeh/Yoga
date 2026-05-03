@@ -26,6 +26,8 @@ import com.yogaflow.coach.ThresholdConfig
 import com.yogaflow.coach.TwistDetectionMapper
 import com.yogaflow.flow.FlowLoader
 import com.yogaflow.flow.FlowPlaylistEngine
+import com.yogaflow.flow.RuntimeOverrideMerger
+import com.yogaflow.flow.UserRuntimeOverrides
 import com.yogaflow.flow.YogaFlow
 import com.yogaflow.llm.LlmCoach
 import com.yogaflow.pose.CameraFramingCoach
@@ -85,6 +87,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private val stateMachine = PoseStateMachine()
     private val flowEngine = PoseFlowEngine()
     private val playlist = FlowPlaylistEngine()
+    private val userRuntimeOverrides = UserRuntimeOverrides.EMPTY
 
     private lateinit var currentFlow: YogaFlow
     private lateinit var currentPose: YogaPose
@@ -289,10 +292,11 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             return
         }
 
+        val effectiveParams = RuntimeOverrideMerger.apply(currentStep.params, userRuntimeOverrides)
         val mapping = PoseDetectionRouter.evaluate(
             poseId = currentPose.id,
             detect = currentStep.detect,
-            params = currentStep.params,
+            params = effectiveParams,
             frame = frame,
             fallback = stateMachine,
             currentPose = currentPose
