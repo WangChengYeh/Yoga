@@ -1,9 +1,5 @@
 package com.yogaflow
 
-import com.yogaflow.coach.BridgeDetectionMapper
-import com.yogaflow.coach.ForwardFoldDetectionMapper
-import com.yogaflow.coach.SquatDetectionMapper
-import com.yogaflow.coach.TwistDetectionMapper
 import com.yogaflow.flow.FlowLoader
 import com.yogaflow.flow.YogaFlow
 
@@ -39,7 +35,7 @@ internal fun MainActivity.applyPlaylist(flows: List<YogaFlow>, openClassView: Bo
     currentFlow = flow
     currentPose = resolvePose(currentFlow)
     flowEngine.reset()
-    resetDetectionMappers()
+    detectionMapperSession.resetAll()
     latestSuggestion = null
     resetToCameraSetup("請先完成相機設定。")
     llmStatus.text = "LLM: OFF"
@@ -60,7 +56,7 @@ internal fun MainActivity.restartCurrentPlaylist() {
     }
 
     flowEngine.reset()
-    resetDetectionMappers()
+    detectionMapperSession.resetAll()
     latestSuggestion = null
     currentFlow = flow
     currentPose = resolvePose(currentFlow)
@@ -85,9 +81,3 @@ internal fun MainActivity.resetToCameraSetup(message: String) {
     coachText.text = message
 }
 
-internal fun MainActivity.resetDetectionMappers() {
-    ForwardFoldDetectionMapper.reset()
-    TwistDetectionMapper.reset()
-    SquatDetectionMapper.reset()
-    BridgeDetectionMapper.reset()
-}

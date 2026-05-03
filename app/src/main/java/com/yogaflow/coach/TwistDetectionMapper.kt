@@ -6,7 +6,7 @@ import com.yogaflow.pose.PoseDetectionResult
 import com.yogaflow.pose.PoseGeometry
 import kotlin.math.abs
 
-object TwistDetectionMapper {
+class TwistDetectionMapper {
 
     data class Result(val matched: Boolean, val state: CoachState, val cue: String, val reason: String = "")
 
