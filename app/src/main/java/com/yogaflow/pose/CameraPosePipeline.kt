@@ -16,7 +16,7 @@ class CameraPosePipeline(
     private val previewView: PreviewView,
     private val poseHelper: PoseHelper,
     private val cameraExecutor: ExecutorService,
-    private val cameraSelector: CameraSelector = CameraSelector.DEFAULT_BACK_CAMERA,
+    private val cameraSelector: CameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA,
     private val onError: (Throwable) -> Unit = {}
 ) {
     private var cameraProvider: ProcessCameraProvider? = null
@@ -25,6 +25,11 @@ class CameraPosePipeline(
     fun start() {
         if (started) return
         started = true
+
+        // Front camera usually implies mirrored preview in PreviewView, 
+        // so we mirror landmarks to match.
+        poseHelper.isMirrored = cameraSelector == CameraSelector.DEFAULT_FRONT_CAMERA
+
         val providerFuture = ProcessCameraProvider.getInstance(context)
         providerFuture.addListener({
             runCatching {

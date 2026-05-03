@@ -7,6 +7,8 @@ import android.os.SystemClock
 import android.util.Log
 import androidx.camera.core.ImageProxy
 import com.google.mediapipe.framework.image.BitmapImageBuilder
+import com.google.mediapipe.tasks.components.containers.Landmark
+import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
 import com.google.mediapipe.tasks.core.BaseOptions
 import com.google.mediapipe.tasks.vision.core.RunningMode
 import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarker
@@ -21,6 +23,8 @@ class PoseHelper(context: Context) {
 
     var isReady: Boolean = false
         private set
+
+    var isMirrored: Boolean = false
 
     var onResult: ((PoseDetectionResult) -> Unit)? = null
 
@@ -38,12 +42,30 @@ class PoseHelper(context: Context) {
                     if (imagePoints == null || imagePoints.isEmpty()) return@setResultListener
 
                     val worldPoints = result.worldLandmarks().firstOrNull() ?: emptyList()
+
+                    val finalImagePoints = if (isMirrored) {
+                        imagePoints.map {
+                            NormalizedLandmark.create(1f - it.x(), it.y(), it.z(), it.visibility(), it.presence())
+                        }
+                    } else {
+                        imagePoints
+                    }
+
+                    val finalWorldPoints = if (isMirrored) {
+                        worldPoints.map {
+                            Landmark.create(-it.x(), it.y(), it.z(), it.visibility(), it.presence())
+                        }
+                    } else {
+                        worldPoints
+                    }
+
                     onResult?.invoke(
                         PoseDetectionResult(
-                            imageLandmarks = imagePoints,
-                            worldLandmarks = worldPoints,
+                            imageLandmarks = finalImagePoints,
+                            worldLandmarks = finalWorldPoints,
                             imageWidth = lastWidth,
-                            imageHeight = lastHeight
+                            imageHeight = lastHeight,
+                            isMirrored = isMirrored
                         )
                     )
                 }
