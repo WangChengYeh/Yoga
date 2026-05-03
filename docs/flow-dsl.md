@@ -2,7 +2,11 @@
 
 YogaFlow Flow DSL is the runtime language for class content, step progression, coaching cues, and pose detection behavior.
 
-The current DSL is **JSON-only DSL v2** with a **type-safe strict runtime**.
+## Release 0.4 · JSON DSL v2
+
+This spec describes the Flow DSL runtime shipped in release 0.4.
+
+The current DSL is **JSON DSL v2** with a **type-safe strict runtime**.
 
 ```text
 .flow.json
