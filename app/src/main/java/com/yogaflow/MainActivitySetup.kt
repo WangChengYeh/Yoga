@@ -3,7 +3,7 @@ package com.yogaflow
 import android.widget.SeekBar
 import com.yogaflow.coach.ThresholdConfig
 
-internal fun MainActivity.bindViewsImpl() {
+internal fun MainActivity.bindViewsMain() {
     homeView = findViewById(R.id.homeView)
     classView = findViewById(R.id.classView)
     previewView = findViewById(R.id.previewView)
@@ -29,15 +29,15 @@ internal fun MainActivity.bindViewsImpl() {
     restartButton = findViewById(R.id.restartButton)
 }
 
-internal fun MainActivity.setupThresholdControlsImpl() {
+internal fun MainActivity.setupThresholdControlsMain() {
     squatThresholdSeekBar.max = MainActivity.TUNING_SLIDER_MAX
     bridgeThresholdSeekBar.max = MainActivity.TUNING_SLIDER_MAX
-    squatThresholdSeekBar.setOnSeekBarChangeListener(runtimeTuningListener(0))
-    bridgeThresholdSeekBar.setOnSeekBarChangeListener(runtimeTuningListener(1))
+    squatThresholdSeekBar.setOnSeekBarChangeListener(runtimeTuningListenerMain(0))
+    bridgeThresholdSeekBar.setOnSeekBarChangeListener(runtimeTuningListenerMain(1))
     updateRuntimeTuningControls()
 }
 
-internal fun MainActivity.runtimeTuningListenerImpl(index: Int): SeekBar.OnSeekBarChangeListener {
+internal fun MainActivity.runtimeTuningListenerMain(index: Int): SeekBar.OnSeekBarChangeListener {
     return object : SeekBar.OnSeekBarChangeListener {
         override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
             if (!fromUser || suppressTuningCallbacks) return
@@ -52,15 +52,15 @@ internal fun MainActivity.runtimeTuningListenerImpl(index: Int): SeekBar.OnSeekB
     }
 }
 
-internal fun MainActivity.loadThresholdPreferencesImpl() {
+internal fun MainActivity.loadThresholdPreferencesMain() {
     val prefs = getSharedPreferences("threshold_prefs", MODE_PRIVATE)
     val squat = prefs.getFloat("squat_hold_knee_max", ThresholdConfig.squatHoldKneeMaxDegrees.toFloat()).toDouble()
     val bridge = prefs.getFloat("bridge_lift_hip_max", ThresholdConfig.bridgeLiftHipMaxDegrees.toFloat()).toDouble()
-    ThresholdConfig.squatHoldKneeMaxDegrees = clampThreshold(squat, 80.0, 70)
-    ThresholdConfig.bridgeLiftHipMaxDegrees = clampThreshold(bridge, 120.0, 70)
+    ThresholdConfig.squatHoldKneeMaxDegrees = clampThresholdMain(squat, 80.0, 70)
+    ThresholdConfig.bridgeLiftHipMaxDegrees = clampThresholdMain(bridge, 120.0, 70)
 }
 
-internal fun MainActivity.saveThresholdPreferencesImpl() {
+internal fun MainActivity.saveThresholdPreferencesMain() {
     getSharedPreferences("threshold_prefs", MODE_PRIVATE)
         .edit()
         .putFloat("squat_hold_knee_max", ThresholdConfig.squatHoldKneeMaxDegrees.toFloat())
@@ -68,10 +68,10 @@ internal fun MainActivity.saveThresholdPreferencesImpl() {
         .apply()
 }
 
-internal fun MainActivity.thresholdProgressImpl(value: Double, min: Double, maxProgress: Int): Int {
+internal fun MainActivity.thresholdProgressMain(value: Double, min: Double, maxProgress: Int): Int {
     return (value - min).toInt().coerceIn(0, maxProgress)
 }
 
-internal fun MainActivity.clampThresholdImpl(value: Double, min: Double, range: Int): Double {
+internal fun MainActivity.clampThresholdMain(value: Double, min: Double, range: Int): Double {
     return value.coerceIn(min, min + range)
 }
