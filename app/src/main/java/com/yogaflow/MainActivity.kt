@@ -25,6 +25,7 @@ import com.yogaflow.pose.CameraPosePipeline
 import com.yogaflow.pose.PoseDetectionResult
 import com.yogaflow.pose.PoseHelper
 import com.yogaflow.pose.PoseOverlayView
+import com.yogaflow.session.CameraSetupController
 import com.yogaflow.session.LiveCoachSessionController
 import com.yogaflow.yoga.YogaPose
 import java.util.Locale
@@ -67,6 +68,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private lateinit var llmCoach: LlmCoach
     private lateinit var coachCueController: CoachCueController
     private lateinit var liveCoachSessionController: LiveCoachSessionController
+    private lateinit var cameraSetupController: CameraSetupController
 
     private val stateMachine = PoseStateMachine()
     internal val flowEngine = PoseFlowEngine()
@@ -171,6 +173,29 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             buildOverrideSummary = { buildOverrideSummary() },
             buildSuggestionSummary = { flowId, stepIndex, detect -> buildSuggestionSummary(flowId, stepIndex, detect) }
         )
+        cameraSetupController = CameraSetupController(
+            autoStartEnabled = AUTO_START_ENABLED,
+            autoStartStableMs = CAMERA_AUTO_START_STABLE_MS,
+            getSessionState = { sessionState },
+            onReadyChanged = { ready, readySince, autoStarted ->
+                cameraReady = ready
+                cameraReadySince = readySince
+                autoStartedCurrentSetup = autoStarted
+            },
+            getCameraReady = { cameraReady },
+            getCameraReadySince = { cameraReadySince },
+            getAutoStarted = { autoStartedCurrentSetup },
+            setSetupPanelVisible = { visible -> cameraSetupPanel.visibility = if (visible) View.VISIBLE else View.GONE },
+            onUpdateSetupPanel = { ready, framingMessage, orientationMessage ->
+                updateCameraSetupPanel(ready, framingMessage, orientationMessage)
+            },
+            onMaybeAutoStart = { maybeAutoStartClass() },
+            onSpeakCoachCue = { state, cue -> speakCoachCue(state, cue) },
+            onUpdateDebugOverlay = { frame, detect, state, matched ->
+                updateDebugOverlay(frame, detect, state, matched)
+            },
+            onUpdateUi = { updateUi(it) }
+        )
 
         if (!poseHelper.isReady) {
             coachText.text = "Pose model not found. Please add pose_landmarker_lite.task to assets."
@@ -182,54 +207,13 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private fun handlePoseFrame(frame: PoseDetectionResult) {
         overlayView.setLandmarks(frame.imageLandmarks)
 
-        if (handleCameraSetupFrame(frame)) return
+        if (cameraSetupController.handleFrame(frame)) return
 
         liveCoachSessionController.handleReadyPoseFrame(
             frame = frame,
             currentFlow = currentFlow,
             currentPose = currentPose
         )
-    }
-
-    private fun handleCameraSetupFrame(frame: PoseDetectionResult): Boolean {
-        val framing = CameraFramingCoach.analyze(frame)
-        val orientation = ViewOrientation.analyze(frame)
-        val ready = framing.status == CameraFramingStatus.GOOD && orientation.status == ViewOrientationStatus.GOOD
-
-        when (sessionState) {
-            SessionState.IDLE -> {
-                updateCameraSetupPanel(ready, framing.message, orientation.message)
-                maybeAutoStartClass()
-                updateDebugOverlay(frame, detect = "camera_setup", state = CoachState.SETUP, matched = ready)
-                updateUi(animated = false)
-                return true
-            }
-            SessionState.PAUSED -> {
-                cameraSetupPanel.visibility = View.GONE
-                updateDebugOverlay(frame, detect = "paused", state = CoachState.SETUP, matched = ready)
-                updateUi(animated = false)
-                return true
-            }
-            SessionState.COMPLETED -> {
-                cameraSetupPanel.visibility = View.GONE
-                updateDebugOverlay(frame, detect = "completed", state = CoachState.HOLD, matched = true)
-                updateUi(animated = false)
-                return true
-            }
-            SessionState.RUNNING -> Unit
-        }
-
-        cameraSetupPanel.visibility = View.GONE
-
-        if (!ready) {
-            val setupCue = cameraSetupCue(framing, orientation)
-            speakCoachCue(CoachState.CORRECTION, setupCue)
-            updateDebugOverlay(frame, detect = "camera_setup", state = CoachState.CORRECTION, matched = false)
-            updateUi(animated = false)
-            return true
-        }
-
-        return false
     }
 
     private fun updateCameraSetupPanel(ready: Boolean, framingMessage: String, orientationMessage: String) {
@@ -385,14 +369,6 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             sessionState = SessionState.COMPLETED
             coachText.text = cue
             speakRawCue(cue)
-        }
-    }
-
-    private fun cameraSetupCue(framing: com.yogaflow.pose.CameraFramingResult, orientation: com.yogaflow.pose.ViewOrientationResult): String {
-        return when {
-            framing.status != CameraFramingStatus.GOOD -> framing.message
-            orientation.status != ViewOrientationStatus.GOOD -> orientation.message
-            else -> ""
         }
     }
 
