@@ -1,6 +1,7 @@
 package com.yogaflow.coach
 
 import android.util.Log
+import com.yogaflow.avatar.AvatarRigFrame
 
 class GodotAvatarBridge(
     private val minIntervalMs: Long = 200L,
@@ -9,6 +10,13 @@ class GodotAvatarBridge(
     private var lastSentMs = 0L
 
     fun send(frame: PoseCoachFrame, force: Boolean = false) {
+        val now = frame.timestampMs
+        if (!force && now - lastSentMs < minIntervalMs) return
+        lastSentMs = now
+        sender(frame.toJson().toString())
+    }
+
+    fun sendRig(frame: AvatarRigFrame, force: Boolean = false) {
         val now = frame.timestampMs
         if (!force && now - lastSentMs < minIntervalMs) return
         lastSentMs = now
