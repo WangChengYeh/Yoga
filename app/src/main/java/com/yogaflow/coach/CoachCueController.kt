@@ -36,11 +36,10 @@ class CoachCueController(
             val generated = llmCoach.generate(pose, state, cue)
             val isFallback = generated == cue
             val spokenText = CoachPhrasePolisher.polish(generated)
-            val displayText = if (isFallback) "(fallback) $spokenText" else spokenText
 
             uiExecutor(Runnable {
                 if (currentRequestId != requestId || !isRequestCurrent(flowId, step)) return@Runnable
-                onDisplay(displayText, !isFallback)
+                onDisplay(spokenText, !isFallback)
                 speaker.speakIfNeeded(spokenText)
             })
         }

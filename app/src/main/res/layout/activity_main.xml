@@ -189,8 +189,8 @@
             android:layout_height="wrap_content"
             android:layout_gravity="bottom"
             android:orientation="vertical"
-            android:background="#99000000"
-            android:padding="12dp">
+            android:background="#66000000"
+            android:padding="8dp">
 
             <TextView
                 android:id="@+id/coachText"
@@ -198,16 +198,17 @@
                 android:layout_height="wrap_content"
                 android:text="Press Start to begin"
                 android:textColor="#FFFFFFFF"
-                android:textSize="18sp" />
+                android:textSize="13sp"
+                android:visibility="gone" />
 
             <TextView
                 android:id="@+id/sessionRecordStatus"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
                 android:text="Session recorder idle"
                 android:textColor="#DDDDDD"
-                android:textSize="11sp" />
+                android:textSize="11sp"
+                android:visibility="gone" />
 
             <LinearLayout
                 android:layout_width="match_parent"

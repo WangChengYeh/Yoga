@@ -4,7 +4,6 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
-import android.graphics.RectF
 import android.util.AttributeSet
 import android.view.View
 import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
@@ -28,23 +27,6 @@ class PoseOverlayView @JvmOverloads constructor(
         style = Paint.Style.STROKE
     }
 
-    private val framingBoxPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.argb(220, 0, 255, 0)
-        strokeWidth = 5f
-        style = Paint.Style.STROKE
-    }
-
-    private val framingBoxFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.argb(28, 0, 255, 0)
-        style = Paint.Style.FILL
-    }
-
-    private val framingGuidePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.argb(180, 255, 255, 255)
-        strokeWidth = 2f
-        style = Paint.Style.STROKE
-    }
-
     private val connections = listOf(
         11 to 12,
         11 to 13,
@@ -64,13 +46,6 @@ class PoseOverlayView @JvmOverloads constructor(
         0 to 12
     )
 
-    private val coreBodyIndices = listOf(
-        11, 12, // shoulders
-        23, 24, // hips
-        25, 26, // knees
-        27, 28  // ankles
-    )
-
     fun setLandmarks(newLandmarks: List<NormalizedLandmark>) {
         landmarks = newLandmarks
         invalidate()
@@ -81,46 +56,7 @@ class PoseOverlayView @JvmOverloads constructor(
 
         if (landmarks.isEmpty()) return
 
-        drawFramingGuide(canvas)
-        drawBodyFramingBox(canvas)
         drawSkeleton(canvas)
-    }
-
-    private fun drawFramingGuide(canvas: Canvas) {
-        val guide = RectF(
-            width * GUIDE_LEFT,
-            height * GUIDE_TOP,
-            width * GUIDE_RIGHT,
-            height * GUIDE_BOTTOM
-        )
-        canvas.drawRoundRect(guide, GUIDE_CORNER_RADIUS, GUIDE_CORNER_RADIUS, framingGuidePaint)
-    }
-
-    private fun drawBodyFramingBox(canvas: Canvas) {
-        val visibleLandmarks = coreBodyIndices.mapNotNull { index ->
-            landmarks.getOrNull(index)?.takeIf {
-                it.x() in 0f..1f && it.y() in 0f..1f
-            }
-        }
-
-        if (visibleLandmarks.isEmpty()) return
-
-        val minX = visibleLandmarks.minOf { it.x() } * width
-        val maxX = visibleLandmarks.maxOf { it.x() } * width
-        val minY = visibleLandmarks.minOf { it.y() } * height
-        val maxY = visibleLandmarks.maxOf { it.y() } * height
-
-        val paddingX = width * BODY_BOX_PADDING_X
-        val paddingY = height * BODY_BOX_PADDING_Y
-        val bodyBox = RectF(
-            (minX - paddingX).coerceAtLeast(0f),
-            (minY - paddingY).coerceAtLeast(0f),
-            (maxX + paddingX).coerceAtMost(width.toFloat()),
-            (maxY + paddingY).coerceAtMost(height.toFloat())
-        )
-
-        canvas.drawRoundRect(bodyBox, BODY_BOX_CORNER_RADIUS, BODY_BOX_CORNER_RADIUS, framingBoxFillPaint)
-        canvas.drawRoundRect(bodyBox, BODY_BOX_CORNER_RADIUS, BODY_BOX_CORNER_RADIUS, framingBoxPaint)
     }
 
     private fun drawSkeleton(canvas: Canvas) {
@@ -141,16 +77,5 @@ class PoseOverlayView @JvmOverloads constructor(
         landmarks.forEach { point ->
             canvas.drawCircle(point.x() * width, point.y() * height, 6f, pointPaint)
         }
-    }
-
-    companion object {
-        private const val GUIDE_LEFT = 0.12f
-        private const val GUIDE_TOP = 0.08f
-        private const val GUIDE_RIGHT = 0.88f
-        private const val GUIDE_BOTTOM = 0.92f
-        private const val GUIDE_CORNER_RADIUS = 28f
-        private const val BODY_BOX_PADDING_X = 0.035f
-        private const val BODY_BOX_PADDING_Y = 0.035f
-        private const val BODY_BOX_CORNER_RADIUS = 24f
     }
 }

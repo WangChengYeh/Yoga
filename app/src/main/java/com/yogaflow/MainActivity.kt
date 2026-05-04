@@ -680,10 +680,11 @@ class MainActivity : AppCompatActivity() {
         if (sessionRecorder.isRecording) {
             val file = sessionRecorder.stopAndSave()
             sessionRecordButton.text = "Record"
-            sessionRecordStatus.text = if (file == null) {
-                "Session recorder idle"
+            if (file == null) {
+                sessionRecordStatus.visibility = View.GONE
             } else {
-                "Saved ${sessionRecorder.eventCount} events\n${file.absolutePath}"
+                sessionRecordStatus.visibility = View.VISIBLE
+                sessionRecordStatus.text = "Saved ${sessionRecorder.eventCount} events\n${file.absolutePath}"
             }
         } else {
             sessionRecorder.start()
@@ -694,6 +695,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateSessionRecordStatus() {
         if (!sessionRecorder.isRecording) return
+        sessionRecordStatus.visibility = View.VISIBLE
         sessionRecordStatus.text = "Recording session events: ${sessionRecorder.eventCount}"
     }
 
