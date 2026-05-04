@@ -584,10 +584,162 @@ Partially integrated / known gaps:
 ### Product Expansion
 
 - Add more pose families
+- Add virtual coach overlay in the camera view
 - Improve coaching personalization
 - Add calibration profiles / per-user presets
 - Replace cover drawable with real generated images (#13)
 - Explore AI-assisted teacher-video-to-flow authoring
+
+---
+
+## Virtual Coach Overlay Proposal
+
+Goal:
+
+```text
+Show a small coach avatar in the live camera screen so users can compare their body with the target pose while practicing.
+```
+
+The virtual coach should demonstrate the target step, not mirror the user's detected skeleton. It is an instructional overlay, separate from pose detection.
+Users should be able to choose different coach appearances. Appearance changes must not affect pose detection or lesson progression.
+
+### First implementation
+
+Use a lightweight Android custom `View` rendered with Canvas:
+
+```text
+VirtualCoachView
+  ↓
+draw 3D-styled humanoid guide
+  ↓
+pose preset selected from current flow pose + CoachState
+```
+
+Reasons:
+
+- no new model asset pipeline
+- no heavy 3D runtime dependency
+- works naturally with the current CameraX + Android View hierarchy
+- fast to tune placement, scale, and visibility
+
+3D engine decision:
+
+```text
+Do not add a full 3D engine for the first version.
+```
+
+Rationale:
+
+- the first product question is whether an on-screen coach guide helps users
+- Canvas is enough for a compact 3D-styled guide avatar
+- skins can be implemented with color palettes and shape presets
+- avoiding a renderer keeps APK size, lifecycle handling, and release risk lower
+- CameraX, MediaPipe, and session control should remain the primary runtime concerns
+
+Add a 3D engine only after the Canvas avatar proves useful and the product needs real model assets.
+
+Initial pose presets:
+
+| Flow pose | Coach pose preset |
+| --- | --- |
+| `mountain` | standing upright |
+| `forward_fold` | setup, hinge, fold, hold, return |
+| `twist` | centered, twist, return |
+| `squat` | standing, descent, hold, return |
+| `bridge` | setup, lift, hold, return |
+
+Coach appearance model:
+
+```text
+CoachSkin
+  id
+  displayName
+  bodyPalette
+  outfitPalette
+  hairStyle
+  silhouette
+```
+
+First-version skins should be data-driven style presets for the Canvas avatar:
+
+| Skin dimension | Examples |
+| --- | --- |
+| `bodyPalette` | light, medium, deep, cool gray stylized |
+| `outfitPalette` | calm blue, forest green, warm coral, high contrast |
+| `hairStyle` | short, tied back, bun, none |
+| `silhouette` | neutral, athletic, soft |
+
+The first implementation should avoid photorealistic identity. Skins are visual styles for different coach personas, not real people.
+
+Placement rules:
+
+- Keep the avatar compact.
+- Place it near the upper-left or upper-right camera area.
+- Do not cover the user's full-body framing box.
+- Do not overlap the bottom control bar, coach text, or session record controls.
+- Hide or shrink it when the camera setup panel is visible.
+
+### Later 3D model upgrade
+
+After the Canvas version proves useful, replace the stylized avatar with a real rigged model:
+
+```text
+GLB/GLTF coach asset
+  ↓
+Android-native renderer
+  ↓
+pose animations keyed by Flow DSL step
+```
+
+Preferred Android-native options to evaluate:
+
+- Filament
+- SceneView
+- lightweight OpenGL renderer
+
+Use a 3D engine only when at least one of these requirements becomes real:
+
+- GLB/GLTF coach model assets
+- rigged pose animations
+- downloadable coach model packs
+- lighting and camera controls
+- smooth animated transitions between yoga poses
+- more realistic coach appearance than Canvas can provide
+
+Non-goals for the first version:
+
+- full-body motion capture replay
+- user skeleton retargeting
+- photorealistic model rendering
+- teacher-video synchronized animation
+
+Design constraint:
+
+```text
+The camera feed remains primary. The virtual coach must guide without reducing body visibility.
+```
+
+Customization constraints:
+
+```text
+Changing coach skin changes only rendering.
+Changing coach skin must not change:
+- Flow DSL
+- DetectKey routing
+- RuntimeParams
+- pose thresholds
+- cue timing
+- session recording semantics
+```
+
+Suggested persistence:
+
+```text
+SharedPreferences
+  virtualCoach.enabled = true
+  virtualCoach.skinId = "calm_blue"
+  virtualCoach.position = "top_start"
+```
 
 ---
 

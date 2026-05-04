@@ -108,6 +108,9 @@ YogaFlow 3D has moved from a pose-detection demo into a product-level on-device 
 - Add visual body framing box overlay
 - Add clearer camera setup screen before class start
 - Add voice pacing rules so repeated cues do not speak too often
+- Add a compact virtual coach overlay in the camera view
+- Add selectable virtual coach skins for different coach styles
+- Build the first virtual coach with Canvas, not a full 3D engine
 
 ### P2: Content expansion
 - Expand flow library to 10–30 flows
@@ -123,6 +126,8 @@ YogaFlow 3D has moved from a pose-detection demo into a product-level on-device 
 - YouTube-aligned class generation
 - 100+ flow library
 - Multi-model perception: Pose + Hand + Face
+- Native 3D coach model with pose animations
+- Downloadable coach skin packs
 - Biomechanics scoring
 - Progress tracking
 - Apple Fitness+ style course cards and carousel UI
