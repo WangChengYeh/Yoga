@@ -406,7 +406,7 @@ class MainActivity : AppCompatActivity() {
     private fun toggleSessionRecording() {
         if (sessionRecorder.isRecording) {
             val file = sessionRecorder.stopAndSave()
-            sessionRecordButton.text = "Record Session"
+            sessionRecordButton.text = "Record"
             sessionRecordStatus.text = if (file == null) {
                 "Session recorder idle"
             } else {
@@ -414,7 +414,7 @@ class MainActivity : AppCompatActivity() {
             }
         } else {
             sessionRecorder.start()
-            sessionRecordButton.text = "Stop Recording"
+            sessionRecordButton.text = "Stop"
             updateSessionRecordStatus()
         }
     }
