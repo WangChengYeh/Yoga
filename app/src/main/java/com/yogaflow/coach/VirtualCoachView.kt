@@ -125,10 +125,10 @@ class VirtualCoachView @JvmOverloads constructor(
 
         val avatarScale = skins[skinIndex].silhouetteScale
         val frame = RectF(
-            width * 0.04f,
-            height * 0.03f,
-            width * 0.96f,
-            height * 0.97f
+            width * 0.01f,
+            height * 0.01f,
+            width * 0.99f,
+            height * 0.99f
         )
 
         drawBackdrop(canvas, frame)
@@ -142,16 +142,16 @@ class VirtualCoachView @JvmOverloads constructor(
             frame.top,
             frame.right,
             frame.bottom,
-            Color.argb(92, 9, 12, 16),
-            Color.argb(45, 245, 248, 252),
+            Color.argb(0, 9, 12, 16),
+            Color.argb(0, 245, 248, 252),
             Shader.TileMode.CLAMP
         )
         val radius = frame.width() * 0.08f
         canvas.drawRoundRect(frame, radius, radius, fillPaint)
         fillPaint.shader = null
 
-        outlinePaint.color = Color.argb(120, 255, 255, 255)
-        outlinePaint.strokeWidth = frame.width() * 0.012f
+        outlinePaint.color = Color.argb(0, 255, 255, 255)
+        outlinePaint.strokeWidth = frame.width() * 0.006f
         canvas.drawRoundRect(frame, radius, radius, outlinePaint)
     }
 

@@ -638,10 +638,10 @@ class MainActivity : AppCompatActivity() {
         val minY = visibleBody.minOf { it.y() } * classView.height
         val maxY = visibleBody.maxOf { it.y() } * classView.height
         val centerY = (minY + maxY) / 2f
-        val bottomReserved = dp(152)
+        val bottomReserved = dp(96)
         val maxCoachHeight = (classView.height * VIRTUAL_COACH_MAX_HEIGHT_FRACTION).toInt()
-            .coerceAtMost((classView.height - bottomReserved - dp(24)).coerceAtLeast(dp(96)))
-        val minCoachHeight = dp(172).coerceAtMost(maxCoachHeight)
+            .coerceAtMost((classView.height - bottomReserved - dp(8)).coerceAtLeast(dp(180)))
+        val minCoachHeight = dp(320).coerceAtMost(maxCoachHeight)
         val targetHeight = ((maxY - minY) * VIRTUAL_COACH_HEIGHT_SCALE)
             .toInt()
             .coerceIn(minCoachHeight, maxCoachHeight)
@@ -656,7 +656,7 @@ class MainActivity : AppCompatActivity() {
             height = targetHeight
             gravity = android.view.Gravity.TOP or android.view.Gravity.END
             this.topMargin = topMargin
-            marginEnd = dp(12)
+            marginEnd = dp(8)
         }
         virtualCoachView.layoutParams = params
     }
@@ -735,8 +735,8 @@ class MainActivity : AppCompatActivity() {
         const val TUNING_SLIDER_MAX = 1000
         private const val CAMERA_AUTO_START_STABLE_MS = 600L
         private const val VIRTUAL_COACH_ASPECT_RATIO = 0.72f
-        private const val VIRTUAL_COACH_HEIGHT_SCALE = 0.74f
-        private const val VIRTUAL_COACH_MAX_HEIGHT_FRACTION = 0.36f
+        private const val VIRTUAL_COACH_HEIGHT_SCALE = 1.35f
+        private const val VIRTUAL_COACH_MAX_HEIGHT_FRACTION = 0.68f
         private const val DEV_PREFS = "development"
         private const val PREF_DISABLE_CAMERA_SETUP = "disableCameraSetup"
         private const val EXTRA_DISABLE_CAMERA_SETUP = "devDisableCameraSetup"
