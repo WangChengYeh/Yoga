@@ -9,9 +9,10 @@ import android.graphics.Path
 import android.graphics.RadialGradient
 import android.graphics.RectF
 import android.graphics.Shader
+import android.os.SystemClock
 import android.util.AttributeSet
 import android.view.View
-import kotlin.math.min
+import kotlin.math.sin
 
 class VirtualCoachView @JvmOverloads constructor(
     context: Context,
@@ -60,6 +61,7 @@ class VirtualCoachView @JvmOverloads constructor(
     private var poseId = "mountain"
     private var detect = ""
     private var coachState = CoachState.SETUP
+    private var avatarCommand = AvatarCommand("hold_mountain", "calm", null)
 
     private val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         strokeCap = Paint.Cap.ROUND
@@ -82,11 +84,32 @@ class VirtualCoachView @JvmOverloads constructor(
         setOnClickListener { cycleSkin() }
     }
 
-    fun setGuide(nextPoseId: String, nextDetect: String, nextState: CoachState) {
-        if (poseId == nextPoseId && detect == nextDetect && coachState == nextState) return
+    fun setGuide(
+        nextPoseId: String,
+        nextDetect: String,
+        nextState: CoachState,
+        nextAvatarCommand: AvatarCommand = avatarCommand
+    ) {
+        if (
+            poseId == nextPoseId &&
+            detect == nextDetect &&
+            coachState == nextState &&
+            avatarCommand == nextAvatarCommand
+        ) return
         poseId = nextPoseId
         detect = nextDetect
         coachState = nextState
+        avatarCommand = nextAvatarCommand
+        invalidate()
+    }
+
+    fun setPoseCoachFrame(frame: PoseCoachFrame) {
+        setGuide(
+            nextPoseId = poseIdForAction(frame.avatar.action),
+            nextDetect = frame.avatar.action,
+            nextState = stateForPhase(frame.phase),
+            nextAvatarCommand = frame.avatar
+        )
         invalidate()
     }
 
@@ -100,14 +123,17 @@ class VirtualCoachView @JvmOverloads constructor(
         super.onDraw(canvas)
         if (width == 0 || height == 0) return
 
-        val size = min(width, height).toFloat()
         val avatarScale = skins[skinIndex].silhouetteScale
-        val left = (width - size) / 2f
-        val top = (height - size) / 2f
-        val frame = RectF(left, top, left + size, top + size)
+        val frame = RectF(
+            width * 0.04f,
+            height * 0.03f,
+            width * 0.96f,
+            height * 0.97f
+        )
 
         drawBackdrop(canvas, frame)
         drawCoach(canvas, frame, avatarScale)
+        if (visibility == VISIBLE) postInvalidateDelayed(80L)
     }
 
     private fun drawBackdrop(canvas: Canvas, frame: RectF) {
@@ -116,11 +142,11 @@ class VirtualCoachView @JvmOverloads constructor(
             frame.top,
             frame.right,
             frame.bottom,
-            Color.argb(120, 14, 22, 30),
-            Color.argb(70, 255, 255, 255),
+            Color.argb(92, 9, 12, 16),
+            Color.argb(45, 245, 248, 252),
             Shader.TileMode.CLAMP
         )
-        val radius = frame.width() * 0.12f
+        val radius = frame.width() * 0.08f
         canvas.drawRoundRect(frame, radius, radius, fillPaint)
         fillPaint.shader = null
 
@@ -131,17 +157,17 @@ class VirtualCoachView @JvmOverloads constructor(
 
     private fun drawCoach(canvas: Canvas, frame: RectF, avatarScale: Float) {
         val skin = skins[skinIndex]
-        val pose = poseFor(poseId, detect, coachState)
+        val pose = applyBreathing(poseFor(poseId, detect, coachState))
         val scaleFrame = scaledFrame(frame, avatarScale)
-        val limbWidth = scaleFrame.width() * 0.052f
-        val armWidth = scaleFrame.width() * 0.043f
+        val limbWidth = scaleFrame.width() * 0.062f
+        val armWidth = scaleFrame.width() * 0.045f
 
         drawShadow(canvas, scaleFrame)
 
         drawSegment(canvas, scaleFrame, pose.leftHip, pose.leftKnee, limbWidth, skin.outfitColor)
-        drawSegment(canvas, scaleFrame, pose.leftKnee, pose.leftFoot, limbWidth, skin.bodyColor)
+        drawSegment(canvas, scaleFrame, pose.leftKnee, pose.leftFoot, limbWidth * 0.92f, skin.outfitColor)
         drawSegment(canvas, scaleFrame, pose.rightHip, pose.rightKnee, limbWidth, skin.outfitColor)
-        drawSegment(canvas, scaleFrame, pose.rightKnee, pose.rightFoot, limbWidth, skin.bodyColor)
+        drawSegment(canvas, scaleFrame, pose.rightKnee, pose.rightFoot, limbWidth * 0.92f, skin.outfitColor)
 
         drawTorso(canvas, scaleFrame, pose, skin)
 
@@ -152,11 +178,13 @@ class VirtualCoachView @JvmOverloads constructor(
 
         drawHead(canvas, scaleFrame, pose.head, skin)
         drawJointHighlights(canvas, scaleFrame, pose, skin)
+        drawCorrectionHighlight(canvas, scaleFrame, pose, skin)
     }
 
     private fun scaledFrame(frame: RectF, scale: Float): RectF {
-        val inset = frame.width() * (1f - scale).coerceAtMost(0.12f) / 2f
-        return RectF(frame.left + inset, frame.top + inset, frame.right - inset, frame.bottom - inset)
+        val insetX = frame.width() * (1f - scale).coerceAtMost(0.12f) / 2f
+        val insetY = frame.height() * (1f - scale).coerceAtMost(0.08f) / 2f
+        return RectF(frame.left + insetX, frame.top + insetY, frame.right - insetX, frame.bottom - insetY)
     }
 
     private fun drawShadow(canvas: Canvas, frame: RectF) {
@@ -164,9 +192,9 @@ class VirtualCoachView @JvmOverloads constructor(
         fillPaint.shader = null
         val base = RectF(
             frame.left + frame.width() * 0.20f,
-            frame.top + frame.height() * 0.84f,
+            frame.top + frame.height() * 0.91f,
             frame.right - frame.width() * 0.20f,
-            frame.top + frame.height() * 0.93f
+            frame.top + frame.height() * 0.97f
         )
         canvas.drawOval(base, fillPaint)
     }
@@ -208,6 +236,16 @@ class VirtualCoachView @JvmOverloads constructor(
         canvas.drawPath(path, fillPaint)
         fillPaint.shader = null
 
+        val waist = Path().apply {
+            moveTo(x(frame, pose.leftHip), y(frame, pose.leftHip))
+            lineTo(x(frame, pose.rightHip), y(frame, pose.rightHip))
+            lineTo(x(frame, pose.rightHip) - frame.width() * 0.026f, y(frame, pose.rightHip) + frame.height() * 0.055f)
+            lineTo(x(frame, pose.leftHip) + frame.width() * 0.026f, y(frame, pose.leftHip) + frame.height() * 0.055f)
+            close()
+        }
+        fillPaint.color = darken(skin.outfitColor)
+        canvas.drawPath(waist, fillPaint)
+
         outlinePaint.color = Color.argb(100, 0, 0, 0)
         outlinePaint.strokeWidth = frame.width() * 0.012f
         canvas.drawPath(path, outlinePaint)
@@ -232,11 +270,55 @@ class VirtualCoachView @JvmOverloads constructor(
 
     private fun drawJointHighlights(canvas: Canvas, frame: RectF, pose: CoachPose, skin: CoachSkin) {
         fillPaint.shader = null
-        fillPaint.color = Color.argb(210, Color.red(skin.accentColor), Color.green(skin.accentColor), Color.blue(skin.accentColor))
+        fillPaint.color = Color.argb(205, Color.red(skin.accentColor), Color.green(skin.accentColor), Color.blue(skin.accentColor))
         val radius = frame.width() * 0.018f
         listOf(pose.leftShoulder, pose.rightShoulder, pose.leftHip, pose.rightHip, pose.leftKnee, pose.rightKnee).forEach {
             canvas.drawCircle(x(frame, it), y(frame, it), radius, fillPaint)
         }
+    }
+
+    private fun drawCorrectionHighlight(canvas: Canvas, frame: RectF, pose: CoachPose, skin: CoachSkin) {
+        val joints = when (avatarCommand.highlight) {
+            "knees" -> listOf(pose.leftKnee, pose.rightKnee)
+            "hips" -> listOf(pose.leftHip, pose.rightHip)
+            "spine" -> listOf(pose.neck, midpoint(pose.leftHip, pose.rightHip))
+            "shoulders" -> listOf(pose.leftShoulder, pose.rightShoulder)
+            "feet" -> listOf(pose.leftFoot, pose.rightFoot)
+            else -> return
+        }
+        val pulse = ((sin(SystemClock.uptimeMillis() / 180.0) + 1.0) * 0.5).toFloat()
+        outlinePaint.color = Color.argb((150 + pulse * 80).toInt(), Color.red(skin.accentColor), Color.green(skin.accentColor), Color.blue(skin.accentColor))
+        outlinePaint.strokeWidth = frame.width() * 0.02f
+        joints.forEach { joint ->
+            val radius = frame.width() * (0.055f + pulse * 0.02f)
+            canvas.drawCircle(x(frame, joint), y(frame, joint), radius, outlinePaint)
+        }
+    }
+
+    private fun applyBreathing(pose: CoachPose): CoachPose {
+        if (coachState != CoachState.HOLD && avatarCommand.emotion != "calm") return pose
+        val breath = sin(SystemClock.uptimeMillis() / 850.0).toFloat() * 0.008f
+        return pose.copy(
+            neck = pose.neck.copy(y = pose.neck.y - breath),
+            leftShoulder = pose.leftShoulder.copy(y = pose.leftShoulder.y - breath),
+            rightShoulder = pose.rightShoulder.copy(y = pose.rightShoulder.y - breath),
+            leftElbow = pose.leftElbow.copy(y = pose.leftElbow.y - breath * 0.6f),
+            rightElbow = pose.rightElbow.copy(y = pose.rightElbow.y - breath * 0.6f)
+        )
+    }
+
+    private fun poseIdForAction(action: String): String {
+        return when {
+            action.contains("forward_fold") || action.contains("knees") -> "forward_fold"
+            action.contains("squat") -> "squat"
+            action.contains("twist") -> "twist"
+            action.contains("bridge") -> "bridge"
+            else -> "mountain"
+        }
+    }
+
+    private fun stateForPhase(phase: String): CoachState {
+        return CoachState.values().firstOrNull { it.name.equals(phase, ignoreCase = true) } ?: CoachState.HOLD
     }
 
     private fun poseFor(poseId: String, detect: String, state: CoachState): CoachPose {

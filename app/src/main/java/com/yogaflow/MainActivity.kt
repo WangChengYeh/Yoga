@@ -1,6 +1,8 @@
 package com.yogaflow
 
 import android.Manifest
+import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.media.AudioAttributes
 import android.content.pm.PackageManager
 import android.os.Bundle
@@ -16,11 +18,16 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
+import com.yogaflow.coach.AvatarCommand
 import com.yogaflow.coach.CoachCueController
 import com.yogaflow.coach.CoachSpeaker
 import com.yogaflow.coach.CoachState
+import com.yogaflow.coach.CoachVisualState
 import com.yogaflow.coach.DetectionMapperSession
+import com.yogaflow.coach.GodotAvatarBridge
+import com.yogaflow.coach.PoseCoachFrame
 import com.yogaflow.coach.PoseFlowEngine
+import com.yogaflow.coach.PoseMetrics
 import com.yogaflow.coach.PoseStateMachine
 import com.yogaflow.coach.VirtualCoachView
 import com.yogaflow.flow.AutoTuningAdvisor
@@ -32,6 +39,7 @@ import com.yogaflow.flow.RuntimeParams
 import com.yogaflow.flow.YogaFlow
 import com.yogaflow.pose.CameraPosePipeline
 import com.yogaflow.pose.PoseDetectionResult
+import com.yogaflow.pose.PoseGeometry
 import com.yogaflow.pose.PoseHelper
 import com.yogaflow.pose.PoseOverlayView
 import com.yogaflow.session.CameraSetupController
@@ -42,6 +50,7 @@ import com.yogaflow.yoga.YogaPoseCatalog
 import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import kotlin.math.sqrt
 
 class MainActivity : AppCompatActivity() {
 
@@ -92,6 +101,7 @@ class MainActivity : AppCompatActivity() {
     var autoStartedCurrentSetup = false
     var suppressTuningCallbacks = false
     var debugViewEnabled = false
+    var cameraSetupDisabledForDevelopment = false
     var lastCountdownText = ""
     var latestSuggestion: AutoTuningSuggestion? = null
 
@@ -103,6 +113,7 @@ class MainActivity : AppCompatActivity() {
     lateinit var cameraSetupController: CameraSetupController
     private lateinit var liveCoachSessionController: LiveCoachSessionController
     private lateinit var sessionRecorder: SessionRecorder
+    private lateinit var godotAvatarBridge: GodotAvatarBridge
     private var pendingTtsReady: Boolean? = null
     private val stateMachine = PoseStateMachine()
     private val autoTuningAdvisor = AutoTuningAdvisor()
@@ -120,6 +131,9 @@ class MainActivity : AppCompatActivity() {
         bindViewsMain()
         applySuggestionButton = findViewById(R.id.applySuggestionButton)
         sessionRecorder = SessionRecorder(this)
+        godotAvatarBridge = GodotAvatarBridge()
+        loadDevelopmentSettings()
+        applyDevelopmentIntentFlags(intent)
         loadThresholdPreferencesMain()
 
         cameraExecutor = Executors.newSingleThreadExecutor()
@@ -209,6 +223,21 @@ class MainActivity : AppCompatActivity() {
         bindActions()
         loadDiscoveredPlaylist(openClassView = false)
         requestCameraIfNeeded()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        applyDevelopmentIntentFlags(intent)
+        if (isCurrentFlowInitialized()) {
+            resetToCameraSetup(
+                if (cameraSetupDisabledForDevelopment) {
+                    "Development: camera setup bypassed."
+                } else {
+                    "請先完成相機設定。"
+                }
+            )
+        }
     }
 
     override fun onDestroy() {
@@ -312,6 +341,32 @@ class MainActivity : AppCompatActivity() {
         debugToggleButton.text = if (enabled) "Hide" else "Debug"
     }
 
+    private fun loadDevelopmentSettings() {
+        cameraSetupDisabledForDevelopment = isDebuggableBuild() &&
+            getSharedPreferences(DEV_PREFS, MODE_PRIVATE)
+                .getBoolean(PREF_DISABLE_CAMERA_SETUP, false)
+    }
+
+    private fun applyDevelopmentIntentFlags(intent: Intent?) {
+        if (!isDebuggableBuild() || intent == null) return
+        when {
+            intent.getBooleanExtra(EXTRA_DISABLE_CAMERA_SETUP, false) -> setDevelopmentCameraSetupDisabled(true)
+            intent.getBooleanExtra(EXTRA_ENABLE_CAMERA_SETUP, false) -> setDevelopmentCameraSetupDisabled(false)
+        }
+    }
+
+    private fun isDebuggableBuild(): Boolean {
+        return applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
+    }
+
+    private fun setDevelopmentCameraSetupDisabled(disabled: Boolean) {
+        cameraSetupDisabledForDevelopment = disabled
+        getSharedPreferences(DEV_PREFS, MODE_PRIVATE)
+            .edit()
+            .putBoolean(PREF_DISABLE_CAMERA_SETUP, disabled)
+            .apply()
+    }
+
     internal fun requestCameraIfNeeded() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
             startCamera()
@@ -329,6 +384,12 @@ class MainActivity : AppCompatActivity() {
         updateVirtualCoachBounds(frame.imageLandmarks)
         updateVirtualCoachFromCurrentStep()
 
+        if (cameraSetupDisabledForDevelopment && sessionState != SessionState.COMPLETED) {
+            bypassCameraSetupForDevelopment()
+            liveCoachSessionController.handleReadyPoseFrame(frame, currentFlow, currentPose)
+            return
+        }
+
         if (cameraSetupController.handleFrame(frame)) return
 
         liveCoachSessionController.handleReadyPoseFrame(frame, currentFlow, currentPose)
@@ -339,6 +400,19 @@ class MainActivity : AppCompatActivity() {
         sessionState = SessionState.RUNNING
         cameraSetupPanel.visibility = View.GONE
         virtualCoachView.visibility = View.VISIBLE
+        coachCueController.reset()
+        updateUi(animated = false)
+    }
+
+    private fun bypassCameraSetupForDevelopment() {
+        if (sessionState == SessionState.RUNNING) return
+        cameraReady = true
+        cameraReadySince = System.currentTimeMillis()
+        autoStartedCurrentSetup = true
+        startButton.isEnabled = true
+        startButton.alpha = 1f
+        cameraSetupPanel.visibility = View.GONE
+        sessionState = SessionState.RUNNING
         coachCueController.reset()
         updateUi(animated = false)
     }
@@ -407,6 +481,7 @@ class MainActivity : AppCompatActivity() {
     ) {
         debugText.text = listOf(
             "detect=$detect state=$state matched=$matched",
+            "devCameraSetupDisabled=$cameraSetupDisabledForDevelopment",
             "landmarks=${frame.imageLandmarks.size} size=${frame.imageWidth}x${frame.imageHeight}",
             runtimeSummary,
             overrideSummary,
@@ -414,7 +489,9 @@ class MainActivity : AppCompatActivity() {
             suggestionSummary
         ).filter { it.isNotBlank() }.joinToString("\n")
         if (isCurrentFlowInitialized()) {
-            updateVirtualCoach(detect, state)
+            val poseCoachFrame = buildPoseCoachFrame(frame, detect, state, matched, failReason)
+            godotAvatarBridge.send(poseCoachFrame)
+            updateVirtualCoach(poseCoachFrame)
             sessionRecorder.recordFrame(
                 frame = frame,
                 flowId = currentFlow.id,
@@ -432,8 +509,124 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateVirtualCoach(detect: String, state: CoachState) {
-        virtualCoachView.setGuide(currentPose.id, detect, state)
+        val command = buildAvatarCommand(detect, state, matched = state != CoachState.CORRECTION, failReason = "")
+        virtualCoachView.setGuide(currentPose.id, detect, state, command)
         virtualCoachView.visibility = if (sessionState == SessionState.COMPLETED) View.GONE else View.VISIBLE
+    }
+
+    private fun updateVirtualCoach(frame: PoseCoachFrame) {
+        virtualCoachView.setPoseCoachFrame(frame)
+        virtualCoachView.visibility = if (sessionState == SessionState.COMPLETED) View.GONE else View.VISIBLE
+    }
+
+    private fun buildPoseCoachFrame(
+        frame: PoseDetectionResult,
+        detect: String,
+        state: CoachState,
+        matched: Boolean,
+        failReason: String
+    ): PoseCoachFrame {
+        val step = currentFlow.steps.getOrNull(flowEngine.currentStepNumber() - 1)
+        val coachState = if (matched && state != CoachState.CORRECTION) "ok" else "needs_correction"
+        val avatarCommand = buildAvatarCommand(detect, state, matched, failReason)
+        return PoseCoachFrame(
+            timestampMs = System.currentTimeMillis(),
+            stepId = step?.detect?.jsonKey ?: detect,
+            phase = state.name.lowercase(Locale.US),
+            pose = buildPoseMetrics(frame),
+            coach = CoachVisualState(
+                state = coachState,
+                error = avatarCommand.highlight?.let { "${it}_alignment" },
+                message = coachText.text.toString(),
+                severity = severityFor(state, matched, failReason)
+            ),
+            avatar = avatarCommand
+        )
+    }
+
+    private fun buildPoseMetrics(frame: PoseDetectionResult): PoseMetrics {
+        val leftKnee = PoseGeometry.angleDegreesOrNull(frame, 23, 25, 27)
+        val rightKnee = PoseGeometry.angleDegreesOrNull(frame, 24, 26, 28)
+        val leftHip = PoseGeometry.angleDegreesOrNull(frame, 11, 23, 25)
+        val rightHip = PoseGeometry.angleDegreesOrNull(frame, 12, 24, 26)
+        val hip = listOfNotNull(leftHip, rightHip).averageOrNull()
+        val spine = PoseGeometry.angleDegreesOrNull(frame, 11, 23, 24)
+        return PoseMetrics(
+            leftKneeAngle = leftKnee,
+            rightKneeAngle = rightKnee,
+            hipAngle = hip,
+            spineAngle = spine,
+            ankleDistanceRatio = ankleDistanceRatio(frame)
+        )
+    }
+
+    private fun buildAvatarCommand(
+        detect: String,
+        state: CoachState,
+        matched: Boolean,
+        failReason: String
+    ): AvatarCommand {
+        val highlight = highlightFor(detect, failReason)
+        val action = when {
+            state == CoachState.CORRECTION && highlight == "knees" -> "correct_knees"
+            state == CoachState.CORRECTION && highlight == "hips" -> "correct_hips"
+            state == CoachState.CORRECTION && highlight == "spine" -> "correct_spine"
+            state == CoachState.CORRECTION -> "correct_alignment"
+            detect.contains("forward_fold") || currentPose.id == "forward_fold" -> "hold_forward_fold"
+            currentPose.id == "squat" -> "hold_squat"
+            currentPose.id == "twist" -> "hold_twist"
+            currentPose.id == "bridge" -> "hold_bridge"
+            state == CoachState.TRANSITION -> "controlled_transition"
+            else -> "hold_mountain"
+        }
+        val emotion = when {
+            state == CoachState.CORRECTION || !matched -> "focused"
+            state == CoachState.MOVEMENT || state == CoachState.TRANSITION -> "attentive"
+            else -> "calm"
+        }
+        return AvatarCommand(action = action, emotion = emotion, highlight = highlight)
+    }
+
+    private fun severityFor(state: CoachState, matched: Boolean, failReason: String): Int {
+        return when {
+            matched && state != CoachState.CORRECTION -> 0
+            failReason.contains("<") || failReason.contains(">") -> 2
+            state == CoachState.CORRECTION -> 2
+            else -> 1
+        }
+    }
+
+    private fun highlightFor(detect: String, failReason: String): String? {
+        val source = "$detect $failReason".lowercase(Locale.US)
+        return when {
+            source.contains("knee") -> "knees"
+            source.contains("hip") -> "hips"
+            source.contains("spine") || source.contains("back") -> "spine"
+            source.contains("shoulder") -> "shoulders"
+            source.contains("ankle") || source.contains("foot") -> "feet"
+            source.contains("twist") -> "shoulders"
+            else -> null
+        }
+    }
+
+    private fun ankleDistanceRatio(frame: PoseDetectionResult): Double? {
+        val leftAnkle = frame.imageLandmarks.getOrNull(27) ?: return null
+        val rightAnkle = frame.imageLandmarks.getOrNull(28) ?: return null
+        val leftHip = frame.imageLandmarks.getOrNull(23) ?: return null
+        val rightHip = frame.imageLandmarks.getOrNull(24) ?: return null
+        val ankleDistance = distance(leftAnkle.x(), leftAnkle.y(), rightAnkle.x(), rightAnkle.y())
+        val hipDistance = distance(leftHip.x(), leftHip.y(), rightHip.x(), rightHip.y()).takeIf { it > 0.001 } ?: return null
+        return ankleDistance / hipDistance
+    }
+
+    private fun distance(ax: Float, ay: Float, bx: Float, by: Float): Double {
+        val dx = ax - bx
+        val dy = ay - by
+        return sqrt((dx * dx + dy * dy).toDouble())
+    }
+
+    private fun List<Double>.averageOrNull(): Double? {
+        return if (isEmpty()) null else average()
     }
 
     private fun updateVirtualCoachBounds(landmarks: List<NormalizedLandmark>) {
@@ -445,13 +638,18 @@ class MainActivity : AppCompatActivity() {
         val minY = visibleBody.minOf { it.y() } * classView.height
         val maxY = visibleBody.maxOf { it.y() } * classView.height
         val centerY = (minY + maxY) / 2f
+        val bottomReserved = dp(152)
+        val maxCoachHeight = (classView.height * VIRTUAL_COACH_MAX_HEIGHT_FRACTION).toInt()
+            .coerceAtMost((classView.height - bottomReserved - dp(24)).coerceAtLeast(dp(96)))
+        val minCoachHeight = dp(172).coerceAtMost(maxCoachHeight)
         val targetHeight = ((maxY - minY) * VIRTUAL_COACH_HEIGHT_SCALE)
             .toInt()
-            .coerceIn(dp(172), (classView.height * 0.62f).toInt())
+            .coerceIn(minCoachHeight, maxCoachHeight)
         val targetWidth = (targetHeight * VIRTUAL_COACH_ASPECT_RATIO).toInt()
+        val maxTop = (classView.height - bottomReserved - targetHeight).coerceAtLeast(0)
         val topMargin = (centerY - targetHeight / 2f)
             .toInt()
-            .coerceIn(0, (classView.height - targetHeight).coerceAtLeast(0))
+            .coerceIn(dp(8), maxTop)
 
         val params = (virtualCoachView.layoutParams as FrameLayout.LayoutParams).apply {
             width = targetWidth
@@ -537,7 +735,12 @@ class MainActivity : AppCompatActivity() {
         const val TUNING_SLIDER_MAX = 1000
         private const val CAMERA_AUTO_START_STABLE_MS = 600L
         private const val VIRTUAL_COACH_ASPECT_RATIO = 0.72f
-        private const val VIRTUAL_COACH_HEIGHT_SCALE = 1.18f
+        private const val VIRTUAL_COACH_HEIGHT_SCALE = 0.74f
+        private const val VIRTUAL_COACH_MAX_HEIGHT_FRACTION = 0.36f
+        private const val DEV_PREFS = "development"
+        private const val PREF_DISABLE_CAMERA_SETUP = "disableCameraSetup"
+        private const val EXTRA_DISABLE_CAMERA_SETUP = "devDisableCameraSetup"
+        private const val EXTRA_ENABLE_CAMERA_SETUP = "devEnableCameraSetup"
         private val VIRTUAL_COACH_SCALE_INDICES = listOf(0, 11, 12, 23, 24, 25, 26, 27, 28)
     }
 }

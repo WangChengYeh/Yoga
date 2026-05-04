@@ -68,14 +68,26 @@ internal fun MainActivity.restartCurrentPlaylist() {
 internal fun MainActivity.resetToCameraSetup(message: String) {
     resetCameraSetupController()
     sessionState = SessionState.IDLE
-    cameraReady = false
-    cameraReadySince = 0L
-    autoStartedCurrentSetup = false
-    startButton.isEnabled = false
-    startButton.alpha = 0.45f
-    cameraSetupPanel.visibility = android.view.View.VISIBLE
+    cameraReady = cameraSetupDisabledForDevelopment
+    cameraReadySince = if (cameraSetupDisabledForDevelopment) System.currentTimeMillis() else 0L
+    autoStartedCurrentSetup = cameraSetupDisabledForDevelopment
+    startButton.isEnabled = cameraSetupDisabledForDevelopment
+    startButton.alpha = if (cameraSetupDisabledForDevelopment) 1f else 0.45f
+    cameraSetupPanel.visibility = if (cameraSetupDisabledForDevelopment) {
+        android.view.View.GONE
+    } else {
+        android.view.View.VISIBLE
+    }
     updateVirtualCoachFromCurrentStep()
-    cameraSetupStatus.text = "Checking body framing..."
+    cameraSetupStatus.text = if (cameraSetupDisabledForDevelopment) {
+        "Development: camera setup bypassed"
+    } else {
+        "Checking body framing..."
+    }
     lastCountdownText = ""
-    coachText.text = message
+    coachText.text = if (cameraSetupDisabledForDevelopment) {
+        "Development: camera setup bypassed."
+    } else {
+        message
+    }
 }
