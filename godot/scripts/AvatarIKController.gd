@@ -16,6 +16,11 @@ extends Node3D
 @export var ik_weight: float = 0.8
 @export var ground_lock_feet: bool = true
 @export var foot_ground_y: float = 0.0
+@export var min_confidence: float = 0.35
+@export var max_rotation_step_degrees: float = 18.0
+@export var min_joint_bend_degrees: float = 4.0
+@export var max_joint_bend_degrees: float = 170.0
+@export var pole_distance: float = 0.25
 
 @onready var skeleton: Skeleton3D = get_node_or_null(skeleton_path)
 
@@ -23,6 +28,7 @@ var _bone_directions := {}
 var _targets := {}
 var _last_left_foot_y: float = 0.0
 var _last_right_foot_y: float = 0.0
+var _last_poles := {}
 
 const MP_TO_GODOT_AXIS := Vector3(1.0, -1.0, -1.0)
 
@@ -74,7 +80,7 @@ func apply_avatar_rig_frame(frame: Dictionary) -> void:
         var bone_name := str(bone_data.get("bone", ""))
         var direction := bone_data.get("direction", {})
         var confidence := float(bone_data.get("confidence", 0.0))
-        if confidence <= 0.0:
+        if confidence < min_confidence:
             continue
         var dir := Vector3(
             float(direction.get("x", 0.0)) * MP_TO_GODOT_AXIS.x,
@@ -126,6 +132,9 @@ func _apply_chain_ik(chain_name: String, chain: Dictionary) -> void:
 
     var upper_dir: Vector3 = _bone_directions[upper_name]
     var lower_dir: Vector3 = _bone_directions[lower_name]
+    var constrained := _constrain_chain_dirs(chain_name, upper_dir, lower_dir)
+    upper_dir = constrained[0]
+    lower_dir = constrained[1]
 
     var target_pos := upper_origin + upper_dir * upper_len + lower_dir * lower_len
     var pole_pos := lower_origin + _compute_pole_offset(upper_dir, lower_dir, chain_name)
@@ -139,17 +148,59 @@ func _apply_chain_ik(chain_name: String, chain: Dictionary) -> void:
     _rotate_bone_toward(upper_idx, upper_dir, ik_weight)
     _rotate_bone_toward(lower_idx, lower_dir, ik_weight)
 
-func _compute_pole_offset(upper_dir: Vector3, lower_dir: Vector3, chain_name: String) -> Vector3:
-    var bend_normal := upper_dir.cross(lower_dir)
-    if bend_normal.length() <= 0.0001:
-        bend_normal = Vector3.FORWARD
-    bend_normal = bend_normal.normalized()
+func _constrain_chain_dirs(chain_name: String, upper_dir: Vector3, lower_dir: Vector3) -> Array:
+    upper_dir = upper_dir.normalized()
+    lower_dir = lower_dir.normalized()
+
+    var angle := rad_to_deg(acos(clamp(upper_dir.dot(lower_dir), -1.0, 1.0)))
+    if angle < min_joint_bend_degrees:
+        lower_dir = _nudge_bend(chain_name, upper_dir, lower_dir, min_joint_bend_degrees)
+    elif angle > max_joint_bend_degrees:
+        lower_dir = _nudge_bend(chain_name, upper_dir, lower_dir, max_joint_bend_degrees)
+
+    lower_dir = _prevent_reverse_bend(chain_name, upper_dir, lower_dir)
+    return [upper_dir.normalized(), lower_dir.normalized()]
+
+func _nudge_bend(chain_name: String, upper_dir: Vector3, lower_dir: Vector3, target_degrees: float) -> Vector3:
+    var pole := _stable_pole_normal(chain_name, upper_dir, lower_dir)
+    var axis := upper_dir.cross(pole)
+    if axis.length() <= 0.0001:
+        axis = Vector3.RIGHT
+    axis = axis.normalized()
+    var q := Quaternion(axis, deg_to_rad(target_degrees))
+    return q * upper_dir
+
+func _prevent_reverse_bend(chain_name: String, upper_dir: Vector3, lower_dir: Vector3) -> Vector3:
+    var pole := _stable_pole_normal(chain_name, upper_dir, lower_dir)
+    var bend_side := upper_dir.cross(lower_dir).dot(pole)
+    if bend_side >= 0.0:
+        return lower_dir
+
+    var projected := lower_dir - pole * lower_dir.dot(pole)
+    if projected.length() <= 0.0001:
+        return _nudge_bend(chain_name, upper_dir, lower_dir, min_joint_bend_degrees)
+    return projected.normalized()
+
+func _stable_pole_normal(chain_name: String, upper_dir: Vector3, lower_dir: Vector3) -> Vector3:
+    var normal := upper_dir.cross(lower_dir)
+    if normal.length() <= 0.0001:
+        normal = _last_poles.get(chain_name, Vector3.FORWARD)
+    normal = normal.normalized()
 
     var side := 1.0
     if chain_name.begins_with("right"):
         side = -1.0
+    normal *= side
 
-    return bend_normal * side * 0.25
+    var previous: Vector3 = _last_poles.get(chain_name, normal)
+    if previous.dot(normal) < 0.0:
+        normal = -normal
+    normal = previous.lerp(normal, smoothing).normalized()
+    _last_poles[chain_name] = normal
+    return normal
+
+func _compute_pole_offset(upper_dir: Vector3, lower_dir: Vector3, chain_name: String) -> Vector3:
+    return _stable_pole_normal(chain_name, upper_dir, lower_dir) * pole_distance
 
 func _apply_foot_ground_lock(chain_name: String, current_y: float) -> float:
     var locked_y := max(current_y, foot_ground_y)
@@ -172,5 +223,10 @@ func _rotate_bone_toward(bone_idx: int, target_dir: Vector3, weight: float) -> v
     var current_q := skeleton.get_bone_pose_rotation(bone_idx)
     var target_basis := Basis().looking_at(target_dir.normalized(), Vector3.UP)
     var target_q := target_basis.get_rotation_quaternion()
-    var blended := current_q.slerp(target_q, clamp(weight * smoothing, 0.0, 1.0))
+    var step := clamp(weight * smoothing, 0.0, 1.0)
+    var max_step := deg_to_rad(max_rotation_step_degrees)
+    var angle := current_q.angle_to(target_q)
+    if angle > max_step and angle > 0.0001:
+        step = min(step, max_step / angle)
+    var blended := current_q.slerp(target_q, step)
     skeleton.set_bone_pose_rotation(bone_idx, blended)
