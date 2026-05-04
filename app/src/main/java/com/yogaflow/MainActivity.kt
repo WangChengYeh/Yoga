@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import android.view.View
 import android.widget.Button
+import android.widget.FrameLayout
 import android.widget.ProgressBar
 import android.widget.SeekBar
 import android.widget.TextView
@@ -14,12 +15,14 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
+import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
 import com.yogaflow.coach.CoachCueController
 import com.yogaflow.coach.CoachSpeaker
 import com.yogaflow.coach.CoachState
 import com.yogaflow.coach.DetectionMapperSession
 import com.yogaflow.coach.PoseFlowEngine
 import com.yogaflow.coach.PoseStateMachine
+import com.yogaflow.coach.VirtualCoachView
 import com.yogaflow.flow.AutoTuningAdvisor
 import com.yogaflow.flow.AutoTuningSuggestion
 import com.yogaflow.flow.FlowPlaylistEngine
@@ -46,7 +49,9 @@ class MainActivity : AppCompatActivity() {
     lateinit var classView: View
     lateinit var previewView: PreviewView
     lateinit var overlayView: PoseOverlayView
+    lateinit var virtualCoachView: VirtualCoachView
     lateinit var cameraSetupPanel: View
+    lateinit var thresholdPanel: View
     lateinit var cameraSetupStatus: TextView
     lateinit var debugText: TextView
     lateinit var coachText: TextView
@@ -66,6 +71,7 @@ class MainActivity : AppCompatActivity() {
     lateinit var pauseButton: Button
     lateinit var restartButton: Button
     lateinit var sessionRecordButton: Button
+    lateinit var debugToggleButton: Button
     lateinit var sessionRecordStatus: TextView
     private lateinit var applySuggestionButton: Button
 
@@ -85,6 +91,7 @@ class MainActivity : AppCompatActivity() {
     var cameraReadySince = 0L
     var autoStartedCurrentSetup = false
     var suppressTuningCallbacks = false
+    var debugViewEnabled = false
     var lastCountdownText = ""
     var latestSuggestion: AutoTuningSuggestion? = null
 
@@ -161,9 +168,11 @@ class MainActivity : AppCompatActivity() {
             },
             setSetupPanelVisible = { visible ->
                 cameraSetupPanel.visibility = if (visible) View.VISIBLE else View.GONE
+                updateVirtualCoachFromCurrentStep()
             },
             onUpdateSetupPanel = { ready, framingMessage, orientationMessage ->
                 cameraSetupPanel.visibility = View.VISIBLE
+                updateVirtualCoachFromCurrentStep()
                 cameraSetupStatus.text = if (ready) {
                     "Ready"
                 } else {
@@ -196,6 +205,7 @@ class MainActivity : AppCompatActivity() {
         )
 
         setupThresholdControlsMain()
+        applyDebugViewEnabled(false)
         bindActions()
         loadDiscoveredPlaylist(openClassView = false)
         requestCameraIfNeeded()
@@ -291,6 +301,15 @@ class MainActivity : AppCompatActivity() {
         restartButton.setOnClickListener { restartCurrentPlaylist() }
         applySuggestionButton.setOnClickListener { applyLatestSuggestion() }
         sessionRecordButton.setOnClickListener { toggleSessionRecording() }
+        debugToggleButton.setOnClickListener { applyDebugViewEnabled(!debugViewEnabled) }
+    }
+
+    private fun applyDebugViewEnabled(enabled: Boolean) {
+        debugViewEnabled = enabled
+        val visibility = if (enabled) View.VISIBLE else View.GONE
+        debugText.visibility = visibility
+        thresholdPanel.visibility = visibility
+        debugToggleButton.text = if (enabled) "Hide" else "Debug"
     }
 
     internal fun requestCameraIfNeeded() {
@@ -303,7 +322,12 @@ class MainActivity : AppCompatActivity() {
 
     private fun handlePoseFrame(frame: PoseDetectionResult) {
         overlayView.setLandmarks(frame.imageLandmarks)
-        if (!isCurrentFlowInitialized()) return
+        if (!isCurrentFlowInitialized()) {
+            virtualCoachView.visibility = View.GONE
+            return
+        }
+        updateVirtualCoachBounds(frame.imageLandmarks)
+        updateVirtualCoachFromCurrentStep()
 
         if (cameraSetupController.handleFrame(frame)) return
 
@@ -314,6 +338,7 @@ class MainActivity : AppCompatActivity() {
         if (!cameraReady) return
         sessionState = SessionState.RUNNING
         cameraSetupPanel.visibility = View.GONE
+        virtualCoachView.visibility = View.VISIBLE
         coachCueController.reset()
         updateUi(animated = false)
     }
@@ -329,6 +354,7 @@ class MainActivity : AppCompatActivity() {
                 startButton.isEnabled = false
                 startButton.alpha = 0.45f
                 cameraSetupPanel.visibility = View.VISIBLE
+                updateVirtualCoachFromCurrentStep()
                 cameraSetupStatus.text = "Checking body framing..."
                 updateUi(animated = false)
             }
@@ -351,6 +377,7 @@ class MainActivity : AppCompatActivity() {
         if (next == null) {
             sessionState = SessionState.COMPLETED
             coachText.text = text
+            virtualCoachView.visibility = View.GONE
             updateUi(animated = true)
             return
         }
@@ -387,6 +414,7 @@ class MainActivity : AppCompatActivity() {
             suggestionSummary
         ).filter { it.isNotBlank() }.joinToString("\n")
         if (isCurrentFlowInitialized()) {
+            updateVirtualCoach(detect, state)
             sessionRecorder.recordFrame(
                 frame = frame,
                 flowId = currentFlow.id,
@@ -401,6 +429,53 @@ class MainActivity : AppCompatActivity() {
             )
             updateSessionRecordStatus()
         }
+    }
+
+    private fun updateVirtualCoach(detect: String, state: CoachState) {
+        virtualCoachView.setGuide(currentPose.id, detect, state)
+        virtualCoachView.visibility = if (sessionState == SessionState.COMPLETED) View.GONE else View.VISIBLE
+    }
+
+    private fun updateVirtualCoachBounds(landmarks: List<NormalizedLandmark>) {
+        val visibleBody = VIRTUAL_COACH_SCALE_INDICES.mapNotNull { index ->
+            landmarks.getOrNull(index)?.takeIf { it.x() in 0f..1f && it.y() in 0f..1f }
+        }
+        if (visibleBody.isEmpty() || classView.width == 0 || classView.height == 0) return
+
+        val minY = visibleBody.minOf { it.y() } * classView.height
+        val maxY = visibleBody.maxOf { it.y() } * classView.height
+        val centerY = (minY + maxY) / 2f
+        val targetHeight = ((maxY - minY) * VIRTUAL_COACH_HEIGHT_SCALE)
+            .toInt()
+            .coerceIn(dp(172), (classView.height * 0.62f).toInt())
+        val targetWidth = (targetHeight * VIRTUAL_COACH_ASPECT_RATIO).toInt()
+        val topMargin = (centerY - targetHeight / 2f)
+            .toInt()
+            .coerceIn(0, (classView.height - targetHeight).coerceAtLeast(0))
+
+        val params = (virtualCoachView.layoutParams as FrameLayout.LayoutParams).apply {
+            width = targetWidth
+            height = targetHeight
+            gravity = android.view.Gravity.TOP or android.view.Gravity.END
+            this.topMargin = topMargin
+            marginEnd = dp(12)
+        }
+        virtualCoachView.layoutParams = params
+    }
+
+    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
+
+    fun updateVirtualCoachFromCurrentStep() {
+        if (!isCurrentFlowInitialized()) {
+            virtualCoachView.visibility = View.GONE
+            return
+        }
+        val step = currentFlow.steps.getOrNull(flowEngine.currentStepNumber() - 1)
+        if (step == null || sessionState == SessionState.COMPLETED) {
+            virtualCoachView.visibility = View.GONE
+            return
+        }
+        updateVirtualCoach(step.detect.jsonKey, step.state)
     }
 
     private fun toggleSessionRecording() {
@@ -461,5 +536,8 @@ class MainActivity : AppCompatActivity() {
     companion object {
         const val TUNING_SLIDER_MAX = 1000
         private const val CAMERA_AUTO_START_STABLE_MS = 600L
+        private const val VIRTUAL_COACH_ASPECT_RATIO = 0.72f
+        private const val VIRTUAL_COACH_HEIGHT_SCALE = 1.18f
+        private val VIRTUAL_COACH_SCALE_INDICES = listOf(0, 11, 12, 23, 24, 25, 26, 27, 28)
     }
 }

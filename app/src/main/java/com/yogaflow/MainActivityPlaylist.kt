@@ -74,6 +74,7 @@ internal fun MainActivity.resetToCameraSetup(message: String) {
     startButton.isEnabled = false
     startButton.alpha = 0.45f
     cameraSetupPanel.visibility = android.view.View.VISIBLE
+    updateVirtualCoachFromCurrentStep()
     cameraSetupStatus.text = "Checking body framing..."
     lastCountdownText = ""
     coachText.text = message

@@ -19,6 +19,15 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
 
+        <com.yogaflow.coach.VirtualCoachView
+            android:id="@+id/virtualCoachView"
+            android:layout_width="132dp"
+            android:layout_height="172dp"
+            android:layout_gravity="center_vertical|end"
+            android:layout_marginEnd="12dp"
+            android:elevation="12dp"
+            android:visibility="gone" />
+
         <LinearLayout
             android:id="@+id/cameraSetupPanel"
             android:layout_width="match_parent"
@@ -232,6 +241,13 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="Record" />
+
+                <Button
+                    android:id="@+id/debugToggleButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Debug" />
 
                 <Button
                     android:id="@+id/applySuggestionButton"

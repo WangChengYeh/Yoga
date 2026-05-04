@@ -8,8 +8,11 @@ internal fun MainActivity.bindViewsMain() {
     homeView = findViewById(R.id.homeView)
     classView = findViewById(R.id.classView)
     previewView = findViewById(R.id.previewView)
+    previewView.implementationMode = androidx.camera.view.PreviewView.ImplementationMode.COMPATIBLE
     overlayView = findViewById(R.id.overlayView)
+    virtualCoachView = findViewById(R.id.virtualCoachView)
     cameraSetupPanel = findViewById(R.id.cameraSetupPanel)
+    thresholdPanel = findViewById(R.id.thresholdPanel)
     cameraSetupStatus = findViewById(R.id.cameraSetupStatus)
     debugText = findViewById(R.id.debugText)
     coachText = findViewById(R.id.coachText)
@@ -29,7 +32,9 @@ internal fun MainActivity.bindViewsMain() {
     pauseButton = findViewById(R.id.pauseButton)
     restartButton = findViewById(R.id.restartButton)
     sessionRecordButton = findViewById(R.id.sessionRecordButton)
+    debugToggleButton = findViewById(R.id.debugToggleButton)
     sessionRecordStatus = findViewById(R.id.sessionRecordStatus)
+    virtualCoachView.bringToFront()
 }
 
 internal fun MainActivity.setupThresholdControlsMain() {
