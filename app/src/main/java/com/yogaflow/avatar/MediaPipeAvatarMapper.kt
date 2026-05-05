@@ -17,10 +17,11 @@ object MediaPipeAvatarMapper {
     private const val R_KNEE = 26
     private const val L_ANKLE = 27
     private const val R_ANKLE = 28
+    private const val MIN_REQUIRED_LANDMARKS = R_ANKLE + 1
 
     fun map(frame: PoseDetectionResult): AvatarRigFrame {
         val l = frame.worldLandmarks
-        if (l.isEmpty()) {
+        if (l.size < MIN_REQUIRED_LANDMARKS) {
             return AvatarRigFrame(System.currentTimeMillis(), emptyList())
         }
 
