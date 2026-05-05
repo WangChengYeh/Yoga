@@ -168,7 +168,6 @@ def main():
         export_texcoords=True,
         export_normals=True,
         export_materials='EXPORT',
-        export_colors=True,
         export_cameras=False,
         export_lights=False
     )
