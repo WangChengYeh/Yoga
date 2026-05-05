@@ -580,39 +580,23 @@ func apply_breathing(frame: Dictionary) -> void:
 
 ---
 
-## Android to Godot Communication
+### Android to Godot Communication
 
-### Phase 1: WebSocket Demo
-
-Use WebSocket first to validate data flow and animation switching.
+The final implemented architecture skips the separate external WebSocket app approach and directly embeds Godot into the Android app as a library.
 
 ```text
-Android Kotlin
-  GodotAvatarBridge.send(PoseCoachFrame)
-    ↓
-WebSocket JSON
-    ↓
-Godot AvatarCoachOverlay.gd
+Android Kotlin (MainActivity)
+  └─ GodotAvatarBridge (OkHttp WebSocket Client)
+       ↓ (127.0.0.1:9090 loopback)
+FrameLayout / GodotFragment
+  └─ Godot Engine (Embedded .pck)
+       └─ AvatarCoachOverlay.gd (TCPServer / WebSocketServer)
 ```
 
-Benefits:
-
-- easier debugging
-- Kotlin and Godot stay decoupled
-- no Android View lifecycle blocking while validating the avatar behavior
-
-### Phase 2: Godot Android Library / Plugin Bridge
-
-After the WebSocket demo works, evaluate tighter Android integration:
-
-```text
-FrameLayout
- ├─ CameraPreviewView
- ├─ PoseOverlayView
- └─ GodotAvatarView
-```
-
-This matches the existing overlay direction. Godot should appear as a picture-in-picture coach first. Transparent overlay can come later.
+Benefits of this Hybrid Embedded approach:
+- Android View hierarchy naturally hosts the 3D engine without blocking the camera preview.
+- Zero network latency: The WebSocket communication happens entirely via local loopback (`127.0.0.1`) within the same app process.
+- Bypasses the complex Godot Android Plugin (JNI) setup, allowing Godot and Kotlin to remain highly decoupled while still running natively inside a single APK.
 
 ---
 
@@ -657,7 +641,7 @@ spine alignment issue:
 
 ## Implementation Milestones
 
-### Milestone 1: Skeleton Standard Document
+### [DONE] Milestone 1: Skeleton Standard Document
 
 Create this document and use it as the asset contract.
 
@@ -667,7 +651,7 @@ Done when:
 Any model that follows this document can be imported into Godot and used by AvatarController.
 ```
 
-### Milestone 2: Blender Prototype Model
+### [DONE] Milestone 2: Blender Prototype Model
 
 Output:
 
@@ -684,7 +668,7 @@ Required bones can be found by name.
 Idle animation can play.
 ```
 
-### Milestone 3: Godot Avatar Controller
+### [DONE] Milestone 3: Godot Avatar Controller
 
 Add:
 
@@ -702,7 +686,7 @@ action=correct_knees → plays knee correction
 highlight=knees → highlights knees
 ```
 
-### Milestone 4: Kotlin Avatar Abstraction
+### [DONE] Milestone 4: Kotlin Avatar Abstraction
 
 Add:
 
@@ -720,15 +704,15 @@ PoseCoachFrame still sends high-level avatar action/highlight.
 The codebase has a stable place to add future avatar rig hints.
 ```
 
-### Milestone 5: Android Overlay Integration
+### [DONE] Milestone 5: Android Overlay Integration
 
 Done when:
 
 ```text
 Camera preview works.
 PoseOverlayView works.
-Godot avatar overlay works.
-Kotlin commands change Godot avatar animation.
+Godot avatar overlay works natively as a GodotFragment.
+Kotlin commands change Godot avatar animation over internal loopback socket.
 ```
 
 ---

@@ -401,7 +401,12 @@ func on_pose_coach_frame(frame):
 - 初期設定較麻煩
 - 需要處理 Godot 與 Activity lifecycle
 
-第一階段可以先用 WebSocket 驗證資料流；之後再評估是否改成更緊密的 Android bridge。
+### 最終決定：Hybrid 混合架構 (Godot Android Library + Local Loopback WebSocket)
+
+我們最終選擇了混合兩者優點的最佳解法：
+- 使用 **GodotFragment** 將 Godot 直接嵌入 Android APK 中 (選項 B)，達成無縫整合。
+- 保留 **WebSocket** 通訊 (選項 A)，但改走 local loopback (`127.0.0.1`) 進行 IPC。
+這樣既免除了 JNI / Plugin bridge 複雜的 C++ 與設定負擔，又讓 Kotlin 和 Godot 在同一個 App 內保持完美解耦與極速通訊。
 
 ---
 
