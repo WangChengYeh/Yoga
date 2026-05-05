@@ -1,6 +1,7 @@
 package com.yogaflow
 
 import android.Manifest
+import android.app.Activity
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.media.AudioAttributes
@@ -47,12 +48,14 @@ import com.yogaflow.session.LiveCoachSessionController
 import com.yogaflow.session.SessionRecorder
 import com.yogaflow.yoga.YogaPose
 import com.yogaflow.yoga.YogaPoseCatalog
+import org.godotengine.godot.Godot
+import org.godotengine.godot.GodotHost
 import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import kotlin.math.sqrt
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), GodotHost {
 
     lateinit var homeView: View
     lateinit var classView: View
@@ -117,6 +120,12 @@ class MainActivity : AppCompatActivity() {
     private var pendingTtsReady: Boolean? = null
     private val stateMachine = PoseStateMachine()
     private val autoTuningAdvisor = AutoTuningAdvisor()
+
+    override fun getActivity(): Activity = this
+
+    override fun getGodot(): Godot = Godot.getInstance(this)
+
+    override fun getCommandLine(): List<String> = emptyList()
 
     private val requestCameraPermission = registerForActivityResult(
         ActivityResultContracts.RequestPermission()

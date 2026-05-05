@@ -25,6 +25,7 @@ func _process(_delta: float) -> void:
 func apply_pose_coach_frame(frame: Dictionary) -> void:
     var avatar = frame.get("avatar", {})
     var coach = frame.get("coach", {})
+    var pose = frame.get("pose", {})
 
     var action = avatar.get("action", "hold_mountain")
     var highlight = avatar.get("highlight", null)
@@ -33,6 +34,15 @@ func apply_pose_coach_frame(frame: Dictionary) -> void:
     play_action(action)
     apply_highlight(highlight, severity)
     apply_breathing(frame)
+    apply_pose_metrics(pose)
+
+func apply_pose_metrics(pose: Dictionary) -> void:
+    if skeleton == null:
+        return
+    # Here we can apply IK or micro-adjustments based on real-time angles.
+    # For version 1, we ensure the wiring exists even if logic is minimal.
+    # Future: skeleton.set_bone_pose_rotation(...) or IK target updates.
+    pass
 
 func play_action(action: String) -> void:
     if action == current_action:
@@ -64,7 +74,7 @@ func _set_animation_state(state_name: String) -> void:
 func apply_highlight(highlight, severity: int) -> void:
     if skeleton == null:
         return
-    var highlight_scale := clamp(float(severity) / 3.0, 0.0, 1.0)
+    var highlight_scale: float = clamp(float(severity) / 3.0, 0.0, 1.0)
     if highlight == null or highlight_scale <= 0.0:
         return
     # Keep the first version non-invasive: visible action comes from pose changes,

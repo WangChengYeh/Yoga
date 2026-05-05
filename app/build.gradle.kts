@@ -29,6 +29,11 @@ android {
             isMinifyEnabled = false
         }
     }
+
+    androidResources {
+        // Godot 4 exports remapped scene and import artifacts under assets/.godot.
+        ignoreAssetsPattern = "!.svn:!.git:!.ds_store:!*.scc:<dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"
+    }
 }
 
 dependencies {
@@ -46,8 +51,8 @@ dependencies {
     implementation("com.google.mediapipe:tasks-vision:0.10.29")
     implementation("com.google.mediapipe:tasks-genai:0.10.27")
     
-    // Godot Android Library. Keep this on a Kotlin-1.9-compatible runtime.
-    implementation("org.godotengine:godot:4.3.0.stable")
+    // Keep Android runtime aligned with the Godot 4.6 exported project.pck.
+    implementation("org.godotengine:godot-lib:4.6.2.stable")
 
     // WebSocket bridge from Android/Kotlin to the embedded Godot avatar.
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
