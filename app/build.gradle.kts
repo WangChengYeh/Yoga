@@ -46,6 +46,9 @@ dependencies {
     implementation("com.google.mediapipe:tasks-vision:0.10.29")
     implementation("com.google.mediapipe:tasks-genai:0.10.27")
     
-    // Godot 4.3 Android Library
+    // Godot Android Library. Keep this on a Kotlin-1.9-compatible runtime.
     implementation("org.godotengine:godot:4.3.0.stable")
+
+    // WebSocket bridge from Android/Kotlin to the embedded Godot avatar.
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 }

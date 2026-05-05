@@ -242,6 +242,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         saveThresholdPreferencesMain()
+        godotAvatarBridge.close()
         cameraPipeline.stop()
         cameraExecutor.shutdown()
         coachExecutor.shutdown()
@@ -509,12 +510,17 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateVirtualCoach(detect: String, state: CoachState) {
-        val command = buildAvatarCommand(detect, state, matched = state != CoachState.CORRECTION, failReason = "")
-        virtualCoachView.visibility = if (sessionState == SessionState.COMPLETED) View.GONE else View.VISIBLE
+        val shouldShowCoach = detect.isNotBlank() &&
+            state != CoachState.SETUP &&
+            sessionState != SessionState.COMPLETED
+        virtualCoachView.visibility = if (shouldShowCoach) View.VISIBLE else View.GONE
     }
 
     private fun updateVirtualCoach(frame: PoseCoachFrame) {
-        virtualCoachView.visibility = if (sessionState == SessionState.COMPLETED) View.GONE else View.VISIBLE
+        val shouldShowCoach = frame.stepId.isNotBlank() &&
+            frame.avatar.action.isNotBlank() &&
+            sessionState != SessionState.COMPLETED
+        virtualCoachView.visibility = if (shouldShowCoach) View.VISIBLE else View.GONE
     }
 
     private fun buildPoseCoachFrame(
