@@ -29,7 +29,7 @@ import com.yogaflow.coach.PoseCoachFrame
 import com.yogaflow.coach.PoseFlowEngine
 import com.yogaflow.coach.PoseMetrics
 import com.yogaflow.coach.PoseStateMachine
-import com.yogaflow.coach.VirtualCoachView
+// import com.yogaflow.coach.VirtualCoachView
 import com.yogaflow.flow.AutoTuningAdvisor
 import com.yogaflow.flow.AutoTuningSuggestion
 import com.yogaflow.flow.FlowPlaylistEngine
@@ -58,7 +58,7 @@ class MainActivity : AppCompatActivity() {
     lateinit var classView: View
     lateinit var previewView: PreviewView
     lateinit var overlayView: PoseOverlayView
-    lateinit var virtualCoachView: VirtualCoachView
+    lateinit var virtualCoachView: View
     lateinit var cameraSetupPanel: View
     lateinit var thresholdPanel: View
     lateinit var cameraSetupStatus: TextView
@@ -510,12 +510,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateVirtualCoach(detect: String, state: CoachState) {
         val command = buildAvatarCommand(detect, state, matched = state != CoachState.CORRECTION, failReason = "")
-        virtualCoachView.setGuide(currentPose.id, detect, state, command)
         virtualCoachView.visibility = if (sessionState == SessionState.COMPLETED) View.GONE else View.VISIBLE
     }
 
     private fun updateVirtualCoach(frame: PoseCoachFrame) {
-        virtualCoachView.setPoseCoachFrame(frame)
         virtualCoachView.visibility = if (sessionState == SessionState.COMPLETED) View.GONE else View.VISIBLE
     }
 

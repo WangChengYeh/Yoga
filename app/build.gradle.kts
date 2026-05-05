@@ -45,4 +45,7 @@ dependencies {
     // Pinned: avoids relying on older overload availability for ImageProcessingOptions.
     implementation("com.google.mediapipe:tasks-vision:0.10.29")
     implementation("com.google.mediapipe:tasks-genai:0.10.27")
+    
+    // Godot 4.3 Android Library
+    implementation("org.godotengine:godot:4.3.0.stable")
 }
