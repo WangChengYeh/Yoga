@@ -135,6 +135,13 @@ def t_launch():
     shell(f"am force-stop {PKG}", check=False)
     time.sleep(1)
     adb("logcat", "-c")  # clear buffer — all subsequent logcat_since calls see from here
+
+    # Disable camera setup so tests go straight to the session screen
+    shell(f"am start -n {ACTIVITY} --ez devDisableCameraSetup true")
+    time.sleep(3)
+    shell(f"am force-stop {PKG}", check=False)
+    time.sleep(1)
+
     shell(f"am start -n {ACTIVITY}")
     time.sleep(4)
     screenshot("01_home")
@@ -155,7 +162,7 @@ def t_launch():
         assert "com.yogaflow" in logs, "App did not start per ActivityTaskManager"
 
 
-@test("start beginner class — camera screen visible")
+@test("start beginner class — session starts immediately (camera setup disabled)")
 def t_start_class():
     root = ui_dump()
     if root is not None:
@@ -165,11 +172,10 @@ def t_start_class():
     else:
         # Fallback: use previously observed coordinates
         w, h = screen_size()
-        # startClassButton is ~20% from left, ~90% down in portrait
         tap(int(w * 0.32), int(h * 0.88), "startClassButton (fallback)")
 
     time.sleep(4)
-    screenshot("02_class_camera_setup")
+    screenshot("02_session_started")
 
     # Godot should have initialized by now
     logs = logcat_since(["Godot", "GodotFragment"])
