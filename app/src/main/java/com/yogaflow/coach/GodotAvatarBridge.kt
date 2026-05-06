@@ -24,10 +24,6 @@ class GodotAvatarBridge(
         .readTimeout(0, TimeUnit.MILLISECONDS)
         .build()
 
-    init {
-        connect()
-    }
-
     @Synchronized
     private fun connect() {
         if (closed || connected) return

@@ -36,12 +36,17 @@ Use the ACP helper script — structured JSON-RPC protocol, streaming output, se
 | Read-only audit | `--mode plan` | Reviewing code, no edits |
 | Safe edit | `--mode auto_edit` | Fixing code, no shell commands (default) |
 
+Default model: `gemini-2.5-pro`. Use Pro only — do not fall back to flash/flash-lite.
+
 ```bash
-# Standard task (auto_edit)
+# Standard task (auto_edit, gemini-2.5-pro default)
 python3 scripts/gemini-acp.py "YOUR TASK"
 
 # Read-only audit
 python3 scripts/gemini-acp.py "YOUR TASK" --mode plan
+
+# Explicit model (e.g. if 2.5-pro quota exhausted)
+python3 scripts/gemini-acp.py "YOUR TASK" --model auto-gemini-3
 
 # Resume a previous session (preserves context)
 python3 scripts/gemini-acp.py "YOUR TASK" --resume <session-id>

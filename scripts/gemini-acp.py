@@ -6,16 +6,23 @@ Usage:
     python3 scripts/gemini-acp.py "Your task here"
     python3 scripts/gemini-acp.py "Your task" --mode plan        # read-only
     python3 scripts/gemini-acp.py "Your task" --mode auto_edit   # safe edits (default)
+    python3 scripts/gemini-acp.py "Your task" --model gemini-2.5-pro
     python3 scripts/gemini-acp.py "Your task" --resume <session-id>
     python3 scripts/gemini-acp.py --list-sessions
+
+Default model: gemini-2.5-pro (Pro only — do not use flash/flash-lite)
+Fallback if pro quota exhausted: auto-gemini-3 (gemini-3.1-pro)
 """
 
 import subprocess, json, sys, threading, queue, time, argparse, os
 
 CWD = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+FALLBACK_MODELS = ["auto-gemini-3", "gemini-2.5-pro"]  # Pro only
 
-def run_acp(task: str, mode: str = "auto_edit", resume_session: str | None = None) -> str:
+
+def run_acp(task: str, mode: str = "auto_edit", resume_session: str | None = None,
+            model: str = "gemini-2.5-pro") -> str:
     proc = subprocess.Popen(
         ["gemini", "--acp", "--approval-mode", mode],
         stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -68,7 +75,20 @@ def run_acp(task: str, mode: str = "auto_edit", resume_session: str | None = Non
               "params": {"cwd": CWD, "mcpServers": []}})
 
     r = wait_id(3)
+    if "error" in r:
+        print(f"[error] session init failed: {r['error']}", file=sys.stderr)
+        sys.exit(1)
     session_id = r["result"]["sessionId"]
+
+    # Switch model if requested
+    if model:
+        send({"jsonrpc": "2.0", "id": 10, "method": "session/set_model",
+              "params": {"sessionId": session_id, "modelId": model}})
+        mr = wait_id(10, timeout=10)
+        if "error" in mr:
+            print(f"[warn] model switch failed: {mr['error']['message']}", file=sys.stderr)
+        else:
+            print(f"[model] {model}", file=sys.stderr)
 
     # Prompt
     send({"jsonrpc": "2.0", "id": 4, "method": "session/prompt",
@@ -76,7 +96,7 @@ def run_acp(task: str, mode: str = "auto_edit", resume_session: str | None = Non
                      "prompt": [{"type": "text", "text": task}]}})
 
     chunks: list[str] = []
-    deadline = time.time() + 180
+    deadline = time.time() + 300
     while time.time() < deadline:
         try:
             msg = q.get(timeout=2)
@@ -89,18 +109,28 @@ def run_acp(task: str, mode: str = "auto_edit", resume_session: str | None = Non
                         sys.stdout.write(text)
                         sys.stdout.flush()
             elif msg.get("id") == 4:
+                if "error" in msg:
+                    err = msg["error"]
+                    print(f"\n[error] {err.get('message', err)}", file=sys.stderr)
+                    # Quota exhausted — suggest fallback
+                    if "quota" in err.get("message", "").lower() or "exhausted" in err.get("message", "").lower():
+                        print(f"[hint] retry with a fallback model: {FALLBACK_MODELS}", file=sys.stderr)
+                    sys.exit(1)
                 sys.stdout.write("\n")
                 meta = msg.get("result", {}).get("_meta", {})
                 usage = meta.get("quota", {}).get("token_count", {})
                 if usage:
-                    print(f"\n[tokens: in={usage.get('input_tokens',0)} out={usage.get('output_tokens',0)} | session={session_id}]",
+                    print(f"[tokens: in={usage.get('input_tokens',0)} out={usage.get('output_tokens',0)} | session={session_id}]",
                           file=sys.stderr)
                 break
         except queue.Empty:
             pass
 
     proc.stdin.close()
-    proc.wait(timeout=5)
+    try:
+        proc.wait(timeout=10)
+    except subprocess.TimeoutExpired:
+        proc.kill()
     return "".join(chunks)
 
 
@@ -118,6 +148,8 @@ def main():
     parser.add_argument("task", nargs="?", help="Task prompt")
     parser.add_argument("--mode", choices=["plan", "auto_edit"], default="auto_edit",
                         help="Approval mode (default: auto_edit)")
+    parser.add_argument("--model", metavar="MODEL_ID", default="gemini-2.5-pro",
+                        help="Gemini model ID (default: gemini-2.5-pro)")
     parser.add_argument("--resume", metavar="SESSION_ID",
                         help="Resume an existing session by ID")
     parser.add_argument("--list-sessions", action="store_true",
@@ -132,7 +164,7 @@ def main():
         parser.print_help()
         sys.exit(1)
 
-    run_acp(args.task, mode=args.mode, resume_session=args.resume)
+    run_acp(args.task, mode=args.mode, resume_session=args.resume, model=args.model)
 
 
 if __name__ == "__main__":

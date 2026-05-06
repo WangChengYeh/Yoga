@@ -236,6 +236,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        getGodot().onNewIntent(intent)
         setIntent(intent)
         applyDevelopmentIntentFlags(intent)
         if (isCurrentFlowInitialized()) {
@@ -247,6 +248,21 @@ class MainActivity : AppCompatActivity(), GodotHost {
                 }
             )
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        getGodot().onResume()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        getGodot().onPause()
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        getGodot().onActivityResult(requestCode, resultCode, data)
     }
 
     override fun onDestroy() {
@@ -410,6 +426,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
         sessionState = SessionState.RUNNING
         cameraSetupPanel.visibility = View.GONE
         virtualCoachView.visibility = View.VISIBLE
+        godotAvatarBridge.connect()
         coachCueController.reset()
         updateUi(animated = false)
     }
