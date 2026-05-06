@@ -89,14 +89,14 @@ Issue priority order:
 7. Documentation updates
 8. UI polish
 
-For the current phase, prioritize work that moves the Godot Avatar coach overlay forward:
+For the current phase, the Godot avatar Godot-side work is done. The remaining overlay work is Android-side:
 
-- GLB avatar import
-- idle / breathing animation
-- forward fold animation
-- Godot scene prototype
-- Kotlin-to-Godot command contract
-- replacing the current right-side placeholder avatar
+- ~~GLB avatar import~~ ✅
+- ~~idle / breathing animation~~ ✅
+- ~~forward fold animation~~ ✅
+- ~~Godot scene prototype~~ ✅
+- ~~Kotlin-to-Godot WebSocket command contract~~ ✅
+- **Embed `GodotFragment` in `activity_main.xml` as right-side overlay** (#45) ← next
 
 Suggested hourly prompt:
 
@@ -181,13 +181,32 @@ Claude should ask agents to leave behind reusable scripts whenever they discover
 - Kotlin (main logic) + Godot (avatar rendering) + MediaPipe (pose detection)
 - Architecture: `docs/architecture.md`
 - Roadmap: `docs/roadmap.md`
-- Active work: Godot↔Android bridge integration
+- Active work: Android embedding of Godot avatar overlay
 - Avatar design direction: `docs/godot-avatar-coach-overlay.md`
 
 ## Current Task Queue
 
-1. Audit and fix Godot bridge integration (Gemini → Codex handoff)
-2. Verify Gradle build passes
-3. P1 polish items (see `docs/roadmap.md`)
-4. Build the first Godot GLB model-led avatar coach prototype (see issue #40)
-5. Script repeated adb / Gradle / Godot verification workflows for reliable Codex ↔ Gemini handoff
+Priority order follows issue labels and roadmap tiers (build bugs → crashes → bridge → P1 polish → P2 content).
+
+### Active (in progress)
+
+- **#40** — Godot GLB avatar prototype: GLB imported, AnimationPlayer with `idle` + `forward_fold` done. **Remaining:** Android embedding via `GodotFragment` (tracked separately as #45).
+- **#45** — Embed `GodotFragment` in `MainActivity` layout as right-side overlay. `GodotHost` is wired; `GodotAvatarBridge` is initialized. Missing: add fragment to layout, call `bridge.start()` in `onGodotMainLoopStarted`.
+
+### P1 Polish (next up)
+
+- **#13** — Replace demo cover drawable with real generated course images (PNG/JPG).
+- **#43** — Add visual body framing box overlay during camera setup (`CameraFramingCoach` data is ready; needs draw layer on `PoseOverlayView`).
+- **#44** — Add voice pacing rules to prevent repeated coach cues (`CoachCueController` cooldown window).
+
+### P2 Content
+
+- **#5** — Integrate MediaPipe LLM (Gemma local inference) — stretch goal, fallback is rule-based.
+- Expand flow library from 1 → 10–30 flows (no issue yet; create when starting).
+
+### Done (do not re-queue)
+
+- ~~Audit and fix Godot bridge integration~~ — WebSocket bridge complete (`GodotAvatarBridge.kt` ↔ `AvatarCoachOverlay.gd`).
+- ~~Verify Gradle build passes~~ — v0.9.0 builds and signs successfully.
+- ~~Fix unsigned APK (#42)~~ — Closed. Debug signing added; `scripts/android-release.sh` added.
+- ~~Script adb / Gradle workflows~~ — `scripts/integration_test.py`, `scripts/android-release.sh`, `scripts/test-gemini-a2a.sh` in place.
