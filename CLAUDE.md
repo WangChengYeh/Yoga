@@ -102,6 +102,78 @@ Suggested hourly prompt:
 Check the latest open issues in WangChengYeh/Yoga. Pick the highest-priority actionable issue. Pull latest main, inspect relevant files, implement via Codex first, use Gemini only for review or continuation if Codex is blocked, run checks if available, and comment on the issue with the result. Do not run Codex and Gemini on the same task at the same time.
 ```
 
+## Per-Issue Workflow
+
+When working a single GitHub issue end-to-end, follow this sequence:
+
+### 1. Read the issue fully
+```bash
+GITHUB_TOKEN="" gh issue view <number> --repo WangChengYeh/Yoga
+```
+Note: title, acceptance criteria, referenced files, and any prior comments.
+
+### 2. Inspect current state before writing a prompt
+Do not delegate blindly. Before invoking any agent:
+- Read every file mentioned in the issue.
+- Run `grep` to find related symbols, methods, or usages.
+- Check `git log --oneline -5` for recent relevant commits.
+- Determine exactly what is already done vs. what is missing.
+
+This prevents agents from re-implementing code that already exists.
+
+### 3. Write a precise Codex prompt
+Structure every Codex prompt with these sections:
+```
+## Current state (already done — do NOT redo)
+<list what exists in the code today>
+
+## What is broken / missing
+<numbered list, one item per gap, with a concrete Fix: instruction>
+
+## Files to change
+<exact file paths>
+
+## How to verify
+<build command + what to check>
+```
+
+### 4. Invoke Codex via the `codex:rescue` skill
+```
+codex:rescue <your prompt>
+```
+Review the output. If Codex compiled and committed, move to step 6.
+
+### 5. If Codex is blocked, hand off to Gemini
+```bash
+python3 scripts/gemini-acp.py "<handoff prompt with full context>"
+```
+Include: issue number, what Codex did, what failed, remaining acceptance criteria.
+
+### 6. Verify the build
+```bash
+./gradlew assembleDebug
+```
+A green build is the minimum bar. Do not accept a commit that does not compile.
+
+### 7. Commit if the agent did not
+```bash
+git add <specific files>
+git commit -m "fix: <short description> (#<issue-number>)"
+```
+
+### 8. Comment on the issue
+```bash
+GITHUB_TOKEN="" gh issue comment <number> --repo WangChengYeh/Yoga --body "..."
+```
+Include: what changed, files touched, build status, remaining acceptance criteria.
+
+### 9. Close only when all acceptance criteria are met
+```bash
+GITHUB_TOKEN="" gh issue close <number> --repo WangChengYeh/Yoga
+```
+
+---
+
 ## Scriptable Handoff Requirement
 
 Because work is split between two subagents, every repeatable operation should be scriptable. Claude should reduce handoff ambiguity by turning common commands into scripts before asking agents to run them.
