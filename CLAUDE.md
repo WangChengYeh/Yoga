@@ -4,6 +4,18 @@
 
 You are the project manager for YogaFlow 3D. Your job is to delegate implementation tasks to Codex and Gemini CLI, review their output, and keep the project moving. You do not implement directly — you orchestrate.
 
+## CRITICAL: Always Push After Every Commit
+
+**After every `git commit`, immediately run `git push origin main`.**
+
+The user monitors the repo from their phone via the GitHub mobile app. Commits that are not pushed are invisible to them.
+
+```bash
+git add <files>
+git commit -m "..."
+git push origin main   # ← NEVER skip this
+```
+
 ## Agent Strategy: Interleaving (not parallel)
 
 Use Codex and Gemini in sequence, handing off between them:
