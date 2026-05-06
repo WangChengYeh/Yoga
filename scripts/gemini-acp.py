@@ -6,23 +6,28 @@ Usage:
     python3 scripts/gemini-acp.py "Your task here"
     python3 scripts/gemini-acp.py "Your task" --mode plan        # read-only
     python3 scripts/gemini-acp.py "Your task" --mode auto_edit   # safe edits (default)
-    python3 scripts/gemini-acp.py "Your task" --model gemini-2.5-pro
+    python3 scripts/gemini-acp.py "Your task" --model auto-gemini-3
     python3 scripts/gemini-acp.py "Your task" --resume <session-id>
     python3 scripts/gemini-acp.py --list-sessions
 
-Default model: gemini-2.5-pro (Pro only — do not use flash/flash-lite)
-Fallback if pro quota exhausted: auto-gemini-3 (gemini-3.1-pro)
+Default model: auto-gemini-3
 """
 
 import subprocess, json, sys, threading, queue, time, argparse, os
 
 CWD = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-FALLBACK_MODELS = ["auto-gemini-3", "gemini-2.5-pro"]  # Pro only
+# Ordered fallback chain — Pro only, no flash/flash-lite
+FALLBACK_MODELS = ["auto-gemini-3"]
 
 
-def run_acp(task: str, mode: str = "auto_edit", resume_session: str | None = None,
-            model: str = "gemini-2.5-pro") -> str:
+def _is_quota_error(msg: str) -> bool:
+    low = msg.lower()
+    return "quota" in low or "exhausted" in low or "rate limit" in low or "429" in low
+
+
+def _run_once(task: str, mode: str, resume_session: str | None, model: str) -> tuple[str, str | None]:
+    """Run one ACP attempt. Returns (response_text, session_id) or raises on quota error."""
     proc = subprocess.Popen(
         ["gemini", "--acp", "--approval-mode", mode],
         stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -76,19 +81,19 @@ def run_acp(task: str, mode: str = "auto_edit", resume_session: str | None = Non
 
     r = wait_id(3)
     if "error" in r:
-        print(f"[error] session init failed: {r['error']}", file=sys.stderr)
-        sys.exit(1)
-    session_id = r["result"]["sessionId"]
+        proc.stdin.close()
+        proc.kill()
+        raise RuntimeError(f"session init failed: {r['error']}")
+    session_id: str = r["result"]["sessionId"]
 
-    # Switch model if requested
-    if model:
-        send({"jsonrpc": "2.0", "id": 10, "method": "session/set_model",
-              "params": {"sessionId": session_id, "modelId": model}})
-        mr = wait_id(10, timeout=10)
-        if "error" in mr:
-            print(f"[warn] model switch failed: {mr['error']['message']}", file=sys.stderr)
-        else:
-            print(f"[model] {model}", file=sys.stderr)
+    # Switch model
+    send({"jsonrpc": "2.0", "id": 10, "method": "session/set_model",
+          "params": {"sessionId": session_id, "modelId": model}})
+    mr = wait_id(10, timeout=10)
+    if "error" in mr:
+        print(f"[warn] model switch failed: {mr['error']['message']}", file=sys.stderr)
+    else:
+        print(f"[model] {model}", file=sys.stderr)
 
     # Prompt
     send({"jsonrpc": "2.0", "id": 4, "method": "session/prompt",
@@ -96,6 +101,7 @@ def run_acp(task: str, mode: str = "auto_edit", resume_session: str | None = Non
                      "prompt": [{"type": "text", "text": task}]}})
 
     chunks: list[str] = []
+    quota_err: str | None = None
     deadline = time.time() + 300
     while time.time() < deadline:
         try:
@@ -110,18 +116,21 @@ def run_acp(task: str, mode: str = "auto_edit", resume_session: str | None = Non
                         sys.stdout.flush()
             elif msg.get("id") == 4:
                 if "error" in msg:
-                    err = msg["error"]
-                    print(f"\n[error] {err.get('message', err)}", file=sys.stderr)
-                    # Quota exhausted — suggest fallback
-                    if "quota" in err.get("message", "").lower() or "exhausted" in err.get("message", "").lower():
-                        print(f"[hint] retry with a fallback model: {FALLBACK_MODELS}", file=sys.stderr)
-                    sys.exit(1)
-                sys.stdout.write("\n")
-                meta = msg.get("result", {}).get("_meta", {})
-                usage = meta.get("quota", {}).get("token_count", {})
-                if usage:
-                    print(f"[tokens: in={usage.get('input_tokens',0)} out={usage.get('output_tokens',0)} | session={session_id}]",
-                          file=sys.stderr)
+                    err_msg = msg["error"].get("message", str(msg["error"]))
+                    if _is_quota_error(err_msg):
+                        quota_err = err_msg
+                    else:
+                        print(f"\n[error] {err_msg}", file=sys.stderr)
+                        proc.stdin.close()
+                        proc.kill()
+                        sys.exit(1)
+                else:
+                    sys.stdout.write("\n")
+                    meta = msg.get("result", {}).get("_meta", {})
+                    usage = meta.get("quota", {}).get("token_count", {})
+                    if usage:
+                        print(f"[tokens: in={usage.get('input_tokens',0)} out={usage.get('output_tokens',0)}]",
+                              file=sys.stderr)
                 break
         except queue.Empty:
             pass
@@ -131,7 +140,39 @@ def run_acp(task: str, mode: str = "auto_edit", resume_session: str | None = Non
         proc.wait(timeout=10)
     except subprocess.TimeoutExpired:
         proc.kill()
-    return "".join(chunks)
+
+    if quota_err:
+        raise _QuotaError(quota_err, session_id)
+
+    print(f"[session] {session_id}", file=sys.stderr)
+    return "".join(chunks), session_id
+
+
+class _QuotaError(Exception):
+    def __init__(self, message: str, session_id: str):
+        super().__init__(message)
+        self.session_id = session_id
+
+
+def run_acp(task: str, mode: str = "auto_edit", resume_session: str | None = None,
+            model: str = "auto-gemini-3") -> str:
+    """Run ACP with automatic fallback on quota exhaustion."""
+    models_to_try = [model] + [m for m in FALLBACK_MODELS if m != model]
+
+    for attempt, m in enumerate(models_to_try):
+        try:
+            text, _ = _run_once(task, mode, resume_session, m)
+            return text
+        except _QuotaError as e:
+            if attempt < len(models_to_try) - 1:
+                next_model = models_to_try[attempt + 1]
+                print(f"[quota] {m} exhausted — retrying with {next_model}", file=sys.stderr)
+                resume_session = None  # start fresh session on new model
+            else:
+                print(f"[error] All models quota-exhausted. Last error: {e}", file=sys.stderr)
+                sys.exit(1)
+
+    return ""
 
 
 def list_sessions():
@@ -148,8 +189,8 @@ def main():
     parser.add_argument("task", nargs="?", help="Task prompt")
     parser.add_argument("--mode", choices=["plan", "auto_edit"], default="auto_edit",
                         help="Approval mode (default: auto_edit)")
-    parser.add_argument("--model", metavar="MODEL_ID", default="gemini-2.5-pro",
-                        help="Gemini model ID (default: gemini-2.5-pro)")
+    parser.add_argument("--model", metavar="MODEL_ID", default="auto-gemini-3",
+                        help="Gemini model ID (default: auto-gemini-3)")
     parser.add_argument("--resume", metavar="SESSION_ID",
                         help="Resume an existing session by ID")
     parser.add_argument("--list-sessions", action="store_true",
