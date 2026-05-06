@@ -51,7 +51,7 @@ internal fun MainActivity.animateFlowTransition() {
 
 internal fun MainActivity.showHome() {
     homeView.visibility = View.VISIBLE
-    classView.visibility = View.GONE
+    classView.visibility = View.VISIBLE
 }
 
 internal fun MainActivity.showClass() {
@@ -61,6 +61,6 @@ internal fun MainActivity.showClass() {
 }
 
 internal fun MainActivity.startCamera() {
-    if (classView.visibility != View.VISIBLE) return
+    if (classView.visibility != View.VISIBLE || homeView.visibility == View.VISIBLE) return
     cameraPipeline.start()
 }

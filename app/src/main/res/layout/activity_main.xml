@@ -7,7 +7,7 @@
         android:id="@+id/classView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:visibility="gone">
+        android:visibility="visible">
 
         <androidx.camera.view.PreviewView
             android:id="@+id/previewView"
