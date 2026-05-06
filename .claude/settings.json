@@ -1,5 +1,17 @@
 {
   "enabledPlugins": {
     "codex@openai-codex": true
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash scripts/claude-stop-hook.sh"
+          }
+        ]
+      }
+    ]
   }
 }
