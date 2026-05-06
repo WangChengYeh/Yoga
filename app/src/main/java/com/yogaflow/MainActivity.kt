@@ -537,7 +537,11 @@ class MainActivity : AppCompatActivity(), GodotHost {
             7000L to "hold_squat",
             9000L to "hold_twist",
             11000L to "correct_knees",
-            13000L to "hold_mountain"
+            13000L to "walk_step_right",
+            15000L to "walk_step_left",
+            17000L to "walk_step_right",
+            19000L to "walk_step_left",
+            21000L to "hold_mountain"
         )
         for ((delay, action) in steps) {
             handler.postDelayed({

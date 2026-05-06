@@ -95,6 +95,10 @@ func play_action(action: String) -> void:
             _set_animation_state("squat")
         "hold_twist":
             _set_animation_state("twist")
+        "walk_step_left":
+            _set_animation_state("walk_step_left")
+        "walk_step_right":
+            _set_animation_state("walk_step_right")
         _ when action.begins_with("hold_"):
             _set_animation_state("idle")
         _:
@@ -154,6 +158,14 @@ func _apply_fallback_pose(state_name: String) -> void:
             target_rotation.x = deg_to_rad(-18.0)
         "twist":
             target_rotation.y = deg_to_rad(38.0)
+        "walk_step_left":
+            target_position.x = _base_position.x - 0.12
+            target_position.y = _base_position.y - 0.04
+            target_rotation.y = deg_to_rad(15.0)
+        "walk_step_right":
+            target_position.x = _base_position.x + 0.12
+            target_position.y = _base_position.y - 0.04
+            target_rotation.y = deg_to_rad(-15.0)
         _:
             target_rotation = _base_rotation
             target_position = _base_position
