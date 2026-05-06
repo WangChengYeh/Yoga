@@ -26,11 +26,14 @@ $ADB shell screencap -p /sdcard/avatar-self-test.png
 $ADB pull /sdcard/avatar-self-test.png "${ARTIFACTS}/avatar-self-test.png"
 $ADB shell rm /sdcard/avatar-self-test.png
 
-echo "[5/5] Dumping UI hierarchy..."
-$ADB shell uiautomator dump /sdcard/ui-dump.xml
-$ADB pull /sdcard/ui-dump.xml "${ARTIFACTS}/ui-dump.xml"
-$ADB shell rm /sdcard/ui-dump.xml
+echo "[5/5] Dumping UI hierarchy (best-effort)..."
+if $ADB shell uiautomator dump /sdcard/ui-dump.xml 2>/dev/null; then
+    $ADB pull /sdcard/ui-dump.xml "${ARTIFACTS}/ui-dump.xml" 2>/dev/null || true
+    $ADB shell rm /sdcard/ui-dump.xml 2>/dev/null || true
+    echo "UI dump saved:    ${ARTIFACTS}/ui-dump.xml"
+else
+    echo "UI dump skipped (app busy/animating — expected with Godot running)"
+fi
 
 echo "Screenshot saved: ${ARTIFACTS}/avatar-self-test.png"
-echo "UI dump saved:    ${ARTIFACTS}/ui-dump.xml"
 echo "PASS: Avatar self-test complete. Inspect screenshot to visually verify avatar poses."
