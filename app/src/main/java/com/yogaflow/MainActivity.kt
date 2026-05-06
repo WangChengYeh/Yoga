@@ -559,7 +559,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
             phase = "running",
             pose = PoseMetrics(null, null, null, null, null),
             coach = CoachVisualState("ok", null, "Self-test: $action", 0),
-            avatar = AvatarCommand(action = action, emotion = "calm", highlight = null)
+            avatar = AvatarCommand(action = action, emotion = "calm", highlight = null, screenSide = "right")
         )
     }
 
@@ -681,7 +681,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
     ): PoseCoachFrame {
         val step = currentFlow.steps.getOrNull(flowEngine.currentStepNumber() - 1)
         val coachState = if (matched && state != CoachState.CORRECTION) "ok" else "needs_correction"
-        val avatarCommand = buildAvatarCommand(detect, state, matched, failReason)
+        val avatarCommand = buildAvatarCommand(detect, state, matched, failReason, humanScreenSide(frame))
         return PoseCoachFrame(
             timestampMs = System.currentTimeMillis(),
             stepId = step?.detect?.jsonKey ?: detect,
@@ -717,7 +717,8 @@ class MainActivity : AppCompatActivity(), GodotHost {
         detect: String,
         state: CoachState,
         matched: Boolean,
-        failReason: String
+        failReason: String,
+        screenSide: String = "right"
     ): AvatarCommand {
         val highlight = highlightFor(detect, failReason)
         val action = when {
@@ -737,7 +738,20 @@ class MainActivity : AppCompatActivity(), GodotHost {
             state == CoachState.MOVEMENT || state == CoachState.TRANSITION -> "attentive"
             else -> "calm"
         }
-        return AvatarCommand(action = action, emotion = emotion, highlight = highlight)
+        return AvatarCommand(action = action, emotion = emotion, highlight = highlight, screenSide = screenSide)
+    }
+
+    private fun humanScreenSide(frame: PoseDetectionResult): String {
+        val nose = frame.imageLandmarks.getOrNull(0)
+        val ls = frame.imageLandmarks.getOrNull(11)
+        val rs = frame.imageLandmarks.getOrNull(12)
+        val rawX: Float = when {
+            nose != null -> nose.x()
+            ls != null && rs != null -> (ls.x() + rs.x()) / 2f
+            else -> return "right"
+        }
+        val screenX = if (frame.isMirrored) 1f - rawX else rawX
+        return if (screenX < 0.5f) "left" else "right"
     }
 
     private fun severityFor(state: CoachState, matched: Boolean, failReason: String): Int {

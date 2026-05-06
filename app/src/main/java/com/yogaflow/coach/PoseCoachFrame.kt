@@ -33,12 +33,14 @@ data class CoachVisualState(
 data class AvatarCommand(
     val action: String,
     val emotion: String,
-    val highlight: String?
+    val highlight: String?,
+    val screenSide: String = "right"
 ) {
     fun toJson(): JSONObject = JSONObject()
         .put("action", action)
         .put("emotion", emotion)
         .putNullable("highlight", highlight)
+        .put("screen_side", screenSide)
 }
 
 data class PoseCoachFrame(

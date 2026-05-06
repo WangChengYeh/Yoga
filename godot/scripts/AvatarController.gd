@@ -10,6 +10,7 @@ var current_action := ""
 var _base_position := Vector3.ZERO
 var _base_rotation := Vector3.ZERO
 var _base_scale := Vector3.ONE
+var _side_x_offset: float = 0.4
 
 func _ready() -> void:
     _base_position = position
@@ -49,12 +50,25 @@ func apply_pose_coach_frame(frame: Dictionary) -> void:
     var pose = frame.get("pose", {})
 
     var action = avatar.get("action", "hold_mountain")
+    var screen_side = avatar.get("screen_side", "right")
     var highlight = avatar.get("highlight", null)
     var severity = coach.get("severity", 0)
 
+    apply_screen_side(screen_side)
     play_action(action)
     apply_highlight(highlight, severity)
     apply_pose_metrics(pose)
+
+func apply_screen_side(side: String) -> void:
+    match side:
+        "left":
+            _side_x_offset = -0.4
+        "right":
+            _side_x_offset = 0.4
+        _:
+            _side_x_offset = 0.0
+    var tween = create_tween()
+    tween.tween_property(self, "position:x", _base_position.x + _side_x_offset, 0.4)
 
 func apply_skin(skin_name: String) -> void:
     match skin_name:
@@ -140,6 +154,7 @@ func _try_play_animation(state_name: String) -> bool:
 func _apply_fallback_pose(state_name: String) -> void:
     var target_rotation := _base_rotation
     var target_position := _base_position
+    target_position.x = _base_position.x + _side_x_offset
     match state_name:
         "forward_fold":
             target_rotation.x = deg_to_rad(-35.0)
@@ -159,16 +174,16 @@ func _apply_fallback_pose(state_name: String) -> void:
         "twist":
             target_rotation.y = deg_to_rad(38.0)
         "walk_step_left":
-            target_position.x = _base_position.x - 0.12
+            target_position.x = _base_position.x + _side_x_offset - 0.12
             target_position.y = _base_position.y - 0.04
             target_rotation.y = deg_to_rad(15.0)
         "walk_step_right":
-            target_position.x = _base_position.x + 0.12
+            target_position.x = _base_position.x + _side_x_offset + 0.12
             target_position.y = _base_position.y - 0.04
             target_rotation.y = deg_to_rad(-15.0)
         _:
             target_rotation = _base_rotation
-            target_position = _base_position
+            target_position = Vector3(_base_position.x + _side_x_offset, _base_position.y, _base_position.z)
     var tween = create_tween().set_parallel(true)
     tween.tween_property(self, "rotation", target_rotation, 0.5)
     tween.tween_property(self, "position", target_position, 0.5)
