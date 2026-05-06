@@ -766,7 +766,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
         val bottomReserved = dp(96)
         val maxCoachHeight = (classView.height * VIRTUAL_COACH_MAX_HEIGHT_FRACTION).toInt()
             .coerceAtMost((classView.height - bottomReserved - dp(8)).coerceAtLeast(dp(180)))
-        val minCoachHeight = dp(320).coerceAtMost(maxCoachHeight)
+        val minCoachHeight = dp(420).coerceAtMost(maxCoachHeight)
         val targetHeight = ((maxY - minY) * VIRTUAL_COACH_HEIGHT_SCALE)
             .toInt()
             .coerceIn(minCoachHeight, maxCoachHeight)

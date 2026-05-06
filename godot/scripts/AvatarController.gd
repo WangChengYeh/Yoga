@@ -36,7 +36,7 @@ func _setup_animations() -> void:
     var forward_fold_rotation_track := forward_fold.add_track(Animation.TYPE_VALUE)
     forward_fold.track_set_path(forward_fold_rotation_track, NodePath(".:rotation"))
     forward_fold.track_insert_key(forward_fold_rotation_track, 0.0, _base_rotation)
-    forward_fold.track_insert_key(forward_fold_rotation_track, 1.5, Vector3(deg_to_rad(-18.0), _base_rotation.y, _base_rotation.z))
+    forward_fold.track_insert_key(forward_fold_rotation_track, 1.5, Vector3(deg_to_rad(-35.0), _base_rotation.y, _base_rotation.z))
 
     var library := AnimationLibrary.new()
     library.add_animation("idle", idle)
@@ -138,22 +138,22 @@ func _apply_fallback_pose(state_name: String) -> void:
     var target_position := _base_position
     match state_name:
         "forward_fold":
-            target_rotation.x = deg_to_rad(-18.0)
-            target_position.y = _base_position.y - 0.04
-        "correct_knees":
-            target_rotation.x = deg_to_rad(-10.0)
-            target_rotation.z = deg_to_rad(4.0)
-        "correct_hips":
-            target_rotation.x = deg_to_rad(-14.0)
-            target_position.z = _base_position.z + 0.04
-        "correct_spine":
-            target_rotation.x = deg_to_rad(-6.0)
-            target_rotation.z = deg_to_rad(-4.0)
-        "squat":
+            target_rotation.x = deg_to_rad(-35.0)
             target_position.y = _base_position.y - 0.10
-            target_rotation.x = deg_to_rad(-8.0)
+        "correct_knees":
+            target_rotation.x = deg_to_rad(-20.0)
+            target_rotation.z = deg_to_rad(8.0)
+        "correct_hips":
+            target_rotation.x = deg_to_rad(-28.0)
+            target_position.z = _base_position.z + 0.08
+        "correct_spine":
+            target_rotation.x = deg_to_rad(-12.0)
+            target_rotation.z = deg_to_rad(-8.0)
+        "squat":
+            target_position.y = _base_position.y - 0.22
+            target_rotation.x = deg_to_rad(-18.0)
         "twist":
-            target_rotation.y = deg_to_rad(18.0)
+            target_rotation.y = deg_to_rad(38.0)
         _:
             target_rotation = _base_rotation
             target_position = _base_position
