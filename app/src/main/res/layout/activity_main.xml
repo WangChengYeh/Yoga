@@ -360,6 +360,47 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
                 android:text="Recovery Class · Twist" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="Coach Style"
+                android:textColor="#CCCCCC"
+                android:textSize="14sp" />
+
+            <RadioGroup
+                android:id="@+id/skinSelector"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal">
+
+                <RadioButton
+                    android:id="@+id/skinClassic"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Classic"
+                    android:textColor="#FFFFFF"
+                    android:checked="true" />
+
+                <RadioButton
+                    android:id="@+id/skinNature"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Nature"
+                    android:textColor="#FFFFFF" />
+
+                <RadioButton
+                    android:id="@+id/skinOcean"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Ocean"
+                    android:textColor="#FFFFFF" />
+            </RadioGroup>
         </LinearLayout>
     </ScrollView>
 

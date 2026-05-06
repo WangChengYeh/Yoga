@@ -78,6 +78,10 @@ class GodotAvatarBridge(
         sendJson(jsonString)
     }
 
+    fun sendSkin(skin: String) {
+        sendJson("""{"type":"set_skin","skin":"$skin"}""")
+    }
+
     @Synchronized
     private fun sendJson(jsonString: String) {
         val socket = webSocket

@@ -39,5 +39,9 @@ func _handle_message(text: String):
     if err == OK:
         var data = json.get_data()
         if typeof(data) == TYPE_DICTIONARY:
+            if data.get("type") == "set_skin":
+                if avatar_controller:
+                    avatar_controller.apply_skin(data.get("skin", "classic"))
+                return
             if avatar_controller:
                 avatar_controller.apply_pose_coach_frame(data)

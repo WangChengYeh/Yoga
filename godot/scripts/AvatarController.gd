@@ -3,6 +3,8 @@ extends Node3D
 @onready var animation_tree: AnimationTree = _find_first_node_of_type(self, "AnimationTree") as AnimationTree
 @onready var animation_player: AnimationPlayer = _find_first_node_of_type(self, "AnimationPlayer") as AnimationPlayer
 @onready var skeleton: Skeleton3D = _find_first_node_of_type(self, "Skeleton3D") as Skeleton3D
+@onready var key_light: DirectionalLight3D = $KeyLight
+@onready var fill_light: OmniLight3D = $FillLight
 
 var current_action := ""
 var _base_position := Vector3.ZERO
@@ -53,6 +55,18 @@ func apply_pose_coach_frame(frame: Dictionary) -> void:
     play_action(action)
     apply_highlight(highlight, severity)
     apply_pose_metrics(pose)
+
+func apply_skin(skin_name: String) -> void:
+    match skin_name:
+        "nature":
+            key_light.light_color = Color(0.75, 1.0, 0.65)
+            fill_light.light_color = Color(0.55, 0.85, 0.45)
+        "ocean":
+            key_light.light_color = Color(0.65, 0.82, 1.0)
+            fill_light.light_color = Color(0.45, 0.65, 1.0)
+        _:
+            key_light.light_color = Color.WHITE
+            fill_light.light_color = Color(1.0, 0.80, 0.50)
 
 func apply_pose_metrics(pose: Dictionary) -> void:
     if skeleton == null:

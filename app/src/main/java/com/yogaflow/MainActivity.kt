@@ -13,6 +13,7 @@ import android.view.View
 import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.ProgressBar
+import android.widget.RadioGroup
 import android.widget.SeekBar
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
@@ -81,6 +82,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
     lateinit var startClassButton: Button
     lateinit var startStretchButton: Button
     lateinit var startRecoveryButton: Button
+    lateinit var skinSelector: RadioGroup
     lateinit var beginSessionButton: Button
     lateinit var startButton: Button
     lateinit var pauseButton: Button
@@ -109,6 +111,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
     var debugViewEnabled = false
     var cameraSetupDisabledForDevelopment = false
     var lastCountdownText = ""
+    var currentSkin: String = "classic"
     var latestSuggestion: AutoTuningSuggestion? = null
 
     private lateinit var poseHelper: PoseHelper
@@ -142,6 +145,9 @@ class MainActivity : AppCompatActivity(), GodotHost {
         super.onGodotMainLoopStarted()
         Log.i("YogaFlow", "Godot main loop started - connecting bridge")
         godotAvatarBridge.connect()
+        android.os.Handler(mainLooper).postDelayed({
+            godotAvatarBridge.sendSkin(currentSkin)
+        }, 1000L)
     }
 
     private val requestCameraPermission = registerForActivityResult(
@@ -161,6 +167,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
         loadDevelopmentSettings()
         applyDevelopmentIntentFlags(intent)
         loadThresholdPreferencesMain()
+        loadCoachSkin()
 
         cameraExecutor = Executors.newSingleThreadExecutor()
         coachExecutor = Executors.newSingleThreadExecutor()
@@ -250,6 +257,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
         setupThresholdControlsMain()
         applyDebugViewEnabled(false)
         bindActions()
+        bindSkinSelector()
         loadDiscoveredPlaylist(openClassView = false)
         requestCameraIfNeeded()
     }
@@ -376,6 +384,33 @@ class MainActivity : AppCompatActivity(), GodotHost {
         applySuggestionButton.setOnClickListener { applyLatestSuggestion() }
         sessionRecordButton.setOnClickListener { toggleSessionRecording() }
         debugToggleButton.setOnClickListener { applyDebugViewEnabled(!debugViewEnabled) }
+    }
+
+    private fun bindSkinSelector() {
+        val skinButtons = mapOf(
+            R.id.skinClassic to "classic",
+            R.id.skinNature to "nature",
+            R.id.skinOcean to "ocean"
+        )
+        skinButtons.entries.firstOrNull { it.value == currentSkin }?.let { skinSelector.check(it.key) }
+        skinSelector.setOnCheckedChangeListener { _, checkedId ->
+            val skin = skinButtons[checkedId] ?: "classic"
+            currentSkin = skin
+            saveCoachSkin(skin)
+            godotAvatarBridge.sendSkin(skin)
+        }
+    }
+
+    private fun loadCoachSkin() {
+        currentSkin = getSharedPreferences("coach_prefs", MODE_PRIVATE)
+            .getString("coach_skin", "classic") ?: "classic"
+    }
+
+    private fun saveCoachSkin(skin: String) {
+        getSharedPreferences("coach_prefs", MODE_PRIVATE)
+            .edit()
+            .putString("coach_skin", skin)
+            .apply()
     }
 
     private fun applyDebugViewEnabled(enabled: Boolean) {
