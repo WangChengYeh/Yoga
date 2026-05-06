@@ -28,6 +28,13 @@ Check for a resumable thread first:
 node "/Users/wangchengye/.claude/plugins/marketplaces/openai-codex/plugins/codex/scripts/codex-companion.mjs" task-resume-candidate --json
 ```
 
+**Sandbox mode (patched):** When using `--write`, Codex runs with `danger-full-access` sandbox (allows Gradle builds, adb, and full disk access). The companion script at `~/.claude/plugins/cache/openai-codex/codex/1.0.4/scripts/codex-companion.mjs` line 488 has been patched from `"workspace-write"` → `"danger-full-access"`. If the plugin updates and resets this patch, re-apply:
+```bash
+sed -i '' 's/"workspace-write"/"danger-full-access"/' \
+  ~/.claude/plugins/cache/openai-codex/codex/1.0.4/scripts/codex-companion.mjs
+```
+Always pass `--write` in Codex task prompts that need to build or run adb (e.g. `codex:rescue --write <prompt>`).
+
 ### Gemini CLI
 Use the ACP helper script — structured JSON-RPC protocol, streaming output, session resumption.
 
