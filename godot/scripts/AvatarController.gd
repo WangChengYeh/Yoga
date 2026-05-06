@@ -8,19 +8,38 @@ var current_action := ""
 var _base_position := Vector3.ZERO
 var _base_rotation := Vector3.ZERO
 var _base_scale := Vector3.ONE
-var _breathing_enabled := false
 
 func _ready() -> void:
     _base_position = position
     _base_rotation = rotation
     _base_scale = scale
+    _setup_animations()
 
-func _process(_delta: float) -> void:
-    if not _breathing_enabled:
+func _setup_animations() -> void:
+    if animation_player == null:
         return
-    var t := float(Time.get_ticks_msec()) / 1000.0
-    var breath := sin(t * 2.0) * 0.015
-    scale = Vector3(_base_scale.x, _base_scale.y * (1.0 + breath), _base_scale.z)
+
+    var idle := Animation.new()
+    idle.length = 4.0
+    idle.loop_mode = Animation.LOOP_LINEAR
+    var idle_scale_track := idle.add_track(Animation.TYPE_VALUE)
+    idle.track_set_path(idle_scale_track, NodePath(".:scale"))
+    idle.track_insert_key(idle_scale_track, 0.0, _base_scale)
+    idle.track_insert_key(idle_scale_track, 2.0, Vector3(_base_scale.x, _base_scale.y * 1.015, _base_scale.z))
+    idle.track_insert_key(idle_scale_track, 4.0, _base_scale)
+
+    var forward_fold := Animation.new()
+    forward_fold.length = 1.5
+    forward_fold.loop_mode = Animation.LOOP_NONE
+    var forward_fold_rotation_track := forward_fold.add_track(Animation.TYPE_VALUE)
+    forward_fold.track_set_path(forward_fold_rotation_track, NodePath(".:rotation"))
+    forward_fold.track_insert_key(forward_fold_rotation_track, 0.0, _base_rotation)
+    forward_fold.track_insert_key(forward_fold_rotation_track, 1.5, Vector3(deg_to_rad(-18.0), _base_rotation.y, _base_rotation.z))
+
+    var library := AnimationLibrary.new()
+    library.add_animation("idle", idle)
+    library.add_animation("forward_fold", forward_fold)
+    animation_player.add_animation_library("", library)
 
 func apply_pose_coach_frame(frame: Dictionary) -> void:
     var avatar = frame.get("avatar", {})
@@ -33,7 +52,6 @@ func apply_pose_coach_frame(frame: Dictionary) -> void:
 
     play_action(action)
     apply_highlight(highlight, severity)
-    apply_breathing(frame)
     apply_pose_metrics(pose)
 
 func apply_pose_metrics(pose: Dictionary) -> void:
@@ -63,6 +81,8 @@ func play_action(action: String) -> void:
             _set_animation_state("squat")
         "hold_twist":
             _set_animation_state("twist")
+        _ when action.begins_with("hold_"):
+            _set_animation_state("idle")
         _:
             _set_animation_state("idle")
 
@@ -79,11 +99,6 @@ func apply_highlight(highlight, severity: int) -> void:
         return
     # Keep the first version non-invasive: visible action comes from pose changes,
     # while future material or marker highlights can hook in here.
-
-func apply_breathing(frame: Dictionary) -> void:
-    var avatar = frame.get("avatar", {})
-    var action := str(avatar.get("action", ""))
-    _breathing_enabled = action.begins_with("hold_")
 
 func _try_play_animation(state_name: String) -> bool:
     if animation_player != null:
