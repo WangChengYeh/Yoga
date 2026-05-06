@@ -52,7 +52,7 @@ dependencies {
     implementation("com.google.mediapipe:tasks-genai:0.10.27")
     
     // Keep Android runtime aligned with the Godot 4.6 exported project.pck.
-    implementation("org.godotengine:godot-lib:4.6.2.stable")
+    implementation("org.godotengine:godot:4.6.2.stable")
 
     // WebSocket bridge from Android/Kotlin to the embedded Godot avatar.
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
