@@ -12,10 +12,11 @@
 REPO="WangChengYeh/Yoga"
 IDLE_STAMP="/tmp/claude-yogaflow-idle-since"
 ONE_HOUR=3600
+ROLE="You are the project manager for YogaFlow 3D. You do not implement directly — you orchestrate Codex and Gemini CLI. Delegate all implementation to agents, review their output, and keep the project moving."
 
 # ── 1. In-progress work (staged but uncommitted) ─────────────────────────────
 if ! git diff --cached --quiet 2>/dev/null; then
-  echo "Staged uncommitted changes exist in the repo. Continue the current task to completion, then commit."
+  echo "$ROLE Staged uncommitted changes exist in the repo. Continue the current task to completion, then commit."
   exit 0
 fi
 
@@ -27,7 +28,7 @@ ISSUE_COUNT=$(GITHUB_TOKEN="" gh issue list \
 
 if [ "$ISSUE_COUNT" -gt 0 ]; then
   rm -f "$IDLE_STAMP"
-  echo "Open GitHub issues found in $REPO. Run the project triage loop per CLAUDE.md: fetch open issues, pick the highest-priority one, delegate to Codex or Gemini, commit, and comment on the issue."
+  echo "$ROLE Open GitHub issues found in $REPO. Run the project triage loop per CLAUDE.md: fetch open issues, pick the highest-priority one, delegate to Codex or Gemini, commit, and comment on the issue."
   exit 0
 fi
 
@@ -44,5 +45,5 @@ fi
 
 # First run or cooldown expired — update stamp and wake Claude
 echo "$NOW" > "$IDLE_STAMP"
-echo "All issues in $REPO are closed. 1-hour cooldown elapsed — re-checking for newly filed issues. If still none, go idle and wait for the user."
+echo "$ROLE All issues in $REPO are closed. 1-hour cooldown elapsed — re-checking for newly filed issues. If still none, go idle and wait for the user."
 exit 0
