@@ -104,6 +104,56 @@ Suggested hourly prompt:
 Check the latest open issues in WangChengYeh/Yoga. Pick the highest-priority actionable issue. Pull latest main, inspect relevant files, implement via Codex first, use Gemini only for review or continuation if Codex is blocked, run checks if available, and comment on the issue with the result. Do not run Codex and Gemini on the same task at the same time.
 ```
 
+## Scriptable Handoff Requirement
+
+Because work is split between two subagents, every repeatable operation should be scriptable. Claude should reduce handoff ambiguity by turning common commands into scripts before asking agents to run them.
+
+Prefer scripts over long manual command sequences, especially for:
+
+- Gradle build / test commands
+- adb install / launch / logcat commands
+- emulator or device smoke tests
+- Godot import / export checks
+- GitHub issue inspection helpers
+- bridge integration verification
+- screenshot / screen recording capture if needed
+
+Expected script location:
+
+```text
+scripts/
+```
+
+Script naming examples:
+
+```text
+scripts/check-gradle.sh
+scripts/android-install-debug.sh
+scripts/android-launch.sh
+scripts/android-logcat-yoga.sh
+scripts/android-smoke-test.sh
+scripts/godot-check.sh
+scripts/issue-triage.sh
+```
+
+When a workflow requires adb, do not leave the workflow only as prose. Add or request a script such as:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+APP_ID="com.yogaflow"
+ADB="${ADB:-adb}"
+
+$ADB devices
+$ADB install -r app/build/outputs/apk/debug/app-debug.apk
+$ADB shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1
+$ADB logcat -c
+$ADB logcat | grep -E "Yoga|Godot|MediaPipe|AndroidRuntime"
+```
+
+Agents may adjust package names and paths to match the repository. The important rule is: if the operation will be repeated or handed over, encode it as a script.
+
 ## Handoff Protocol
 
 When handing off between agents:
@@ -116,9 +166,14 @@ For issue-driven work, every handoff prompt must include:
 - GitHub issue number and title
 - Current branch / commit state
 - Files already changed
+- Scripts added or used
+- Exact commands run
 - Checks already run
+- Current failure output, if any
 - Remaining acceptance criteria
 - Clear instruction not to duplicate previous work
+
+Claude should ask agents to leave behind reusable scripts whenever they discover a manual verification path. A handoff should be executable by the next agent without reconstructing adb, Gradle, Godot, or logcat commands from memory.
 
 ## Project Context
 
@@ -135,3 +190,4 @@ For issue-driven work, every handoff prompt must include:
 2. Verify Gradle build passes
 3. P1 polish items (see `docs/roadmap.md`)
 4. Build the first Godot GLB model-led avatar coach prototype (see issue #40)
+5. Script repeated adb / Gradle / Godot verification workflows for reliable Codex ↔ Gemini handoff
