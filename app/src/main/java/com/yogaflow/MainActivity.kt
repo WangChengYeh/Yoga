@@ -398,6 +398,9 @@ class MainActivity : AppCompatActivity(), GodotHost {
             intent.getBooleanExtra(EXTRA_DISABLE_CAMERA_SETUP, false) -> setDevelopmentCameraSetupDisabled(true)
             intent.getBooleanExtra(EXTRA_ENABLE_CAMERA_SETUP, false) -> setDevelopmentCameraSetupDisabled(false)
         }
+        if (intent.getBooleanExtra(EXTRA_AVATAR_SELF_TEST, false)) {
+            scheduleAvatarSelfTest()
+        }
     }
 
     private fun isDebuggableBuild(): Boolean {
@@ -464,6 +467,37 @@ class MainActivity : AppCompatActivity(), GodotHost {
         sessionState = SessionState.RUNNING
         coachCueController.reset()
         updateUi(animated = false)
+    }
+
+    private fun scheduleAvatarSelfTest() {
+        loadDiscoveredPlaylist(openClassView = true)
+        val handler = android.os.Handler(mainLooper)
+        val steps = listOf(
+            3000L to "hold_mountain",
+            5000L to "hold_forward_fold",
+            7000L to "hold_squat",
+            9000L to "hold_twist",
+            11000L to "correct_knees",
+            13000L to "hold_mountain"
+        )
+        for ((delay, action) in steps) {
+            handler.postDelayed({
+                android.util.Log.i("YogaFlow", "AvatarSelfTest: sending $action")
+                virtualCoachView.visibility = android.view.View.VISIBLE
+                godotAvatarBridge.send(buildSelfTestFrame(action), force = true)
+            }, delay)
+        }
+    }
+
+    private fun buildSelfTestFrame(action: String): PoseCoachFrame {
+        return PoseCoachFrame(
+            timestampMs = System.currentTimeMillis(),
+            stepId = "self_test",
+            phase = "running",
+            pose = PoseMetrics(null, null, null, null, null),
+            coach = CoachVisualState("ok", null, "Self-test: $action", 0),
+            avatar = AvatarCommand(action = action, emotion = "calm", highlight = null)
+        )
     }
 
     private fun togglePause() {
@@ -799,6 +833,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
         private const val PREF_DISABLE_CAMERA_SETUP = "disableCameraSetup"
         private const val EXTRA_DISABLE_CAMERA_SETUP = "devDisableCameraSetup"
         private const val EXTRA_ENABLE_CAMERA_SETUP = "devEnableCameraSetup"
+        private const val EXTRA_AVATAR_SELF_TEST = "avatarSelfTest"
         private val VIRTUAL_COACH_SCALE_INDICES = listOf(0, 11, 12, 23, 24, 25, 26, 27, 28)
     }
 }
