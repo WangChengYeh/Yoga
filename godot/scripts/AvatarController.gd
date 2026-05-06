@@ -157,8 +157,9 @@ func _apply_fallback_pose(state_name: String) -> void:
         _:
             target_rotation = _base_rotation
             target_position = _base_position
-    rotation = rotation.lerp(target_rotation, 0.35)
-    position = position.lerp(target_position, 0.35)
+    var tween = create_tween().set_parallel(true)
+    tween.tween_property(self, "rotation", target_rotation, 0.5)
+    tween.tween_property(self, "position", target_position, 0.5)
 
 func _find_first_node_of_type(node: Node, type_name: String) -> Node:
     if node.is_class(type_name):
