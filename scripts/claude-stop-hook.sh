@@ -9,7 +9,8 @@
 #   5. No issues, ≥ 1 h elapsed    → inject "re-check for new issues"
 #
 # Install: referenced from .claude/settings.json Stop hook.
-# Output format: JSON with hookSpecificOutput.additionalContext (required by Claude Code).
+# Output format: {"decision":"block","reason":"..."} — blocks Claude from stopping and
+# injects the reason as context, causing Claude to continue working.
 
 REPO="WangChengYeh/Yoga"
 IDLE_STAMP="/tmp/claude-yogaflow-idle-since"
@@ -27,12 +28,7 @@ emit() {
   local msg="$1"
   python3 -c "
 import json, sys
-print(json.dumps({
-  'hookSpecificOutput': {
-    'hookEventName': 'Stop',
-    'additionalContext': sys.argv[1]
-  }
-}))" "$msg"
+print(json.dumps({'decision': 'block', 'reason': sys.argv[1]}))" "$msg"
 }
 
 # ── 1. In-progress work (staged but uncommitted) ─────────────────────────────
