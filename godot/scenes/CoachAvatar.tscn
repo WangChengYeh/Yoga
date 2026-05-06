@@ -7,7 +7,7 @@
 script = ExtResource("1_script")
 
 [node name="Camera3D" type="Camera3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0.985, 0.174, 0, -0.174, 0.985, 0, 0.48, 3.2)
+transform = Transform3D(1, 0, 0, 0, 0.985, 0.174, 0, -0.174, 0.985, 0.6, 0.2, 3.2)
 fov = 33.0
 
 [node name="KeyLight" type="DirectionalLight3D" parent="."]

@@ -69,10 +69,8 @@
         <androidx.fragment.app.FragmentContainerView
             android:id="@+id/virtualCoachView"
             android:name="org.godotengine.godot.GodotFragment"
-            android:layout_width="132dp"
-            android:layout_height="172dp"
-            android:layout_gravity="center_vertical|end"
-            android:layout_marginEnd="12dp"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
             android:elevation="12dp"
             android:visibility="visible" />
 

@@ -755,35 +755,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
     }
 
     private fun updateVirtualCoachBounds(landmarks: List<NormalizedLandmark>) {
-        val visibleBody = VIRTUAL_COACH_SCALE_INDICES.mapNotNull { index ->
-            landmarks.getOrNull(index)?.takeIf { it.x() in 0f..1f && it.y() in 0f..1f }
-        }
-        if (visibleBody.isEmpty() || classView.width == 0 || classView.height == 0) return
-
-        val minY = visibleBody.minOf { it.y() } * classView.height
-        val maxY = visibleBody.maxOf { it.y() } * classView.height
-        val centerY = (minY + maxY) / 2f
-        val bottomReserved = dp(96)
-        val maxCoachHeight = (classView.height * VIRTUAL_COACH_MAX_HEIGHT_FRACTION).toInt()
-            .coerceAtMost((classView.height - bottomReserved - dp(8)).coerceAtLeast(dp(180)))
-        val minCoachHeight = dp(420).coerceAtMost(maxCoachHeight)
-        val targetHeight = ((maxY - minY) * VIRTUAL_COACH_HEIGHT_SCALE)
-            .toInt()
-            .coerceIn(minCoachHeight, maxCoachHeight)
-        val targetWidth = (targetHeight * VIRTUAL_COACH_ASPECT_RATIO).toInt()
-        val maxTop = (classView.height - bottomReserved - targetHeight).coerceAtLeast(0)
-        val topMargin = (centerY - targetHeight / 2f)
-            .toInt()
-            .coerceIn(dp(8), maxTop)
-
-        val params = (virtualCoachView.layoutParams as FrameLayout.LayoutParams).apply {
-            width = targetWidth
-            height = targetHeight
-            gravity = android.view.Gravity.TOP or android.view.Gravity.END
-            this.topMargin = topMargin
-            marginEnd = dp(8)
-        }
-        virtualCoachView.layoutParams = params
+        // Full-screen fusion: Godot handles its own layout
     }
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
