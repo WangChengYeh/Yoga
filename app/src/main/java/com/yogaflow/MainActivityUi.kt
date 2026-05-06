@@ -6,6 +6,13 @@ import android.animation.ObjectAnimator
 
 internal fun MainActivity.updateUi(animated: Boolean) {
     if (!isCurrentFlowInitialized()) return
+    val sessionUiVisibility = if (sessionState == SessionState.IDLE) View.GONE else View.VISIBLE
+    flowName.visibility = sessionUiVisibility
+    progressText.visibility = sessionUiVisibility
+    progressBar.visibility = sessionUiVisibility
+    countdownText.visibility = sessionUiVisibility
+    demoTitle.visibility = sessionUiVisibility
+
     flowName.text = "Flow ${playlist.currentNumber()}/${playlist.total()} · ${currentFlow.name}"
     val step = flowEngine.currentStepNumber()
     val total = flowEngine.totalSteps(currentFlow)

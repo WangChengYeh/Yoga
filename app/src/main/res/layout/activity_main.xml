@@ -55,6 +55,15 @@
                 android:text="1. Stand where your full body is visible\n2. Face the camera directly\n3. Keep enough space around your arms and legs\n4. Wait until the status says Ready"
                 android:textColor="#DDDDDD"
                 android:textSize="14sp" />
+
+            <Button
+                android:id="@+id/beginSessionButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:alpha="0.45"
+                android:enabled="false"
+                android:text="Begin Session" />
         </LinearLayout>
 
         <androidx.fragment.app.FragmentContainerView

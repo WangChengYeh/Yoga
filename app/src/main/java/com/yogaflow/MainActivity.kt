@@ -68,6 +68,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
     lateinit var cameraSetupStatus: TextView
     lateinit var debugText: TextView
     lateinit var coachText: TextView
+    lateinit var demoTitle: TextView
     lateinit var flowName: TextView
     lateinit var progressText: TextView
     lateinit var countdownText: TextView
@@ -80,6 +81,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
     lateinit var startClassButton: Button
     lateinit var startStretchButton: Button
     lateinit var startRecoveryButton: Button
+    lateinit var beginSessionButton: Button
     lateinit var startButton: Button
     lateinit var pauseButton: Button
     lateinit var restartButton: Button
@@ -203,6 +205,8 @@ class MainActivity : AppCompatActivity(), GodotHost {
                 autoStartedCurrentSetup = autoStarted
                 startButton.isEnabled = ready
                 startButton.alpha = if (ready) 1f else 0.45f
+                beginSessionButton.isEnabled = ready
+                beginSessionButton.alpha = if (ready) 1f else 0.45f
             },
             setSetupPanelVisible = { visible ->
                 cameraSetupPanel.visibility = if (visible) View.VISIBLE else View.GONE
@@ -362,6 +366,9 @@ class MainActivity : AppCompatActivity(), GodotHost {
         startButton.setOnClickListener {
             if (cameraReady) beginRunningSession()
         }
+        beginSessionButton.setOnClickListener {
+            if (cameraReady) beginRunningSession()
+        }
         pauseButton.setOnClickListener {
             togglePause()
         }
@@ -436,6 +443,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
     private fun beginRunningSession() {
         if (!cameraReady) return
         sessionState = SessionState.RUNNING
+        startButton.visibility = View.VISIBLE
         cameraSetupPanel.visibility = View.GONE
         overlayView.setFramingStatus(null)
         virtualCoachView.visibility = View.VISIBLE
@@ -450,6 +458,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
         autoStartedCurrentSetup = true
         startButton.isEnabled = true
         startButton.alpha = 1f
+        startButton.visibility = View.VISIBLE
         cameraSetupPanel.visibility = View.GONE
         virtualCoachView.visibility = View.VISIBLE
         sessionState = SessionState.RUNNING
@@ -467,6 +476,9 @@ class MainActivity : AppCompatActivity(), GodotHost {
                 autoStartedCurrentSetup = false
                 startButton.isEnabled = false
                 startButton.alpha = 0.45f
+                startButton.visibility = View.GONE
+                beginSessionButton.isEnabled = false
+                beginSessionButton.alpha = 0.45f
                 cameraSetupPanel.visibility = View.VISIBLE
                 updateVirtualCoachFromCurrentStep()
                 cameraSetupStatus.text = "Checking body framing..."

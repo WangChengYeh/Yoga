@@ -73,6 +73,9 @@ internal fun MainActivity.resetToCameraSetup(message: String) {
     autoStartedCurrentSetup = cameraSetupDisabledForDevelopment
     startButton.isEnabled = cameraSetupDisabledForDevelopment
     startButton.alpha = if (cameraSetupDisabledForDevelopment) 1f else 0.45f
+    startButton.visibility = android.view.View.GONE
+    beginSessionButton.isEnabled = false
+    beginSessionButton.alpha = 0.45f
     cameraSetupPanel.visibility = if (cameraSetupDisabledForDevelopment) {
         android.view.View.GONE
     } else {
