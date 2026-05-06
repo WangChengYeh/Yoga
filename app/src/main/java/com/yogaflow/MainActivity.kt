@@ -8,6 +8,7 @@ import android.media.AudioAttributes
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
+import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.FrameLayout
@@ -125,10 +126,19 @@ class MainActivity : AppCompatActivity(), GodotHost {
 
     override fun getGodot(): Godot = Godot.getInstance(this)
 
-    override fun getCommandLine(): List<String> = emptyList()
+    override fun getCommandLine(): List<String> {
+        Log.i("YogaFlow", "GodotHost.getCommandLine called - host wired")
+        return emptyList()
+    }
+
+    override fun onGodotSetupCompleted() {
+        super.onGodotSetupCompleted()
+        Log.i("YogaFlow", "Godot setup completed")
+    }
 
     override fun onGodotMainLoopStarted() {
         super.onGodotMainLoopStarted()
+        Log.i("YogaFlow", "Godot main loop started - connecting bridge")
         godotAvatarBridge.connect()
     }
 
@@ -415,7 +425,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
     private fun handlePoseFrame(frame: PoseDetectionResult) {
         overlayView.setLandmarks(frame.imageLandmarks)
         if (!isCurrentFlowInitialized()) {
-            virtualCoachView.visibility = View.GONE
+            virtualCoachView.visibility = View.INVISIBLE
             return
         }
         updateVirtualCoachBounds(frame.imageLandmarks)
@@ -490,7 +500,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
         if (next == null) {
             sessionState = SessionState.COMPLETED
             coachText.text = text
-            virtualCoachView.visibility = View.GONE
+            virtualCoachView.visibility = View.INVISIBLE
             updateUi(animated = true)
             return
         }
@@ -552,14 +562,14 @@ class MainActivity : AppCompatActivity(), GodotHost {
         val shouldShowCoach = detect.isNotBlank() &&
             state != CoachState.SETUP &&
             sessionState != SessionState.COMPLETED
-        virtualCoachView.visibility = if (shouldShowCoach) View.VISIBLE else View.GONE
+        virtualCoachView.visibility = if (shouldShowCoach) View.VISIBLE else View.INVISIBLE
     }
 
     private fun updateVirtualCoach(frame: PoseCoachFrame) {
         val shouldShowCoach = frame.stepId.isNotBlank() &&
             frame.avatar.action.isNotBlank() &&
             sessionState != SessionState.COMPLETED
-        virtualCoachView.visibility = if (shouldShowCoach) View.VISIBLE else View.GONE
+        virtualCoachView.visibility = if (shouldShowCoach) View.VISIBLE else View.INVISIBLE
     }
 
     private fun buildPoseCoachFrame(
@@ -708,12 +718,12 @@ class MainActivity : AppCompatActivity(), GodotHost {
 
     fun updateVirtualCoachFromCurrentStep() {
         if (!isCurrentFlowInitialized()) {
-            virtualCoachView.visibility = View.GONE
+            virtualCoachView.visibility = View.INVISIBLE
             return
         }
         val step = currentFlow.steps.getOrNull(flowEngine.currentStepNumber() - 1)
         if (step == null || sessionState == SessionState.COMPLETED) {
-            virtualCoachView.visibility = View.GONE
+            virtualCoachView.visibility = View.INVISIBLE
             return
         }
         updateVirtualCoach(step.detect.jsonKey, step.state)
