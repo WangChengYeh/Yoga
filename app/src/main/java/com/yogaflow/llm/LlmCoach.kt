@@ -34,6 +34,7 @@ class LlmCoach(context: Context) {
         val prompt = PromptBuilder.buildCoachPrompt(pose, state, raw)
 
         return try {
+            // TODO(#5): Use generateResponseAsync when callers can consume async results.
             llm?.generateResponse(prompt) ?: raw
         } catch (e: Exception) {
             Log.e("LLM", "generate failed", e)
