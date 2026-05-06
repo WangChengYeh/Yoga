@@ -745,12 +745,12 @@ class MainActivity : AppCompatActivity(), GodotHost {
         val nose = frame.imageLandmarks.getOrNull(0)
         val ls = frame.imageLandmarks.getOrNull(11)
         val rs = frame.imageLandmarks.getOrNull(12)
-        val rawX: Float = when {
+        // PoseHelper already flips x for mirrored (front) camera, so landmarks are in screen coords
+        val screenX: Float = when {
             nose != null -> nose.x()
             ls != null && rs != null -> (ls.x() + rs.x()) / 2f
             else -> return "right"
         }
-        val screenX = if (frame.isMirrored) 1f - rawX else rawX
         return if (screenX < 0.5f) "left" else "right"
     }
 

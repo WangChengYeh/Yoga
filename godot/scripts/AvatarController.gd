@@ -62,9 +62,9 @@ func apply_pose_coach_frame(frame: Dictionary) -> void:
 func apply_screen_side(side: String) -> void:
     match side:
         "left":
-            _side_x_offset = -0.4
+            _side_x_offset = -0.6
         "right":
-            _side_x_offset = 0.4
+            _side_x_offset = 0.6
         _:
             _side_x_offset = 0.0
     var tween = create_tween()
