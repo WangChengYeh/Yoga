@@ -141,19 +141,28 @@ Structure every Codex prompt with these sections:
 ```
 codex:rescue <your prompt>
 ```
-Review the output. If Codex compiled and committed, move to step 6.
+Every Codex prompt **must** include a "How to verify" section that instructs the agent to:
+1. Run `./gradlew assembleDebug` and confirm BUILD SUCCESSFUL
+2. Install and smoke-test on device with `adb install -r ... && adb shell am start ... && adb logcat`
+3. Report the actual output — not just "it should work"
+
+Agents must test their own work. Do not accept output that only says "build should pass" or leaves verification as a manual next step.
+
+Review the output. If Codex compiled, installed, and verified on device, move to step 6.
 
 ### 5. If Codex is blocked, hand off to Gemini
 ```bash
 python3 scripts/gemini-acp.py "<handoff prompt with full context>"
 ```
 Include: issue number, what Codex did, what failed, remaining acceptance criteria.
+Same rule applies: Gemini must also run the build and device test, not just edit files.
 
 ### 6. Verify the build
 ```bash
 ./gradlew assembleDebug
 ```
 A green build is the minimum bar. Do not accept a commit that does not compile.
+If the subagent already ran and reported the build result, skip re-running it — trust the agent's reported output.
 
 ### 7. Commit if the agent did not
 ```bash
