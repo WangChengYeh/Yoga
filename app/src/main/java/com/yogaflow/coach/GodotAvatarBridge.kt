@@ -25,7 +25,7 @@ class GodotAvatarBridge(
         .build()
 
     @Synchronized
-    private fun connect() {
+    internal fun connect() {
         if (closed || connected) return
         val request = Request.Builder().url("ws://127.0.0.1:9090").build()
         webSocket = client.newWebSocket(request, object : WebSocketListener() {

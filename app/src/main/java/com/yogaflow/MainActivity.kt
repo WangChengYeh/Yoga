@@ -236,7 +236,6 @@ class MainActivity : AppCompatActivity(), GodotHost {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        getGodot().onNewIntent(intent)
         setIntent(intent)
         applyDevelopmentIntentFlags(intent)
         if (isCurrentFlowInitialized()) {
@@ -252,12 +251,12 @@ class MainActivity : AppCompatActivity(), GodotHost {
 
     override fun onResume() {
         super.onResume()
-        getGodot().onResume()
+        getGodot().onResume(this)
     }
 
     override fun onPause() {
         super.onPause()
-        getGodot().onPause()
+        getGodot().onPause(this)
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
