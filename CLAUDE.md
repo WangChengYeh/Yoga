@@ -29,18 +29,28 @@ node "/Users/wangchengye/.claude/plugins/marketplaces/openai-codex/plugins/codex
 ```
 
 ### Gemini CLI
-Run headless via Bash. Do NOT use `--yolo`.
+Use the ACP helper script — structured JSON-RPC protocol, streaming output, session resumption.
 
 | Mode | Flag | Use when |
 |---|---|---|
-| Read-only audit | `--approval-mode plan` | Reviewing code, no edits |
-| Safe edit | `--approval-mode auto_edit` | Fixing code, no shell commands |
+| Read-only audit | `--mode plan` | Reviewing code, no edits |
+| Safe edit | `--mode auto_edit` | Fixing code, no shell commands (default) |
 
 ```bash
-gemini -p "YOUR TASK" --approval-mode auto_edit 2>&1
+# Standard task (auto_edit)
+python3 scripts/gemini-acp.py "YOUR TASK"
+
+# Read-only audit
+python3 scripts/gemini-acp.py "YOUR TASK" --mode plan
+
+# Resume a previous session (preserves context)
+python3 scripts/gemini-acp.py "YOUR TASK" --resume <session-id>
+
+# List available sessions
+python3 scripts/gemini-acp.py --list-sessions
 ```
 
-Always pass a self-contained prompt. Gemini has no prior context.
+Always pass a self-contained prompt. The session ID is printed to stderr after each run — save it to resume.
 
 ## Handoff Protocol
 
