@@ -127,6 +127,11 @@ class MainActivity : AppCompatActivity(), GodotHost {
 
     override fun getCommandLine(): List<String> = emptyList()
 
+    override fun onGodotMainLoopStarted() {
+        super.onGodotMainLoopStarted()
+        godotAvatarBridge.connect()
+    }
+
     private val requestCameraPermission = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
@@ -259,6 +264,11 @@ class MainActivity : AppCompatActivity(), GodotHost {
         getGodot().onPause(this)
     }
 
+    override fun onStop() {
+        super.onStop()
+        getGodot().onStop(this)
+    }
+
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         getGodot().onActivityResult(requestCode, resultCode, data)
@@ -272,6 +282,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
         coachExecutor.shutdown()
         tts.shutdown()
         super.onDestroy()
+        getGodot().onDestroy(this)
     }
 
     fun isCurrentFlowInitialized(): Boolean = ::currentFlow.isInitialized && ::currentPose.isInitialized
@@ -425,7 +436,6 @@ class MainActivity : AppCompatActivity(), GodotHost {
         sessionState = SessionState.RUNNING
         cameraSetupPanel.visibility = View.GONE
         virtualCoachView.visibility = View.VISIBLE
-        godotAvatarBridge.connect()
         coachCueController.reset()
         updateUi(animated = false)
     }
@@ -438,6 +448,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
         startButton.isEnabled = true
         startButton.alpha = 1f
         cameraSetupPanel.visibility = View.GONE
+        virtualCoachView.visibility = View.VISIBLE
         sessionState = SessionState.RUNNING
         coachCueController.reset()
         updateUi(animated = false)
