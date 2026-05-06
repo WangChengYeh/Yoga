@@ -212,7 +212,8 @@ class MainActivity : AppCompatActivity(), GodotHost {
             onUpdateDebugOverlay = { frame, detect, state, matched ->
                 updateDebugOverlay(frame, detect, state, matched)
             },
-            onUpdateUi = ::updateUi
+            onUpdateUi = ::updateUi,
+            onUpdateFramingBox = { status -> overlayView.setFramingStatus(status) }
         )
 
         liveCoachSessionController = LiveCoachSessionController(
@@ -435,6 +436,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
         if (!cameraReady) return
         sessionState = SessionState.RUNNING
         cameraSetupPanel.visibility = View.GONE
+        overlayView.setFramingStatus(null)
         virtualCoachView.visibility = View.VISIBLE
         coachCueController.reset()
         updateUi(animated = false)

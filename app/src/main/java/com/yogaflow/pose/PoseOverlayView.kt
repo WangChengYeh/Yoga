@@ -14,6 +14,7 @@ class PoseOverlayView @JvmOverloads constructor(
 ) : View(context, attrs) {
 
     private var landmarks: List<NormalizedLandmark> = emptyList()
+    private var framingStatus: CameraFramingStatus? = null
 
     private val pointPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
@@ -24,6 +25,11 @@ class PoseOverlayView @JvmOverloads constructor(
     private val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
         strokeWidth = 5f
+        style = Paint.Style.STROKE
+    }
+
+    private val framingPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        strokeWidth = 6f
         style = Paint.Style.STROKE
     }
 
@@ -51,12 +57,19 @@ class PoseOverlayView @JvmOverloads constructor(
         invalidate()
     }
 
+    fun setFramingStatus(status: CameraFramingStatus?) {
+        framingStatus = status
+        invalidate()
+    }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-        if (landmarks.isEmpty()) return
+        if (landmarks.isNotEmpty()) {
+            drawSkeleton(canvas)
+        }
 
-        drawSkeleton(canvas)
+        drawFramingBox(canvas)
     }
 
     private fun drawSkeleton(canvas: Canvas) {
@@ -77,5 +90,26 @@ class PoseOverlayView @JvmOverloads constructor(
         landmarks.forEach { point ->
             canvas.drawCircle(point.x() * width, point.y() * height, 6f, pointPaint)
         }
+    }
+
+    private fun drawFramingBox(canvas: Canvas) {
+        framingPaint.color = when (framingStatus) {
+            CameraFramingStatus.GOOD -> Color.rgb(0x4C, 0xAF, 0x50)
+            CameraFramingStatus.TOO_CLOSE,
+            CameraFramingStatus.TOP_CUT,
+            CameraFramingStatus.BOTTOM_CUT -> Color.rgb(0xF4, 0x43, 0x36)
+            CameraFramingStatus.TOO_FAR,
+            CameraFramingStatus.TOO_LEFT,
+            CameraFramingStatus.TOO_RIGHT -> Color.rgb(0xFF, 0xC1, 0x07)
+            CameraFramingStatus.UNKNOWN,
+            null -> return
+        }
+        canvas.drawRect(
+            width * 0.12f,
+            height * 0.03f,
+            width * 0.88f,
+            height * 0.97f,
+            framingPaint
+        )
     }
 }

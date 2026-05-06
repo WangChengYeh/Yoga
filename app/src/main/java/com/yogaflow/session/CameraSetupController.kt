@@ -20,7 +20,8 @@ class CameraSetupController(
     private val onAutoStartReady: () -> Unit,
     private val onSpeakCoachCue: (CoachState, String) -> Unit,
     private val onUpdateDebugOverlay: (frame: PoseDetectionResult, detect: String, state: CoachState, matched: Boolean) -> Unit,
-    private val onUpdateUi: (Boolean) -> Unit
+    private val onUpdateUi: (Boolean) -> Unit,
+    private val onUpdateFramingBox: ((CameraFramingStatus?) -> Unit)? = null
 ) {
     private var ready = false
     private var readySince = 0L
@@ -39,6 +40,7 @@ class CameraSetupController(
             SessionState.IDLE -> {
                 updateReadyState(frameReady)
                 onUpdateSetupPanel(frameReady, framing.message, orientation.message)
+                onUpdateFramingBox?.invoke(framing.status)
                 maybeAutoStart()
                 onUpdateDebugOverlay(frame, "camera_setup", CoachState.SETUP, frameReady)
                 onUpdateUi(false)
@@ -48,6 +50,7 @@ class CameraSetupController(
                 updateReadyState(frameReady)
                 setSetupPanelVisible(true)
                 onUpdateSetupPanel(frameReady, framing.message, orientation.message)
+                onUpdateFramingBox?.invoke(framing.status)
                 onUpdateDebugOverlay(frame, "paused", CoachState.SETUP, frameReady)
                 onUpdateUi(false)
                 return true
@@ -66,6 +69,7 @@ class CameraSetupController(
             updateReadyState(false)
             setSetupPanelVisible(true)
             onUpdateSetupPanel(false, framing.message, orientation.message)
+            onUpdateFramingBox?.invoke(framing.status)
             val setupCue = cameraSetupCue(framing, orientation)
             onSpeakCoachCue(CoachState.CORRECTION, setupCue)
             onUpdateDebugOverlay(frame, "camera_setup", CoachState.CORRECTION, false)
@@ -75,6 +79,7 @@ class CameraSetupController(
 
         updateReadyState(true)
         setSetupPanelVisible(false)
+        onUpdateFramingBox?.invoke(null)
         return false
     }
 
