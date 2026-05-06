@@ -10,6 +10,7 @@ data class UserRuntimeOverrides(
     val stabilityMs: Long? = null,
     val emaAlpha: Double? = null,
     val deadbandDegrees: Double? = null,
+    val sameCueCooldownMs: Long? = null,
     val angles: AngleParams = AngleParams()
 ) {
     companion object {
@@ -75,6 +76,7 @@ object RuntimeOverrideMerger {
             stabilityMs = overrides.stabilityMs ?: base.stabilityMs,
             emaAlpha = overrides.emaAlpha ?: base.emaAlpha,
             deadbandDegrees = overrides.deadbandDegrees ?: base.deadbandDegrees,
+            sameCueCooldownMs = overrides.sameCueCooldownMs ?: base.sameCueCooldownMs,
             angles = mergeAngles(base.angles, overrides.angles)
         )
     }
@@ -150,6 +152,18 @@ object TunableRuntimeParamExtractor {
                 )
             )
         }
+        params.sameCueCooldownMs?.let {
+            result.add(
+                TunableRuntimeParam(
+                    label = "sameCueCooldownMs",
+                    path = "runtime.sameCueCooldownMs",
+                    value = it.toDouble(),
+                    min = 1000.0,
+                    max = 30000.0,
+                    isInteger = true
+                )
+            )
+        }
 
         collectJoint(result, "knee", params.angles.knee)
         collectJoint(result, "hip", params.angles.hip)
@@ -191,6 +205,7 @@ private object RuntimeOverridePathWriter {
             "runtime.stabilityMs" -> base.copy(stabilityMs = value.toLong())
             "runtime.emaAlpha" -> base.copy(emaAlpha = value)
             "runtime.deadbandDegrees" -> base.copy(deadbandDegrees = value)
+            "runtime.sameCueCooldownMs" -> base.copy(sameCueCooldownMs = value.toLong())
             else -> writeAngle(base, path, value)
         }
     }

@@ -16,11 +16,13 @@ class CoachCueController(
 ) {
     private var lastCoachCue = ""
     private var lastCoachAt = 0L
+    private var lastSeverity = 0
     private var requestId = 0L
 
     fun reset() {
         lastCoachCue = ""
         lastCoachAt = 0L
+        lastSeverity = 0
         requestId++
     }
 
@@ -28,8 +30,8 @@ class CoachCueController(
         requestId++
     }
 
-    fun speak(pose: YogaPose, flowId: String, step: Int, state: CoachState, cue: String) {
-        if (cue.isBlank() || !shouldEmit(cue)) return
+    fun speak(pose: YogaPose, flowId: String, step: Int, state: CoachState, cue: String, severity: Int = 0) {
+        if (cue.isBlank() || !shouldEmit(cue, severity)) return
         val currentRequestId = ++requestId
 
         executor.execute {
@@ -50,12 +52,13 @@ class CoachCueController(
         speaker.speakIfNeeded(cue)
     }
 
-    private fun shouldEmit(cue: String): Boolean {
+    private fun shouldEmit(cue: String, severity: Int = 0): Boolean {
         val now = System.currentTimeMillis()
-        if (cue == lastCoachCue && now - lastCoachAt < sameCueIntervalMs) return false
         if (now - lastCoachAt < minCueIntervalMs) return false
+        if (cue == lastCoachCue && severity <= lastSeverity && now - lastCoachAt < sameCueIntervalMs) return false
         lastCoachCue = cue
         lastCoachAt = now
+        lastSeverity = severity
         return true
     }
 }

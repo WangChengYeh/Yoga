@@ -171,7 +171,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
             executor = coachExecutor,
             uiExecutor = { runnable -> runOnUiThread(runnable) },
             minCueIntervalMs = 5000L,
-            sameCueIntervalMs = 5000L,
+            sameCueIntervalMs = 8000L,
             onDisplay = { displayText, llmEnabled ->
                 coachText.text = displayText
                 llmStatus.text = if (llmEnabled) "LLM: ON" else "LLM: OFF"
@@ -503,7 +503,8 @@ class MainActivity : AppCompatActivity(), GodotHost {
 
     private fun speakCoachCue(state: CoachState, cue: String) {
         if (!isCurrentFlowInitialized()) return
-        coachCueController.speak(currentPose, currentFlow.id, flowEngine.currentStepNumber(), state, cue)
+        val severity = if (state == CoachState.CORRECTION) 2 else 0
+        coachCueController.speak(currentPose, currentFlow.id, flowEngine.currentStepNumber(), state, cue, severity = severity)
     }
 
     private fun updateDebugOverlay(

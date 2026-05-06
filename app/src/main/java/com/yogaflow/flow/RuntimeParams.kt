@@ -10,6 +10,7 @@ data class RuntimeParams(
     val stabilityMs: Long? = null,
     val emaAlpha: Double? = null,
     val deadbandDegrees: Double? = null,
+    val sameCueCooldownMs: Long? = null,
     val angles: AngleParams = AngleParams()
 ) {
     companion object {
