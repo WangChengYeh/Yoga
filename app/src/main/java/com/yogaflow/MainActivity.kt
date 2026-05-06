@@ -267,22 +267,14 @@ class MainActivity : AppCompatActivity(), GodotHost {
 
     override fun onResume() {
         super.onResume()
-        getGodot().onResume(this)
     }
 
     override fun onPause() {
         super.onPause()
-        getGodot().onPause(this)
-    }
-
-    override fun onStop() {
-        super.onStop()
-        getGodot().onStop(this)
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        getGodot().onActivityResult(requestCode, resultCode, data)
     }
 
     override fun onDestroy() {
@@ -293,7 +285,6 @@ class MainActivity : AppCompatActivity(), GodotHost {
         coachExecutor.shutdown()
         tts.shutdown()
         super.onDestroy()
-        getGodot().onDestroy(this)
     }
 
     fun isCurrentFlowInitialized(): Boolean = ::currentFlow.isInitialized && ::currentPose.isInitialized
