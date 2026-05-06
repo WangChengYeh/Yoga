@@ -136,9 +136,33 @@ class MainActivity : AppCompatActivity(), GodotHost {
         return emptyList()
     }
 
+    private fun findSurfaceViewInHierarchy(view: android.view.View): android.view.SurfaceView? {
+        if (view is android.view.SurfaceView) return view
+        if (view is android.view.ViewGroup) {
+            for (i in 0 until view.childCount) {
+                val found = findSurfaceViewInHierarchy(view.getChildAt(i))
+                if (found != null) return found
+            }
+        }
+        return null
+    }
+
     override fun onGodotSetupCompleted() {
         super.onGodotSetupCompleted()
         Log.i("YogaFlow", "Godot setup completed")
+        runOnUiThread {
+            window.setFormat(android.graphics.PixelFormat.TRANSLUCENT)
+            android.os.Handler(mainLooper).postDelayed({
+                val surfaceView = findSurfaceViewInHierarchy(virtualCoachView)
+                if (surfaceView != null) {
+                    surfaceView.setZOrderOnTop(true)
+                    surfaceView.holder.setFormat(android.graphics.PixelFormat.TRANSPARENT)
+                    Log.i("YogaFlow", "Godot SurfaceView set transparent")
+                } else {
+                    Log.w("YogaFlow", "Godot SurfaceView not found for transparency")
+                }
+            }, 500L)
+        }
     }
 
     override fun onGodotMainLoopStarted() {
