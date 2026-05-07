@@ -10,6 +10,7 @@ import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import android.util.Log
 import android.view.View
+import android.view.WindowInsetsController
 import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.ProgressBar
@@ -20,6 +21,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
 import com.yogaflow.coach.AvatarCommand
 import com.yogaflow.coach.CoachCueController
@@ -188,6 +191,11 @@ class MainActivity : AppCompatActivity(), GodotHost {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        window.insetsController?.let { ctrl ->
+            ctrl.hide(WindowInsetsCompat.Type.systemBars())
+            ctrl.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        }
 
         bindViewsMain()
         cameraToggleButton = findViewById(R.id.cameraToggleButton)
