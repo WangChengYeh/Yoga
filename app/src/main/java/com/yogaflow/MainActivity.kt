@@ -35,6 +35,7 @@ import com.yogaflow.coach.PoseStateMachine
 // import com.yogaflow.coach.VirtualCoachView
 import com.yogaflow.flow.AutoTuningAdvisor
 import com.yogaflow.flow.AutoTuningSuggestion
+import com.yogaflow.flow.FlowLoader
 import com.yogaflow.flow.FlowPlaylistEngine
 import com.yogaflow.flow.RuntimeOverrideKey
 import com.yogaflow.flow.RuntimeOverrideStore
@@ -406,8 +407,14 @@ class MainActivity : AppCompatActivity(), GodotHost {
 
     private fun bindActions() {
         startClassButton.setOnClickListener { loadDiscoveredPlaylist() }
-        startStretchButton.setOnClickListener { loadPlaylist(listOf("flows/02_forward_fold_main.flow.json")) }
-        startRecoveryButton.setOnClickListener { loadPlaylist(listOf("flows/03_twist_cooldown.flow.json")) }
+        startStretchButton.setOnClickListener {
+            val flows = FlowLoader.loadByPose(this, "forward_fold")
+            applyPlaylist(flows, openClassView = true)
+        }
+        startRecoveryButton.setOnClickListener {
+            val flows = FlowLoader.loadByPose(this, "bridge", "twist")
+            applyPlaylist(flows, openClassView = true)
+        }
         startButton.setOnClickListener {
             if (cameraReady) beginRunningSession()
         }
