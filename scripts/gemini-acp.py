@@ -7,12 +7,12 @@ Usage:
     python3 scripts/gemini-acp.py "Your task here"
     python3 scripts/gemini-acp.py "Your task" --mode plan        # read-only
     python3 scripts/gemini-acp.py "Your task" --mode auto_edit   # safe edits (default)
-    python3 scripts/gemini-acp.py "Your task" --model gemini-2.5-pro
     python3 scripts/gemini-acp.py "Your task" --resume <session-id>
     python3 scripts/gemini-acp.py --list-sessions
     python3 scripts/gemini-acp.py --mcp                          # start MCP server (stdio)
 
-Default model: gemini-2.5-pro (CLI) / gemini-3.0-pro (MCP server)
+Default model: gemini-3.0-pro (Pro only — no flash/flash-lite)
+On quota exhaustion: sleeps 60 s then retries indefinitely.
 """
 
 from __future__ import annotations
@@ -23,6 +23,7 @@ import contextlib
 import os
 import subprocess
 import sys
+import time
 from typing import Any
 
 from acp import PROTOCOL_VERSION, Client, RequestError, connect_to_agent, text_block
@@ -38,8 +39,8 @@ from acp.schema import (
 
 CWD = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# Ordered fallback chain — Pro only, no flash/flash-lite
-FALLBACK_MODELS = ["gemini-2.5-pro"]
+MODEL = "gemini-3.0-pro"
+QUOTA_SLEEP_SECS = 60
 
 
 class _QuotaError(Exception):
@@ -175,27 +176,19 @@ def _run_once(task: str, mode: str, resume_session: str | None, model: str) -> t
 
 
 def run_acp(task: str, mode: str = "auto_edit", resume_session: str | None = None,
-            model: str = "gemini-2.5-pro") -> str:
-    """Run ACP with automatic fallback on quota exhaustion."""
-    models_to_try = [model] + [m for m in FALLBACK_MODELS if m != model]
-
-    for attempt, m in enumerate(models_to_try):
+            model: str = MODEL) -> str:
+    """Run ACP with gemini-3.0-pro; sleeps and retries indefinitely on quota exhaustion."""
+    while True:
         try:
-            text, _ = _run_once(task, mode, resume_session, m)
+            text, _ = _run_once(task, mode, resume_session, model)
             return text
         except RuntimeError as e:
             print(f"[error] {e}", file=sys.stderr)
             sys.exit(1)
         except _QuotaError as e:
-            if attempt < len(models_to_try) - 1:
-                next_model = models_to_try[attempt + 1]
-                print(f"[quota] {m} exhausted — retrying with {next_model}", file=sys.stderr)
-                resume_session = None  # start fresh session on new model
-            else:
-                print(f"[error] All models quota-exhausted. Last error: {e}", file=sys.stderr)
-                sys.exit(1)
-
-    return ""
+            print(f"[quota] {model} exhausted — sleeping {QUOTA_SLEEP_SECS}s before retry", file=sys.stderr)
+            time.sleep(QUOTA_SLEEP_SECS)
+            resume_session = None  # start fresh session after sleep
 
 
 def list_sessions():
@@ -239,14 +232,14 @@ def main():
     parser.add_argument("task", nargs="?", help="Task prompt")
     parser.add_argument("--mode", choices=["plan", "auto_edit"], default="auto_edit",
                         help="Approval mode (default: auto_edit)")
-    parser.add_argument("--model", metavar="MODEL_ID", default="gemini-2.5-pro",
-                        help="Gemini model ID (default: gemini-2.5-pro)")
+    parser.add_argument("--model", metavar="MODEL_ID", default=MODEL,
+                        help=f"Gemini model ID (default: {MODEL})")
     parser.add_argument("--resume", metavar="SESSION_ID",
                         help="Resume an existing session by ID")
     parser.add_argument("--list-sessions", action="store_true",
                         help="List available sessions and exit")
     parser.add_argument("--mcp", action="store_true",
-                        help="Start as MCP stdio server (gemini-3.0-pro default)")
+                        help="Start as MCP stdio server")
     args = parser.parse_args()
 
     if args.mcp:
