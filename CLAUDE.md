@@ -151,10 +151,14 @@ codex:rescue <your prompt>
 ```
 Every Codex prompt **must** include a "How to verify" section that instructs the agent to:
 1. Run `./gradlew assembleDebug` and confirm BUILD SUCCESSFUL
-2. Install and smoke-test on device with `adb install -r ... && adb shell am start ... && adb logcat`
-3. Report the actual output — not just "it should work"
+2. `adb install -r app/build/outputs/apk/debug/app-debug.apk`
+3. `adb shell am start -n com.yogaflow/.MainActivity`
+4. `adb shell screencap -p /sdcard/yoga_screen.png && adb pull /sdcard/yoga_screen.png /tmp/yoga_screen.png`
+5. Read `/tmp/yoga_screen.png` and describe what is visible — confirm the feature works visually
+6. `adb logcat | grep -E "Yoga|Godot|MediaPipe|AndroidRuntime" | head -40`
+7. Report the actual output — not "it should work" or "needs manual verification"
 
-Agents must test their own work. Do not accept output that only says "build should pass" or leaves verification as a manual next step.
+Agents must test their own work. Do not accept output that only says "build passed" without a screenshot description.
 
 Review the output. If Codex compiled, installed, and verified on device, move to step 6.
 

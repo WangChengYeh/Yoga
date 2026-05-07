@@ -50,5 +50,9 @@ Every handoff prompt must include:
 ## Verification Requirement
 Every task must end with:
 1. `./gradlew assembleDebug` — confirm BUILD SUCCESSFUL
-2. `adb install -r <apk-path> && adb shell am start ... && adb logcat`
-3. Report actual output — not "it should work"
+2. `adb install -r app/build/outputs/apk/debug/app-debug.apk`
+3. `adb shell am start -n com.yogaflow/.MainActivity`
+4. `adb shell screencap -p /sdcard/yoga_screen.png && adb pull /sdcard/yoga_screen.png /tmp/yoga_screen.png`
+5. Read `/tmp/yoga_screen.png` and describe what is visible — confirm the feature works visually
+6. `adb logcat | grep -E "Yoga|Godot|MediaPipe|AndroidRuntime" | head -40`
+7. Report actual output — not "it should work" or "needs manual verification"

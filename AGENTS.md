@@ -34,10 +34,15 @@ Every Codex prompt must include all four sections:
    - Must run:
    ```bash
    ./gradlew assembleDebug
-   adb install <apk-path>
-   adb logcat
+   adb install -r app/build/outputs/apk/debug/app-debug.apk
+   adb shell am start -n com.yogaflow/.MainActivity
+   adb shell screencap -p /sdcard/yoga_screen.png
+   adb pull /sdcard/yoga_screen.png /tmp/yoga_screen.png
+   adb logcat | grep -E "Yoga|Godot|MediaPipe|AndroidRuntime" | head -40
    ```
-   - Must report actual command output (not just "should work")
+   - Read `/tmp/yoga_screen.png` and describe what is visible on screen
+   - Report actual command output — not "should work" or "needs manual verification"
+   - A verification that only says "build passed" without a screenshot check is NOT accepted
 
 ## When To Use
 - Use for all implementation tasks
