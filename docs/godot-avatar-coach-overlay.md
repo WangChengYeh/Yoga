@@ -275,7 +275,8 @@ GodotAvatarView 可以先作為固定大小 overlay：
   "avatar": {
     "action": "hold_forward_fold",
     "emotion": "calm",
-    "highlight": null
+    "highlight": null,
+    "screen_side": "left"
   }
 }
 ```
@@ -303,7 +304,8 @@ GodotAvatarView 可以先作為固定大小 overlay：
   "avatar": {
     "action": "correct_knees",
     "emotion": "focused",
-    "highlight": "knees"
+    "highlight": "knees",
+    "screen_side": "left"
   }
 }
 ```
@@ -574,7 +576,7 @@ func apply_screen_side(side: String) -> void:
 ### 已知限制
 
 - 使用者做前彎、趴臥等姿勢時身體橫跨整個畫面，此時任一側都可能有部份重疊，這是可接受的邊界情況。
-- 目前偏移量為 ±0.6 Godot 單位，若仍嫌不夠遠可在 `apply_screen_side()` 中調大。
+- 目前偏移量為 ±1.4 Godot 單位，若仍嫌不夠遠可在 `apply_screen_side()` 中調大。
 
 ### GDScript 部署注意事項
 

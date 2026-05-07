@@ -108,9 +108,9 @@ YogaFlow 3D has moved from a pose-detection demo into a product-level on-device 
 - Add visual body framing box overlay
 - Add clearer camera setup screen before class start
 - Add voice pacing rules so repeated cues do not speak too often
-- Add a compact virtual coach overlay in the camera view
-- Add selectable virtual coach skins for different coach styles
-- Build the first virtual coach with Canvas, not a full 3D engine
+- ✔ Add Godot 3D avatar coach overlay (GodotFragment + WebSocket IPC)
+- ✔ Avatar auto-positioning — moves to opposite side of detected human
+- ✔ Selectable coach skins (Classic, Nature, Ocean)
 
 ### P2: Content expansion
 - Expand flow library to 10–30 flows

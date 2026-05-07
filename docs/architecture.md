@@ -1,4 +1,4 @@
-# YogaFlow 3D Architecture (v8)
+# YogaFlow 3D Architecture (v9)
 
 YogaFlow 3D 是一個 production-oriented on-device AI 瑜伽教練系統。
 
@@ -55,9 +55,9 @@ Stability Window (~300ms)
   ↓
 PoseFlowEngine (Event)
   ↓
-LLM Coach / Fallback
-  ↓
-TTS Voice
+LLM Coach / Fallback        PoseCoachFrame JSON (screen_side + action + highlight)
+  ↓                                ↓
+TTS Voice                   Godot Avatar (WebSocket → AvatarController.gd)
 ```
 
 Target controller pipeline:
@@ -109,14 +109,11 @@ Not Ready
 → auto-start class
 ```
 
-Known integration gap:
+Integration status:
 
 ```text
-CameraSetupController exists, but latest main still needs final MainActivity wiring cleanup.
-MainActivity still contains local handleCameraSetupFrame logic.
+CameraSetupController is wired in MainActivity (imported and initialized).
 ```
-
-This gap should be fixed before further feature work.
 
 ---
 
@@ -523,10 +520,10 @@ Reason:
 - improve reuse across controllers
 - reduce package coupling
 
-Known gap:
+Status:
 
 ```text
-SessionState is still defined in MainActivity.kt in latest main.
+SessionState is in session/SessionState.kt (extracted from MainActivity).
 ```
 
 ---
@@ -551,13 +548,18 @@ SessionState is still defined in MainActivity.kt in latest main.
 ✔ Runtime threshold tuning UI
 ✔ Persistent user calibration with SharedPreferences
 ✔ LLM + TTS coaching
+✔ Godot 3D Avatar coach overlay (GodotFragment + WebSocket IPC)
+✔ Avatar auto-positioning — moves to opposite side of detected human (screen_side)
+✔ Walk simulation poses in avatar self-test
+✔ Transparent Godot SurfaceView (camera feed visible through avatar layer)
+✔ SessionState extracted to session/SessionState.kt
+✔ CameraSetupController wired in MainActivity
 ```
 
-Partially integrated / known gaps:
+Known gaps:
 
 ```text
-△ CameraSetupController exists, but final MainActivity wiring cleanup is still needed
-△ Mountain still uses legacy fallback
+△ Mountain still uses legacy PoseStateMachine fallback
 △ Teacher-video-to-flow pipeline is not fully automated
 ```
 
@@ -567,8 +569,6 @@ Partially integrated / known gaps:
 
 ### Near-term
 
-- Restore full CameraSetupController wiring in MainActivity
-- Move SessionState to a dedicated file
 - Add strict MountainDetectionMapper
 - Add Flow JSON CI validation
 - Add threshold reset button
@@ -592,138 +592,55 @@ Partially integrated / known gaps:
 
 ---
 
-## Virtual Coach Overlay Proposal
+## Godot Avatar Coach Overlay
 
 Goal:
 
 ```text
-Show a small coach avatar in the live camera screen so users can compare their body with the target pose while practicing.
+Show a 3D coach avatar floating over the live camera so users can compare
+their body with the target pose in real time.
 ```
 
-The virtual coach should demonstrate the target step, not mirror the user's detected skeleton. It is an instructional overlay, separate from pose detection.
-Users should be able to choose different coach appearances. Appearance changes must not affect pose detection or lesson progression.
+The avatar demonstrates the target step; it does not mirror the user's skeleton. It is an instructional overlay separate from pose detection. Appearance changes must not affect pose detection or lesson progression.
 
-### First implementation
+### Implementation (shipped)
 
-Use a lightweight Android custom `View` rendered with Canvas:
+Architecture: Canvas-first approach was evaluated but skipped. The team chose Godot 4.x directly because a GLB model asset (`female_yoga_coach.glb`) was available and Godot's GDScript allows rapid pose animation without a custom renderer.
 
 ```text
-VirtualCoachView
+Android (Kotlin)
+  ↓  PoseCoachFrame JSON via local WebSocket (127.0.0.1:9090)
+Godot 4 (GodotFragment embedded in FragmentContainerView)
   ↓
-draw 3D-styled humanoid guide
+AvatarCoachOverlay.gd  ←  WebSocket server
   ↓
-pose preset selected from current flow pose + CoachState
+AvatarController.gd
+  ├─ play_action(action)        — pose animation / fallback tween
+  ├─ apply_screen_side(side)    — move avatar to opposite side of human
+  ├─ apply_highlight(bone, sev) — visual correction feedback
+  └─ apply_skin(name)           — Classic / Nature / Ocean lighting
 ```
 
-Reasons:
+PoseCoachFrame avatar object (current schema):
 
-- no new model asset pipeline
-- no heavy 3D runtime dependency
-- works naturally with the current CameraX + Android View hierarchy
-- fast to tune placement, scale, and visibility
-
-3D engine decision:
-
-```text
-Do not add a full 3D engine for the first version.
+```json
+{
+  "action": "hold_forward_fold",
+  "emotion": "calm",
+  "highlight": null,
+  "screen_side": "left"
+}
 ```
 
-Rationale:
+`screen_side` is computed per-frame by `humanScreenSide()` in Kotlin: returns the OPPOSITE side of where the human body center is detected, so the avatar always steps aside. See `docs/godot-avatar-coach-overlay.md` for full details.
 
-- the first product question is whether an on-screen coach guide helps users
-- Canvas is enough for a compact 3D-styled guide avatar
-- skins can be implemented with color palettes and shape presets
-- avoiding a renderer keeps APK size, lifecycle handling, and release risk lower
-- CameraX, MediaPipe, and session control should remain the primary runtime concerns
+GDScript deployment note: Godot compiles `.gd` source to `.gdc` bytecode during export. The bytecode in `app/src/main/assets/scripts/*.gdc` must be kept in sync with the source in `godot/scripts/`. Currently the `.gd.remap` files point directly to the source `.gd` files to avoid stale-bytecode bugs; this means any Godot export must also update the remap files.
 
-Add a 3D engine only after the Canvas avatar proves useful and the product needs real model assets.
-
-Initial pose presets:
-
-| Flow pose | Coach pose preset |
-| --- | --- |
-| `mountain` | standing upright |
-| `forward_fold` | setup, hinge, fold, hold, return |
-| `twist` | centered, twist, return |
-| `squat` | standing, descent, hold, return |
-| `bridge` | setup, lift, hold, return |
-
-Coach appearance model:
+Design constraints (unchanged):
 
 ```text
-CoachSkin
-  id
-  displayName
-  bodyPalette
-  outfitPalette
-  hairStyle
-  silhouette
-```
-
-First-version skins should be data-driven style presets for the Canvas avatar:
-
-| Skin dimension | Examples |
-| --- | --- |
-| `bodyPalette` | light, medium, deep, cool gray stylized |
-| `outfitPalette` | calm blue, forest green, warm coral, high contrast |
-| `hairStyle` | short, tied back, bun, none |
-| `silhouette` | neutral, athletic, soft |
-
-The first implementation should avoid photorealistic identity. Skins are visual styles for different coach personas, not real people.
-
-Placement rules:
-
-- Keep the avatar compact.
-- Place it near the upper-left or upper-right camera area.
-- Do not cover the user's full-body framing box.
-- Do not overlap the bottom control bar, coach text, or session record controls.
-- Hide or shrink it when the camera setup panel is visible.
-
-### Later 3D model upgrade
-
-After the Canvas version proves useful, replace the stylized avatar with a real rigged model:
-
-```text
-GLB/GLTF coach asset
-  ↓
-Android-native renderer
-  ↓
-pose animations keyed by Flow DSL step
-```
-
-Preferred Android-native options to evaluate:
-
-- Filament
-- SceneView
-- lightweight OpenGL renderer
-
-Use a 3D engine only when at least one of these requirements becomes real:
-
-- GLB/GLTF coach model assets
-- rigged pose animations
-- downloadable coach model packs
-- lighting and camera controls
-- smooth animated transitions between yoga poses
-- more realistic coach appearance than Canvas can provide
-
-Non-goals for the first version:
-
-- full-body motion capture replay
-- user skeleton retargeting
-- photorealistic model rendering
-- teacher-video synchronized animation
-
-Design constraint:
-
-```text
-The camera feed remains primary. The virtual coach must guide without reducing body visibility.
-```
-
-Customization constraints:
-
-```text
-Changing coach skin changes only rendering.
-Changing coach skin must not change:
+Changing coach skin changes only rendering (light colors).
+Changing skin must not change:
 - Flow DSL
 - DetectKey routing
 - RuntimeParams
@@ -732,34 +649,13 @@ Changing coach skin must not change:
 - session recording semantics
 ```
 
-Suggested persistence:
-
-```text
-SharedPreferences
-  virtualCoach.enabled = true
-  virtualCoach.skinId = "calm_blue"
-  virtualCoach.position = "top_start"
-```
-
 ---
 
 ## Recommended Next Architecture PRs
 
-### PR 1: Restore CameraSetupController wiring
+### PR 1: (Done) CameraSetupController wiring — completed
 
-Scope:
-
-- route setup frames through `CameraSetupController.handleFrame(frame)`
-- remove local `MainActivity.handleCameraSetupFrame`
-- fix pause/resume readiness gating
-- decide auto-start behavior
-
-### PR 2: Extract SessionState
-
-Scope:
-
-- move `SessionState` into a dedicated file
-- update imports across controllers
+### PR 2: (Done) Extract SessionState — completed, lives in session/SessionState.kt
 
 ### PR 3: Strict MountainDetectionMapper
 
