@@ -91,6 +91,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
     lateinit var restartButton: Button
     lateinit var sessionRecordButton: Button
     lateinit var debugToggleButton: Button
+    lateinit var cameraToggleButton: Button
     lateinit var sessionRecordStatus: TextView
     private lateinit var applySuggestionButton: Button
 
@@ -109,6 +110,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
     var cameraReady = false
     var cameraReadySince = 0L
     var autoStartedCurrentSetup = false
+    var cameraSetupEnabled = false
     var suppressTuningCallbacks = false
     var debugViewEnabled = false
     var cameraSetupDisabledForDevelopment = false
@@ -187,6 +189,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
         setContentView(R.layout.activity_main)
 
         bindViewsMain()
+        cameraToggleButton = findViewById(R.id.cameraToggleButton)
         applySuggestionButton = findViewById(R.id.applySuggestionButton)
         sessionRecorder = SessionRecorder(this)
         godotAvatarBridge = GodotAvatarBridge()
@@ -230,29 +233,33 @@ class MainActivity : AppCompatActivity(), GodotHost {
         )
 
         cameraSetupController = CameraSetupController(
-            autoStartEnabled = true,
+            autoStartEnabled = false,
             autoStartStableMs = CAMERA_AUTO_START_STABLE_MS,
             getSessionState = { sessionState },
             onReadyChanged = { ready, readySince, autoStarted ->
-                cameraReady = ready
-                cameraReadySince = readySince
-                autoStartedCurrentSetup = autoStarted
-                startButton.isEnabled = ready
-                startButton.alpha = if (ready) 1f else 0.45f
-                beginSessionButton.isEnabled = ready
-                beginSessionButton.alpha = if (ready) 1f else 0.45f
+                if (cameraSetupEnabled) {
+                    cameraReady = ready
+                    cameraReadySince = readySince
+                    autoStartedCurrentSetup = autoStarted
+                    startButton.isEnabled = ready
+                    startButton.alpha = if (ready) 1f else 0.45f
+                    beginSessionButton.isEnabled = ready
+                    beginSessionButton.alpha = if (ready) 1f else 0.45f
+                }
             },
             setSetupPanelVisible = { visible ->
-                cameraSetupPanel.visibility = if (visible) View.VISIBLE else View.GONE
+                cameraSetupPanel.visibility = if (cameraSetupEnabled && visible) View.VISIBLE else View.GONE
                 updateVirtualCoachFromCurrentStep()
             },
             onUpdateSetupPanel = { ready, framingMessage, orientationMessage ->
-                cameraSetupPanel.visibility = View.VISIBLE
-                updateVirtualCoachFromCurrentStep()
-                cameraSetupStatus.text = if (ready) {
-                    "Ready"
-                } else {
-                    listOf(framingMessage, orientationMessage).firstOrNull { it.isNotBlank() }.orEmpty()
+                if (cameraSetupEnabled) {
+                    cameraSetupPanel.visibility = View.VISIBLE
+                    updateVirtualCoachFromCurrentStep()
+                    cameraSetupStatus.text = if (ready) {
+                        "Ready"
+                    } else {
+                        listOf(framingMessage, orientationMessage).firstOrNull { it.isNotBlank() }.orEmpty()
+                    }
                 }
             },
             onAutoStartReady = ::beginRunningSession,
@@ -284,8 +291,10 @@ class MainActivity : AppCompatActivity(), GodotHost {
         setupThresholdControlsMain()
         applyDebugViewEnabled(false)
         bindActions()
+        applyCameraSetupEnabled(false)
         bindSkinSelector()
         loadDiscoveredPlaylist(openClassView = false)
+        applyCameraSetupEnabled(false)
         requestCameraIfNeeded()
     }
 
@@ -301,6 +310,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
                     "請先完成相機設定。"
                 }
             )
+            applyCameraSetupEnabled(cameraSetupEnabled)
         }
     }
 
@@ -411,6 +421,42 @@ class MainActivity : AppCompatActivity(), GodotHost {
         applySuggestionButton.setOnClickListener { applyLatestSuggestion() }
         sessionRecordButton.setOnClickListener { toggleSessionRecording() }
         debugToggleButton.setOnClickListener { applyDebugViewEnabled(!debugViewEnabled) }
+        cameraToggleButton.setOnClickListener { applyCameraSetupEnabled(!cameraSetupEnabled) }
+    }
+
+    private fun applyCameraSetupEnabled(enabled: Boolean) {
+        cameraSetupEnabled = enabled
+        cameraToggleButton.text = if (enabled) "Camera: ON" else "Camera: OFF"
+        if (enabled) {
+            cameraSetupController.reset()
+            cameraReady = false
+            cameraReadySince = 0L
+            autoStartedCurrentSetup = false
+            startButton.isEnabled = false
+            startButton.alpha = 0.45f
+            beginSessionButton.isEnabled = false
+            beginSessionButton.alpha = 0.45f
+            cameraSetupPanel.visibility = View.VISIBLE
+            updateVirtualCoachFromCurrentStep()
+            cameraSetupStatus.text = "Checking body framing..."
+            coachText.text = "請先完成相機設定。"
+        } else {
+            cameraSetupController.reset()
+            cameraReady = false
+            cameraReadySince = 0L
+            autoStartedCurrentSetup = false
+            startButton.isEnabled = false
+            startButton.alpha = 0.45f
+            beginSessionButton.isEnabled = false
+            beginSessionButton.alpha = 0.45f
+            cameraSetupPanel.visibility = View.GONE
+            overlayView.setFramingStatus(null)
+            updateVirtualCoachFromCurrentStep()
+            if (sessionState != SessionState.RUNNING) {
+                coachText.text = "Camera setup is off. Tap Camera to enable."
+            }
+        }
+        updateUi(animated = false)
     }
 
     private fun bindSkinSelector() {
@@ -551,6 +597,10 @@ class MainActivity : AppCompatActivity(), GodotHost {
         if (cameraSetupDisabledForDevelopment && sessionState != SessionState.COMPLETED) {
             bypassCameraSetupForDevelopment()
             liveCoachSessionController.handleReadyPoseFrame(frame, currentFlow, currentPose)
+            return
+        }
+
+        if (!cameraSetupEnabled) {
             return
         }
 
