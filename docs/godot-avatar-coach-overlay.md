@@ -518,6 +518,72 @@ Godot 只做 Avatar Coach overlay
 
 ---
 
+## Avatar 自動迴避功能（Issue #54）
+
+### 問題
+
+Avatar 直接疊在使用者身上，遮擋骨架與姿勢視線，無法提供教練應有的「在旁示範」效果。
+
+### 解法：`screen_side` 欄位
+
+每個 `PoseCoachFrame` 的 `avatar` 物件加入 `screen_side` 欄位（`"left"` 或 `"right"`），Godot Avatar 根據此值將自己移到人體的對側：
+
+```json
+{
+  "avatar": {
+    "action": "hold_mountain",
+    "emotion": "calm",
+    "highlight": null,
+    "screen_side": "left"
+  }
+}
+```
+
+### Android 端：`humanScreenSide()`
+
+```kotlin
+private fun humanScreenSide(frame: PoseDetectionResult): String {
+    // PoseHelper 已對前鏡頭翻轉 x，直接使用即是螢幕座標
+    val screenX = frame.imageLandmarks.getOrNull(0)?.x()   // landmark 0 = 鼻子
+        ?: ((frame.imageLandmarks.getOrNull(11)?.x() ?: 0.5f) +
+            (frame.imageLandmarks.getOrNull(12)?.x() ?: 0.5f)) / 2f
+    // 人在左 → avatar 去右；人在右 → avatar 去左
+    return if (screenX < 0.5f) "right" else "left"
+}
+```
+
+回傳值是 **avatar 的目標側**，不是人體所在側。
+
+### Godot 端：`apply_screen_side()`
+
+```gdscript
+var _side_x_offset: float = 0.4
+
+func apply_screen_side(side: String) -> void:
+    match side:
+        "left":  _side_x_offset = -0.6
+        "right": _side_x_offset =  0.6
+        _:       _side_x_offset =  0.0
+    var tween = create_tween()
+    tween.tween_property(self, "position:x",
+        _base_position.x + _side_x_offset, 0.4)
+```
+
+在 Godot 3D 座標系中，正 x 對應螢幕右側（標準方向），故 `+0.6` 移到右側、`-0.6` 移到左側。
+
+### 已知限制
+
+- 使用者做前彎、趴臥等姿勢時身體橫跨整個畫面，此時任一側都可能有部份重疊，這是可接受的邊界情況。
+- 目前偏移量為 ±0.6 Godot 單位，若仍嫌不夠遠可在 `apply_screen_side()` 中調大。
+
+### GDScript 部署注意事項
+
+Godot 匯出時會將 `.gd` 來源編譯成 `.gdc` 二進制檔（位於 `app/src/main/assets/scripts/`）。**修改 `godot/scripts/*.gd` 後必須同步更新 assets 目錄，否則裝置執行的仍是舊版 bytecode。**
+
+目前採用的做法：將更新後的 `.gd` 來源直接複製到 `app/src/main/assets/scripts/`，並把對應的 `.gd.remap` 指向 `.gd` 而非 `.gdc`，讓 Godot debug runtime 載入來源檔。
+
+---
+
 ## 待確認事項
 
 - Godot 版本：建議 Godot 4.x
