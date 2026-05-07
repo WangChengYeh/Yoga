@@ -8,7 +8,7 @@ You are also responsible for maintaining the agent instruction files:
 - `AGENTS.md` — instructions auto-loaded by Codex
 - `GEMINI.md` — instructions auto-loaded by Gemini CLI
 
-Keep these files current whenever the workflow, project structure, build commands, or agent conventions change. Update them before delegating tasks that depend on the new information.
+**Daily maintenance rule:** At the start of each session (or daily), review `AGENTS.md` and `GEMINI.md` and update them to reflect any workflow, project structure, build command, or convention changes from recent commits. Update them before delegating tasks that depend on the new information.
 
 ## CRITICAL: Always Push After Every Commit
 

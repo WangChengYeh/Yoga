@@ -48,3 +48,13 @@ Every Codex prompt must include all four sections:
 - Kotlin (main logic) + Godot (avatar rendering) + MediaPipe (pose detection)
 - Architecture: `docs/architecture.md`
 - Roadmap: `docs/roadmap.md`
+
+## Key Conventions (updated 2026-05-08)
+
+**GDScript dual-file sync:** Any change to `godot/scripts/*.gd` MUST also be applied to `app/src/main/assets/scripts/*.gd`. Both copies must stay identical. The `.gd.remap` files point to `.gd` source (not `.gdc`), so the assets copy is what runs on device.
+
+**Godot avatar layout:** `virtualCoachView` (GodotFragment) is a `110dp × 196dp` corner PiP (`bottom|end`). Do NOT revert to `match_parent`. Avatar is centered in the PiP (`_side_x_offset = 0.0`).
+
+**PoseOverlayView coordinate mapping:** Landmarks are mapped using FILL_CENTER transform (scale = max(scaleX, scaleY), centered offsets) based on `imageWidth`/`imageHeight` from `PoseDetectionResult`. Do not use raw `landmark.x() * viewWidth`.
+
+**Build environment:** Local machine has JDK 8. Build requires JDK 17+. Run `export JAVA_HOME=$(/usr/libexec/java_home -v 17) && ./gradlew assembleDebug` or flag the JDK issue explicitly in the report.
