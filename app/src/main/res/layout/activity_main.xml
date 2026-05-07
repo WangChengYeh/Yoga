@@ -131,17 +131,6 @@
         </LinearLayout>
 
         <TextView
-            android:id="@+id/demoTitle"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_gravity="top"
-            android:padding="12dp"
-            android:background="#99000000"
-            android:text="YogaFlow 3D Class"
-            android:textColor="#FFFFFFFF"
-            android:textSize="16sp" />
-
-        <TextView
             android:id="@+id/flowName"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -182,18 +171,6 @@
             android:text="Ready"
             android:textColor="#FFFFFF"
             android:textSize="20sp" />
-
-        <TextView
-            android:id="@+id/llmStatus"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="top|end"
-            android:layout_margin="12dp"
-            android:padding="6dp"
-            android:background="#99000000"
-            android:text="LLM: OFF"
-            android:textColor="#FFFFFFFF"
-            android:textSize="12sp" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -290,22 +267,6 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:padding="24dp">
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="YogaFlow 3D"
-                android:textColor="#FFFFFF"
-                android:textSize="32sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="On-device AI yoga coach"
-                android:textColor="#CCCCCC"
-                android:textSize="16sp" />
 
             <FrameLayout
                 android:layout_width="match_parent"

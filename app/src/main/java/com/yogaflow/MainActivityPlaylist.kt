@@ -38,7 +38,6 @@ internal fun MainActivity.applyPlaylist(flows: List<YogaFlow>, openClassView: Bo
     detectionMapperSession.resetAll()
     latestSuggestion = null
     resetToCameraSetup("請先完成相機設定。")
-    llmStatus.text = "LLM: OFF"
     updateRuntimeTuningControls()
 
     if (openClassView) showClass()

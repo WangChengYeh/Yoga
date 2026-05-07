@@ -75,11 +75,9 @@ class MainActivity : AppCompatActivity(), GodotHost {
     lateinit var cameraSetupStatus: TextView
     lateinit var debugText: TextView
     lateinit var coachText: TextView
-    lateinit var demoTitle: TextView
     lateinit var flowName: TextView
     lateinit var progressText: TextView
     lateinit var countdownText: TextView
-    lateinit var llmStatus: TextView
     lateinit var progressBar: ProgressBar
     lateinit var squatThresholdLabel: TextView
     lateinit var bridgeThresholdLabel: TextView
@@ -225,7 +223,6 @@ class MainActivity : AppCompatActivity(), GodotHost {
         }
 
         val llmCoach = LlmCoach(this, llmInteractionDb)
-        llmStatus.text = if (llmCoach.isLlmLoaded) "LLM: ON" else "LLM: OFF (model missing)"
 
         coachCueController = CoachCueController(
             llmCoach = llmCoach,
@@ -234,9 +231,8 @@ class MainActivity : AppCompatActivity(), GodotHost {
             uiExecutor = { runnable -> runOnUiThread(runnable) },
             minCueIntervalMs = 5000L,
             sameCueIntervalMs = 8000L,
-            onDisplay = { displayText, llmEnabled ->
+            onDisplay = { displayText, _ ->
                 coachText.text = displayText
-                llmStatus.text = if (llmEnabled) "LLM: ON" else "LLM: OFF"
                 recordSessionCue(null, displayText, "display")
             },
             isRequestCurrent = { flowId, step ->

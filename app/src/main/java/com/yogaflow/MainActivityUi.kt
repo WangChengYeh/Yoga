@@ -11,7 +11,6 @@ internal fun MainActivity.updateUi(animated: Boolean) {
     progressText.visibility = sessionUiVisibility
     progressBar.visibility = sessionUiVisibility
     countdownText.visibility = sessionUiVisibility
-    demoTitle.visibility = sessionUiVisibility
 
     flowName.text = "Flow ${playlist.currentNumber()}/${playlist.total()} · ${currentFlow.name}"
     val step = flowEngine.currentStepNumber()
