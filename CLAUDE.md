@@ -61,7 +61,7 @@ Use the ACP helper script — structured JSON-RPC protocol, streaming output, se
 | Read-only audit | `--mode plan` | Reviewing code, no edits |
 | Safe edit | `--mode auto_edit` | Fixing code, no shell commands (default) |
 
-Default model: `auto-gemini-3`. Do not use flash/flash-lite.
+Default model: `gemini-3.0-pro`. Do not use flash/flash-lite or auto-gemini-3.
 
 ```bash
 # Standard task (auto_edit, auto-gemini-3 default)
