@@ -6,11 +6,11 @@ Usage:
     python3 scripts/gemini-acp.py "Your task here"
     python3 scripts/gemini-acp.py "Your task" --mode plan        # read-only
     python3 scripts/gemini-acp.py "Your task" --mode auto_edit   # safe edits (default)
-    python3 scripts/gemini-acp.py "Your task" --model gemini-3.0-pro
+    python3 scripts/gemini-acp.py "Your task" --model gemini-2.5-pro
     python3 scripts/gemini-acp.py "Your task" --resume <session-id>
     python3 scripts/gemini-acp.py --list-sessions
 
-Default model: gemini-3.0-pro
+Default model: gemini-2.5-pro
 """
 
 import subprocess, json, sys, threading, queue, time, argparse, os
@@ -18,7 +18,7 @@ import subprocess, json, sys, threading, queue, time, argparse, os
 CWD = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Ordered fallback chain — Pro only, no flash/flash-lite
-FALLBACK_MODELS = ["gemini-3.0-pro"]
+FALLBACK_MODELS = ["gemini-2.5-pro"]
 
 
 def _is_quota_error(msg: str) -> bool:
@@ -155,7 +155,7 @@ class _QuotaError(Exception):
 
 
 def run_acp(task: str, mode: str = "auto_edit", resume_session: str | None = None,
-            model: str = "gemini-3.0-pro") -> str:
+            model: str = "gemini-2.5-pro") -> str:
     """Run ACP with automatic fallback on quota exhaustion."""
     models_to_try = [model] + [m for m in FALLBACK_MODELS if m != model]
 
@@ -189,8 +189,8 @@ def main():
     parser.add_argument("task", nargs="?", help="Task prompt")
     parser.add_argument("--mode", choices=["plan", "auto_edit"], default="auto_edit",
                         help="Approval mode (default: auto_edit)")
-    parser.add_argument("--model", metavar="MODEL_ID", default="gemini-3.0-pro",
-                        help="Gemini model ID (default: gemini-3.0-pro)")
+    parser.add_argument("--model", metavar="MODEL_ID", default="gemini-2.5-pro",
+                        help="Gemini model ID (default: gemini-2.5-pro)")
     parser.add_argument("--resume", metavar="SESSION_ID",
                         help="Resume an existing session by ID")
     parser.add_argument("--list-sessions", action="store_true",
