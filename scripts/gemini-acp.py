@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 Gemini ACP client — sends a task prompt and streams the response.
+Also serves as a FastMCP server when invoked with --mcp.
 
 Usage:
     python3 scripts/gemini-acp.py "Your task here"
@@ -9,8 +10,9 @@ Usage:
     python3 scripts/gemini-acp.py "Your task" --model gemini-2.5-pro
     python3 scripts/gemini-acp.py "Your task" --resume <session-id>
     python3 scripts/gemini-acp.py --list-sessions
+    python3 scripts/gemini-acp.py --mcp                          # start MCP server (stdio)
 
-Default model: gemini-2.5-pro
+Default model: gemini-2.5-pro (CLI) / gemini-3.0-pro (MCP server)
 """
 
 from __future__ import annotations
@@ -205,6 +207,33 @@ def list_sessions():
     print(result.stdout or result.stderr)
 
 
+def _serve_mcp() -> None:
+    from mcp.server.fastmcp import FastMCP
+    mcp = FastMCP("gemini-acp")
+
+    @mcp.tool()
+    def gemini_run(
+        task: str,
+        mode: str = "auto_edit",
+        resume_session: str | None = None,
+        model: str = "gemini-3.0-pro",
+    ) -> str:
+        """Send a task to Gemini via ACP and return the response text."""
+        return run_acp(task=task, mode=mode, resume_session=resume_session, model=model)
+
+    @mcp.tool()
+    def gemini_list_sessions() -> dict[str, Any]:
+        """Run `gemini --list-sessions` and return stdout/stderr/exit code."""
+        result = subprocess.run(
+            ["gemini", "--list-sessions"],
+            capture_output=True, text=True,
+            cwd=CWD,
+        )
+        return {"stdout": result.stdout, "stderr": result.stderr, "returncode": result.returncode}
+
+    mcp.run()
+
+
 def main():
     parser = argparse.ArgumentParser(description="Gemini ACP client for YogaFlow 3D")
     parser.add_argument("task", nargs="?", help="Task prompt")
@@ -216,7 +245,13 @@ def main():
                         help="Resume an existing session by ID")
     parser.add_argument("--list-sessions", action="store_true",
                         help="List available sessions and exit")
+    parser.add_argument("--mcp", action="store_true",
+                        help="Start as MCP stdio server (gemini-3.0-pro default)")
     args = parser.parse_args()
+
+    if args.mcp:
+        _serve_mcp()
+        return
 
     if args.list_sessions:
         list_sessions()
