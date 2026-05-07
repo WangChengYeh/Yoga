@@ -10,7 +10,7 @@ var current_action := ""
 var _base_position := Vector3.ZERO
 var _base_rotation := Vector3.ZERO
 var _base_scale := Vector3.ONE
-var _side_x_offset: float = 0.4
+var _side_x_offset: float = 0.0
 var _override_active: bool = false
 var _override_x: float = 0.0
 var _override_y: float = 0.0
@@ -83,15 +83,9 @@ func clear_override_position() -> void:
     _override_active = false
 
 func apply_screen_side(side: String) -> void:
-    match side:
-        "left":
-            _side_x_offset = -1.4
-        "right":
-            _side_x_offset = 1.4
-        _:
-            _side_x_offset = 0.0
+    _side_x_offset = 0.0
     var tween = create_tween()
-    tween.tween_property(self, "position:x", _base_position.x + _side_x_offset, 0.4)
+    tween.tween_property(self, "position:x", _base_position.x, 0.4)
 
 func apply_skin(skin_name: String) -> void:
     match skin_name:

@@ -156,11 +156,9 @@ class MainActivity : AppCompatActivity(), GodotHost {
             android.os.Handler(mainLooper).postDelayed({
                 val surfaceView = findSurfaceViewInHierarchy(virtualCoachView)
                 if (surfaceView != null) {
-                    surfaceView.setZOrderOnTop(true)
-                    surfaceView.holder.setFormat(android.graphics.PixelFormat.TRANSPARENT)
-                    Log.i("YogaFlow", "Godot SurfaceView set transparent")
+                    Log.i("YogaFlow", "Godot SurfaceView found (PiP mode, transparency override disabled)")
                 } else {
-                    Log.w("YogaFlow", "Godot SurfaceView not found for transparency")
+                    Log.w("YogaFlow", "Godot SurfaceView not found")
                 }
             }, 500L)
         }
