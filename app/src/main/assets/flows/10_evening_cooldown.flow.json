@@ -1,0 +1,133 @@
+{
+  "version": "dsl-v2",
+  "flow": {
+    "id": "10_evening_cooldown",
+    "name": "夜間放鬆 · Evening Cooldown",
+    "pose": "forward_fold",
+    "language": "zh-TW",
+    "level": "beginner"
+  },
+  "defaults": {
+    "runtime": {
+      "stabilityMs": 100,
+      "emaAlpha": 0.15,
+      "deadbandDegrees": 8
+    }
+  },
+  "steps": [
+    {
+      "state": "SETUP",
+      "durationMs": 5000,
+      "cue": "站穩，閉上眼睛感受一下身體的狀態。深吸一口氣，吐氣，讓肩膀完全放下來。",
+      "detect": "ready_forward_fold",
+      "correction": "把注意力帶到呼吸上，讓身體慢慢靜下來。",
+      "runtime": {
+        "angles": {
+          "knee": { "ready": { "min": 110 } },
+          "hip": { "ready": { "min": 80 } }
+        }
+      }
+    },
+    {
+      "state": "SETUP",
+      "durationMs": 5000,
+      "cue": "吸氣，背拉長，讓身體準備好往前折疊。肩膀自然放鬆，不要刻意用力。",
+      "detect": "tall_spine_setup",
+      "correction": "不用硬撐背，讓呼吸自然帶動脊椎延伸。",
+      "runtime": {
+        "angles": {
+          "knee": { "setup": { "min": 110 } },
+          "hip": { "setup": { "min": 80 } }
+        }
+      }
+    },
+    {
+      "state": "MOVEMENT",
+      "durationMs": 7000,
+      "cue": "吐氣，非常緩慢地從髖部往前傾，讓上半身的重量自然帶著你下去，不需要用力。",
+      "detect": "hip_hinge",
+      "correction": "放慢速度，這不是測試你的柔軟度，是讓身體放鬆。",
+      "runtime": {
+        "stabilityMs": 100,
+        "emaAlpha": 0.15,
+        "angles": {
+          "knee": { "hinge": { "min": 100 } },
+          "hip": { "hinge": { "max": 145 } }
+        }
+      }
+    },
+    {
+      "state": "MOVEMENT",
+      "durationMs": 5000,
+      "cue": "讓身體慢慢沉下去到舒適的位置，雙手輕輕擺動或扶在腿上都可以。",
+      "detect": "controlled_forward_fold",
+      "correction": "不需要到最深的地方，找到今天舒服的範圍就停下來。",
+      "runtime": {
+        "emaAlpha": 0.15,
+        "angles": {
+          "knee": { "fold": { "min": 100 } },
+          "hip": { "fold": { "min": 50, "max": 140 } }
+        }
+      }
+    },
+    {
+      "state": "HOLD",
+      "durationMs": 12000,
+      "cue": "完全放鬆在這裡。讓頭、頸、肩膀都沉下去，感受一整天的疲勞慢慢釋放。",
+      "detect": "forward_hold",
+      "correction": "如果覺得太緊，稍微彎一下膝蓋，讓背部放鬆比較重要。",
+      "runtime": {
+        "stabilityMs": 150,
+        "emaAlpha": 0.15,
+        "angles": {
+          "knee": { "hold": { "min": 100 } },
+          "hip": { "hold": { "min": 45, "max": 140 } }
+        }
+      }
+    },
+    {
+      "state": "HOLD",
+      "durationMs": 12000,
+      "cue": "繼續放鬆。每次吐氣讓身體更柔軟一些，不用追求，就讓地心引力帶著你。",
+      "detect": "forward_hold",
+      "correction": "呼吸是你的工具，吸氣空間延伸，吐氣重量釋放。",
+      "runtime": {
+        "stabilityMs": 150,
+        "emaAlpha": 0.15,
+        "angles": {
+          "knee": { "hold": { "min": 100 } },
+          "hip": { "hold": { "min": 45, "max": 140 } }
+        }
+      }
+    },
+    {
+      "state": "TRANSITION",
+      "durationMs": 6000,
+      "cue": "非常慢地起身，先彎膝蓋，雙手扶腿，讓背部一節一節捲起來，最後才抬頭。",
+      "detect": "return_standing",
+      "correction": "不要快速起身，頭暈是起太快造成的，慢慢來。",
+      "runtime": {
+        "angles": {
+          "knee": { "return": { "min": 100 } },
+          "hip": { "return": { "min": 80 } }
+        }
+      }
+    },
+    {
+      "state": "HOLD",
+      "durationMs": 6000,
+      "cue": "回到站姿，閉上眼睛感受身體現在的狀態。全身是否比剛才輕了一點點？",
+      "detect": "neutral_finish",
+      "correction": "如果頭暈，慢慢睜開眼睛，扶著旁邊等一下。",
+      "runtime": {
+        "angles": {
+          "knee": { "neutral": { "min": 110 } },
+          "hip": { "neutral": { "min": 80 } }
+        }
+      }
+    }
+  ],
+  "end": {
+    "cue": "夜間放鬆完成。帶著這份平靜去休息，晚安。"
+  }
+}

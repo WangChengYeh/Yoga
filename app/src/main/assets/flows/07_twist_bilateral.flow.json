@@ -1,0 +1,118 @@
+{
+  "version": "dsl-v2",
+  "flow": {
+    "id": "07_twist_bilateral",
+    "name": "雙側扭轉 · Bilateral Twist",
+    "pose": "twist",
+    "language": "zh-TW",
+    "level": "beginner"
+  },
+  "defaults": {
+    "runtime": {
+      "stabilityMs": 150,
+      "emaAlpha": 0.2,
+      "deadbandDegrees": 6
+    }
+  },
+  "steps": [
+    {
+      "state": "SETUP",
+      "durationMs": 4000,
+      "cue": "站穩或坐穩，脊椎回到正中，肩膀放鬆，準備開始側邊扭轉。",
+      "detect": "stable_base",
+      "correction": "先讓身體完全回到正中，確認兩邊肩膀一樣高。",
+      "runtime": {
+        "angles": {
+          "twist": { "center": { "max": 15 } }
+        }
+      }
+    },
+    {
+      "state": "MOVEMENT",
+      "durationMs": 5000,
+      "cue": "吸氣，脊椎往上拉長。吐氣，從肚臍開始往右轉，肩膀跟著帶動。",
+      "detect": "twist_start",
+      "correction": "轉動的力量來自核心，不是用肩膀硬拉。",
+      "runtime": {
+        "angles": {
+          "twist": { "start": { "min": 15, "max": 55 } }
+        }
+      }
+    },
+    {
+      "state": "HOLD",
+      "durationMs": 8000,
+      "cue": "維持向右扭轉，每次吸氣脊椎往上長，吐氣再多轉一點點。",
+      "detect": "twist_hold",
+      "correction": "如果背部彎了，先把脊椎拉直，再保持扭轉。",
+      "runtime": {
+        "angles": {
+          "twist": { "hold": { "min": 20, "max": 65 } }
+        }
+      }
+    },
+    {
+      "state": "TRANSITION",
+      "durationMs": 4000,
+      "cue": "慢慢把身體帶回正中間，讓脊椎回到中立位置，放鬆一下。",
+      "detect": "return_center",
+      "correction": "不要快速轉回來，慢慢讓扭轉消退。",
+      "runtime": {
+        "angles": {
+          "twist": { "center": { "max": 15 } }
+        }
+      }
+    },
+    {
+      "state": "SETUP",
+      "durationMs": 3000,
+      "cue": "回到正中間，感受一下兩邊的差異，準備換左邊。",
+      "detect": "stable_base",
+      "correction": "讓身體完全放鬆回到中心。",
+      "runtime": {
+        "angles": {
+          "twist": { "center": { "max": 15 } }
+        }
+      }
+    },
+    {
+      "state": "MOVEMENT",
+      "durationMs": 5000,
+      "cue": "吸氣，脊椎往上拉長。吐氣，從肚臍開始往左轉，肩膀跟著帶動。",
+      "detect": "twist_start",
+      "correction": "換到左邊，力量同樣來自核心不是肩膀。",
+      "runtime": {
+        "angles": {
+          "twist": { "start": { "min": 15, "max": 55 } }
+        }
+      }
+    },
+    {
+      "state": "HOLD",
+      "durationMs": 8000,
+      "cue": "維持向左扭轉，呼吸均勻，感受脊椎的旋轉。",
+      "detect": "twist_hold",
+      "correction": "保持脊椎直立，不要讓腰往前彎。",
+      "runtime": {
+        "angles": {
+          "twist": { "hold": { "min": 20, "max": 65 } }
+        }
+      }
+    },
+    {
+      "state": "TRANSITION",
+      "durationMs": 4000,
+      "cue": "慢慢回到正中。全身放鬆，感受脊椎兩側都得到了伸展。",
+      "detect": "return_center",
+      "correction": "慢慢轉回，不要急。",
+      "runtime": {
+        "angles": {
+          "twist": { "center": { "max": 15 } }
+        }
+      }
+    }
+  ],
+  "end": {
+    "cue": "雙側扭轉完成。脊椎左右兩側都得到了充分活動。"
+  }
+}

@@ -1,0 +1,102 @@
+{
+  "version": "dsl-v2",
+  "flow": {
+    "id": "09_bridge_activation",
+    "name": "橋式強化 · Bridge Activation",
+    "pose": "bridge",
+    "language": "zh-TW",
+    "level": "intermediate"
+  },
+  "defaults": {
+    "runtime": {
+      "stabilityMs": 200,
+      "emaAlpha": 0.2,
+      "deadbandDegrees": 5
+    }
+  },
+  "steps": [
+    {
+      "state": "SETUP",
+      "durationMs": 5000,
+      "cue": "躺平，雙膝彎曲，腳掌踩地與臀同寬。雙手放在身體兩側，掌心朝下。",
+      "detect": "bridge_setup",
+      "correction": "腳掌要平踩地板，腳跟在膝蓋正下方或稍微靠近身體。"
+    },
+    {
+      "state": "MOVEMENT",
+      "durationMs": 5000,
+      "cue": "吸氣，收緊核心和臀部，讓臀部慢慢抬離地板，一節一節往上。",
+      "detect": "bridge_lift",
+      "correction": "不要一次用力彈起來，讓脊椎從尾骨到腰逐漸離地。",
+      "runtime": {
+        "angles": {
+          "hip": { "lift": { "min": 80, "max": 180 } }
+        }
+      }
+    },
+    {
+      "state": "HOLD",
+      "durationMs": 8000,
+      "cue": "維持橋式，夾緊臀部，感覺臀部、大腿後側、核心都在用力。膝蓋不要向外張開。",
+      "detect": "bridge_hold",
+      "correction": "如果臀部歪了，重新收緊核心，讓兩邊臀部等高。",
+      "runtime": {
+        "stabilityMs": 300,
+        "emaAlpha": 0.18,
+        "angles": {
+          "hip": { "hold": { "min": 80, "max": 170 } }
+        }
+      }
+    },
+    {
+      "state": "TRANSITION",
+      "durationMs": 4000,
+      "cue": "慢慢放下，讓背部從上到下依序回到地板，臀部最後落地。",
+      "detect": "bridge_return",
+      "correction": "不要直接摔下來，控制好速度，讓脊椎慢慢落地。"
+    },
+    {
+      "state": "SETUP",
+      "durationMs": 3000,
+      "cue": "放鬆一下，感覺臀部和大腿後側的疲勞感。準備再做一次。",
+      "detect": "bridge_setup",
+      "correction": "讓背部完全放平，呼吸平穩後再繼續。"
+    },
+    {
+      "state": "MOVEMENT",
+      "durationMs": 4000,
+      "cue": "再次抬起，這次在最高點時試著讓臀部夾得更緊一點。",
+      "detect": "bridge_lift",
+      "correction": "往上的速度不用快，力量來自臀部，不是用慣性彈起。",
+      "runtime": {
+        "angles": {
+          "hip": { "lift": { "min": 80, "max": 180 } }
+        }
+      }
+    },
+    {
+      "state": "HOLD",
+      "durationMs": 10000,
+      "cue": "維持橋式。試著感受臀部肌肉的深層用力，呼吸不要憋住。",
+      "detect": "bridge_hold",
+      "correction": "如果腰很緊，稍微降低臀部高度，讓核心多分擔一點力量。",
+      "runtime": {
+        "stabilityMs": 300,
+        "emaAlpha": 0.18,
+        "angles": {
+          "hip": { "hold": { "min": 80, "max": 165 } }
+        }
+      }
+    },
+    {
+      "state": "TRANSITION",
+      "durationMs": 5000,
+      "cue": "慢慢放下，一節一節讓脊椎回到地板。完全躺平，深呼吸兩口。",
+      "detect": "bridge_return",
+      "correction": "慢慢放，讓脊椎每一節都感覺到地板。"
+    }
+  ],
+  "end": {
+    "cue": "橋式強化完成。臀部和大腿後側都得到了很好的啟動和訓練。"
+  }
+}

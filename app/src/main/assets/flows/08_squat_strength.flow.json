@@ -1,0 +1,136 @@
+{
+  "version": "dsl-v2",
+  "flow": {
+    "id": "08_squat_strength",
+    "name": "力量深蹲 · Strength Squat",
+    "pose": "squat",
+    "language": "zh-TW",
+    "level": "intermediate"
+  },
+  "defaults": {
+    "runtime": {
+      "stabilityMs": 200,
+      "emaAlpha": 0.2,
+      "deadbandDegrees": 5
+    }
+  },
+  "steps": [
+    {
+      "state": "SETUP",
+      "durationMs": 5000,
+      "cue": "站穩，雙腳打開略比肩寬，腳尖稍微朝外，核心收緊，背部打直。",
+      "detect": "squat_setup",
+      "correction": "雙腳再打開一點，讓膝蓋對齊腳尖的方向。",
+      "runtime": {
+        "angles": {
+          "knee": { "setup": { "min": 140 } }
+        }
+      }
+    },
+    {
+      "state": "MOVEMENT",
+      "durationMs": 5000,
+      "cue": "吸氣，臀部往後坐，膝蓋朝腳尖方向推，上半身略往前傾保持平衡。",
+      "detect": "squat_descent",
+      "correction": "膝蓋不要往內夾，讓膝蓋對齊腳趾方向。",
+      "runtime": {
+        "angles": {
+          "knee": { "descent": { "min": 85, "max": 155 } }
+        }
+      }
+    },
+    {
+      "state": "HOLD",
+      "durationMs": 10000,
+      "cue": "維持深蹲，感覺大腿前側和臀部的用力。呼吸平穩，核心收緊，不要坐垮。",
+      "detect": "squat_hold",
+      "correction": "如果膝蓋往內塌，把膝蓋往外推，和腳趾同方向。",
+      "runtime": {
+        "stabilityMs": 300,
+        "emaAlpha": 0.18,
+        "angles": {
+          "knee": { "hold": { "min": 75, "max": 110 } }
+        }
+      }
+    },
+    {
+      "state": "HOLD",
+      "durationMs": 8000,
+      "cue": "再撐一下，深呼吸幫助肌肉放鬆，保持臀部和大腿都在用力。",
+      "detect": "squat_hold",
+      "correction": "上半身不要往前倒太多，保持胸口朝前。",
+      "runtime": {
+        "stabilityMs": 300,
+        "emaAlpha": 0.18,
+        "angles": {
+          "knee": { "hold": { "min": 75, "max": 110 } }
+        }
+      }
+    },
+    {
+      "state": "TRANSITION",
+      "durationMs": 4000,
+      "cue": "吐氣，用大腿和臀部的力量把身體推回站立，膝蓋慢慢伸直。",
+      "detect": "squat_return",
+      "correction": "起身時不要讓膝蓋往內夾，用臀部力量帶動起身。",
+      "runtime": {
+        "angles": {
+          "knee": { "return": { "min": 150 } }
+        }
+      }
+    },
+    {
+      "state": "SETUP",
+      "durationMs": 3000,
+      "cue": "站回來，感受大腿和臀部的疲勞感。這是進步的訊號。深呼吸一口。",
+      "detect": "squat_setup",
+      "correction": "站穩，讓腿部放鬆一下。",
+      "runtime": {
+        "angles": {
+          "knee": { "setup": { "min": 140 } }
+        }
+      }
+    },
+    {
+      "state": "MOVEMENT",
+      "durationMs": 5000,
+      "cue": "再來一次。吸氣，臀部後坐，控制好速度，慢慢下蹲。",
+      "detect": "squat_descent",
+      "correction": "下蹲時背部保持平直，不要讓腰往前彎。",
+      "runtime": {
+        "angles": {
+          "knee": { "descent": { "min": 85, "max": 155 } }
+        }
+      }
+    },
+    {
+      "state": "HOLD",
+      "durationMs": 10000,
+      "cue": "再次維持深蹲。這次試著讓臀部更低，但保持背部直立。",
+      "detect": "squat_hold",
+      "correction": "如果腳跟抬起，代表需要更開的腳距或腳跟後面墊高一點。",
+      "runtime": {
+        "stabilityMs": 300,
+        "emaAlpha": 0.18,
+        "angles": {
+          "knee": { "hold": { "min": 70, "max": 105 } }
+        }
+      }
+    },
+    {
+      "state": "TRANSITION",
+      "durationMs": 4000,
+      "cue": "最後一次起身，吐氣，用力把身體推回站立。",
+      "detect": "squat_return",
+      "correction": "慢慢起身，不要用衝的。",
+      "runtime": {
+        "angles": {
+          "knee": { "return": { "min": 150 } }
+        }
+      }
+    }
+  ],
+  "end": {
+    "cue": "力量深蹲完成。大腿和臀部得到了充分訓練。"
+  }
+}

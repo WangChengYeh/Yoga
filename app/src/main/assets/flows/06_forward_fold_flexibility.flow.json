@@ -1,0 +1,133 @@
+{
+  "version": "dsl-v2",
+  "flow": {
+    "id": "06_forward_fold_flexibility",
+    "name": "柔韌前彎 · Flexibility Forward Fold",
+    "pose": "forward_fold",
+    "language": "zh-TW",
+    "level": "intermediate"
+  },
+  "defaults": {
+    "runtime": {
+      "stabilityMs": 200,
+      "emaAlpha": 0.2,
+      "deadbandDegrees": 5
+    }
+  },
+  "steps": [
+    {
+      "state": "SETUP",
+      "durationMs": 5000,
+      "cue": "站直，雙腳打開約一肩寬，膝蓋保持伸長不要鎖死，感覺腳掌穩穩踩地。",
+      "detect": "ready_forward_fold",
+      "correction": "先把重心放到腳掌中央，膝蓋微微放鬆，不要鎖死。",
+      "runtime": {
+        "angles": {
+          "knee": { "ready": { "min": 130 } },
+          "hip": { "ready": { "min": 90 } }
+        }
+      }
+    },
+    {
+      "state": "SETUP",
+      "durationMs": 4000,
+      "cue": "吸氣，把脊椎往上拉長，胸口打開，肩膀放鬆往下沉。",
+      "detect": "tall_spine_setup",
+      "correction": "先打開胸口，再把背拉長。不要聳肩。",
+      "runtime": {
+        "angles": {
+          "knee": { "setup": { "min": 130 } },
+          "hip": { "setup": { "min": 90 } }
+        }
+      }
+    },
+    {
+      "state": "MOVEMENT",
+      "durationMs": 6000,
+      "cue": "吐氣，從髖部開始折疊，保持背部平直，雙手輕輕往下延伸。",
+      "detect": "hip_hinge",
+      "correction": "現在有點用背往下彎，先停住，把腰背打直，再從髖部前傾。",
+      "runtime": {
+        "stabilityMs": 150,
+        "emaAlpha": 0.25,
+        "angles": {
+          "knee": { "hinge": { "min": 120 } },
+          "hip": { "hinge": { "max": 135 } }
+        }
+      }
+    },
+    {
+      "state": "MOVEMENT",
+      "durationMs": 5000,
+      "cue": "繼續前傾，雙手碰到地板或支撐在腿上都可以，大腿後側感覺到拉伸就對了。",
+      "detect": "controlled_forward_fold",
+      "correction": "膝蓋稍微彎了，試著再伸直一點，讓拉伸在大腿後側，不是膝蓋後方。",
+      "runtime": {
+        "emaAlpha": 0.22,
+        "angles": {
+          "knee": { "fold": { "min": 120 } },
+          "hip": { "fold": { "min": 45, "max": 120 } }
+        }
+      }
+    },
+    {
+      "state": "HOLD",
+      "durationMs": 10000,
+      "cue": "停在這裡。完全放鬆頭頸，讓上半身的重量自然往下，不要用力壓。",
+      "detect": "forward_hold",
+      "correction": "感覺太緊就退回一點，保持呼吸平穩，讓身體自然放鬆。",
+      "runtime": {
+        "stabilityMs": 300,
+        "emaAlpha": 0.18,
+        "angles": {
+          "knee": { "hold": { "min": 120 } },
+          "hip": { "hold": { "min": 40, "max": 115 } }
+        }
+      }
+    },
+    {
+      "state": "HOLD",
+      "durationMs": 10000,
+      "cue": "再深一點點。每次吐氣讓身體更放鬆，感受大腿後側和下背的伸展。",
+      "detect": "forward_hold",
+      "correction": "不需要追求深度，維持呼吸比壓更深重要。",
+      "runtime": {
+        "stabilityMs": 300,
+        "emaAlpha": 0.18,
+        "angles": {
+          "knee": { "hold": { "min": 120 } },
+          "hip": { "hold": { "min": 40, "max": 110 } }
+        }
+      }
+    },
+    {
+      "state": "TRANSITION",
+      "durationMs": 5000,
+      "cue": "準備起身。吸氣，雙手支撐，從腹部核心帶動，慢慢一節一節把背捲起來。",
+      "detect": "return_standing",
+      "correction": "不要突然直起來，慢慢從腰到胸到肩依序捲起。",
+      "runtime": {
+        "angles": {
+          "knee": { "return": { "min": 120 } },
+          "hip": { "return": { "min": 90 } }
+        }
+      }
+    },
+    {
+      "state": "HOLD",
+      "durationMs": 4000,
+      "cue": "回到站姿，感覺大腿後側和背部的放鬆感。深呼吸兩口，感受剛才的效果。",
+      "detect": "neutral_finish",
+      "correction": "如果頭有點暈，保持站穩，先呼吸幾口再動。",
+      "runtime": {
+        "angles": {
+          "knee": { "neutral": { "min": 130 } },
+          "hip": { "neutral": { "min": 90 } }
+        }
+      }
+    }
+  ],
+  "end": {
+    "cue": "柔韌前彎完成。大腿後側、下背都有得到充分伸展。"
+  }
+}
