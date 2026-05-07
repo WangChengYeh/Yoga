@@ -17,12 +17,9 @@ IDLE_STAMP="/tmp/claude-yogaflow-idle-since"
 ONE_HOUR=3600
 ROLE="You are the project manager for YogaFlow 3D. You do not implement directly — you orchestrate Codex and Gemini CLI. Delegate all implementation to agents, review their output, and keep the project moving."
 
-# ── 0. Read hook input; skip if this is already a hook-injected turn ─────────
+# ── 0. Read hook input ───────────────────────────────────────────────────────
 INPUT=$(cat)
 HOOK_ACTIVE=$(echo "$INPUT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(str(d.get('stop_hook_active',False)).lower())" 2>/dev/null || echo "false")
-if [ "$HOOK_ACTIVE" = "true" ]; then
-  exit 0
-fi
 
 emit() {
   local msg="$1"
@@ -37,7 +34,7 @@ if ! git diff --cached --quiet 2>/dev/null; then
   exit 0
 fi
 
-# ── 2. Open GitHub issues ─────────────────────────────────────────────────────
+# ── 2. Open GitHub issues — always block, even if stop_hook_active ───────────
 ISSUE_COUNT=$(GITHUB_TOKEN="" gh issue list \
   --repo "$REPO" --state open --limit 1 --json number 2>/dev/null \
   | python3 -c "import sys,json; print(len(json.load(sys.stdin)))" 2>/dev/null \
@@ -49,7 +46,12 @@ if [ "$ISSUE_COUNT" -gt 0 ]; then
   exit 0
 fi
 
-# ── 3/4. No open issues — enforce 1-hour cooldown ────────────────────────────
+# ── 3. Nothing to do — only now respect stop_hook_active to prevent re-injection loop
+if [ "$HOOK_ACTIVE" = "true" ]; then
+  exit 0
+fi
+
+# ── 4. No open issues — enforce 1-hour cooldown ──────────────────────────────
 NOW=$(date +%s)
 
 if [ -f "$IDLE_STAMP" ]; then
