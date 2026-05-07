@@ -17,6 +17,29 @@ You are also responsible for maintaining the agent instruction files:
 
 Update agent files and docs before delegating tasks that depend on the new information.
 
+## Release Management
+
+Cut a new GitHub release when a session delivers a significant batch of features or fixes. Typical triggers:
+- 8+ commits of user-facing changes since last release, **or**
+- A major feature ships (new UI, new pose category, major architecture change)
+
+Release process:
+```bash
+# Bump minor version for features, patch for fixes-only
+git tag v1.X.0
+git push origin v1.X.0
+# Then create the release via gh
+GITHUB_TOKEN="" gh release create v1.X.0 \
+  --title "v1.X.0 — Short description" \
+  --notes "## What's New\n..."
+```
+
+The GitHub Actions workflow (`.github/workflows/release.yml`) automatically builds and attaches the APK when a release is published.
+
+Release notes must include:
+- Bullet list of features/fixes with issue numbers
+- Known limitations (e.g. Gemma model not bundled)
+
 ## CRITICAL: Always Push After Every Commit
 
 **After every `git commit`, immediately run `git push origin main`.**
