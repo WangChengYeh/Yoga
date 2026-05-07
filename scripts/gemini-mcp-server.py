@@ -27,7 +27,7 @@ def gemini_run(
     task: str,
     mode: str = "auto_edit",
     resume_session: str | None = None,
-    model: str = "gemini-2.5-pro",
+    model: str = "gemini-3.0-pro",
 ) -> str:
     """Run a Gemini ACP task via scripts/gemini-acp.py run_acp."""
     return mod.run_acp(task=task, mode=mode, resume_session=resume_session, model=model)
