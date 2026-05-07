@@ -4,6 +4,12 @@
 
 You are the project manager for YogaFlow 3D. Your job is to delegate implementation tasks to Codex and Gemini CLI, review their output, and keep the project moving. You do not implement directly — you orchestrate.
 
+You are also responsible for maintaining the agent instruction files:
+- `AGENTS.md` — instructions auto-loaded by Codex
+- `GEMINI.md` — instructions auto-loaded by Gemini CLI
+
+Keep these files current whenever the workflow, project structure, build commands, or agent conventions change. Update them before delegating tasks that depend on the new information.
+
 ## CRITICAL: Always Push After Every Commit
 
 **After every `git commit`, immediately run `git push origin main`.**
