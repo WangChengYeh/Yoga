@@ -71,7 +71,7 @@ YogaFlow 3D has moved from a pose-detection demo into a product-level on-device 
 
 ### App / UX
 - Multi-course home UI
-- Course selection
+- Course selection (Full / Stretch / Recovery / Strength categories)
 - Session control: Start / Pause / Restart
 - Flow index + step index
 - Progress bar
@@ -81,41 +81,52 @@ YogaFlow 3D has moved from a pose-detection demo into a product-level on-device 
   - progress
   - countdown
   - flow transition
-- 2D skeleton overlay
+- 2D skeleton overlay with FILL_CENTER coordinate mapping (#65)
+- Visual body framing box overlay (green/red border via PoseOverlayView)
+- Voice pacing rules: 5s min between cues, 8s before same cue repeats
+- Full-screen landscape mode — `resizeableActivity=false`, immersive sticky (#73)
+- Manual camera toggle button (Camera: OFF/ON) — no auto-start (#70)
+- Home screen class filters: Stretch→forward_fold, Recovery→bridge+twist, Strength→squat (#74, #75)
+- Godot avatar corner PiP (110dp×196dp, bottom-right) — no camera overlap (#66)
 
 ### AI / Voice
 - Local LLM coach via Gemma / MediaPipe GenAI
 - Rule-based fallback coach
 - Coach phrase polishing
 - TTS voice coaching
+- `LlmInteractionDb` — SQLite logging of all LLM prompt/response pairs with timing (#69)
+
+### Content
+- 15 flow JSON files in `assets/flows/` (01–15), dsl-v2, zh-TW, covering all 5 pose types (#58)
 
 ### Documentation
 - README updated to reflect 3D pose + camera coaching architecture
 - `architecture.md` rewritten as product-level architecture with 3D + camera coaching diagram
+- `YogaFlow3D-Proposal.pptx` and `.pdf` generated (#67)
 
 ---
 
 ## Remaining Product Work
 
 ### P0: Verify on device
-- Run Gradle build
-- Confirm MediaPipe `worldLandmarks()` availability with pinned dependency
-- Test CameraX RGBA pipeline on target high-end Android phones
-- Validate TTS + LLM fallback behavior during live camera inference
+- ✔ Gradle build verified (JDK 17 via Homebrew)
+- ✔ MediaPipe pose detection running on device
+- ✔ CameraX RGBA pipeline confirmed
+- Gemma LLM model not installed — all cues use rule-based fallback (#79)
 
 ### P1: Product polish
 - Replace cover drawable with real generated course images (#13)
-- Add visual body framing box overlay
-- Add clearer camera setup screen before class start
-- Add voice pacing rules so repeated cues do not speak too often
+- ✔ Add visual body framing box overlay
+- ✔ Add camera setup screen / toggle before class start (#70)
+- ✔ Add voice pacing rules (5s/8s intervals)
 - ✔ Add Godot 3D avatar coach overlay (GodotFragment + WebSocket IPC)
 - ✔ Avatar auto-positioning — moves to opposite side of detected human
 - ✔ Selectable coach skins (Classic, Nature, Ocean)
 
 ### P2: Content expansion
-- Expand flow library to 10–30 flows
+- ✔ Expand flow library to 15 flows (target: 10–30)
 - Add more pose-specific geometry rules
-- Add beginner / flexibility / recovery / strength categories
+- ✔ beginner / flexibility / recovery / strength categories on home screen
 
 ---
 

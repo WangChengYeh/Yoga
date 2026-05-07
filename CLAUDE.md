@@ -8,7 +8,14 @@ You are also responsible for maintaining the agent instruction files:
 - `AGENTS.md` — instructions auto-loaded by Codex
 - `GEMINI.md` — instructions auto-loaded by Gemini CLI
 
-**Daily maintenance rule:** At the start of each session (or daily), review `AGENTS.md` and `GEMINI.md` and update them to reflect any workflow, project structure, build command, or convention changes from recent commits. Update them before delegating tasks that depend on the new information.
+**Daily maintenance rule:** At the start of each session (or daily):
+1. Review `AGENTS.md` and `GEMINI.md` — update to reflect workflow, build, or convention changes from recent commits.
+2. Review `docs/roadmap.md` and `docs/architecture.md` — mark completed items ✔, remove stale descriptions.
+3. Review `docs/Proposal.md` — identify gaps between promised features and current implementation; open GitHub issues for material gaps.
+4. Scan recent commits (`git log --oneline -10`) — confirm docs reflect the actual shipped state.
+5. Open GitHub issues for any actionable gap found. GitHub is the single source of truth.
+
+Update agent files and docs before delegating tasks that depend on the new information.
 
 ## CRITICAL: Always Push After Every Commit
 

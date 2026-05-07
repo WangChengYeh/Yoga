@@ -39,11 +39,11 @@ PoseDetectionResult
   ↓
 CameraFramingCoach + ViewOrientation
   ↓
-Camera Setup Panel
+Camera Setup Panel (shown only when Camera toggle = ON)
   ↓
 Ready Stability Window (~1500ms)
   ↓
-Auto-start Gate
+Manual Start Gate (user taps Start — no auto-start since #70)
   ↓
 Flow step.detect
   ↓
@@ -56,8 +56,9 @@ Stability Window (~300ms)
 PoseFlowEngine (Event)
   ↓
 LLM Coach / Fallback        PoseCoachFrame JSON (screen_side + action + highlight)
-  ↓                                ↓
-TTS Voice                   Godot Avatar (WebSocket → AvatarController.gd)
+  ↓          ↓                          ↓
+TTS Voice  LlmInteractionDb      Godot Avatar (WebSocket → AvatarController.gd)
+           (SQLite: prompt/response/timing, #69)
 ```
 
 Target controller pipeline:
@@ -91,22 +92,23 @@ Ready Gate
   ↓
 Ready Stability Window
   ↓
-Auto-start
+Manual Start (user taps Start button)
   ↓
 FlowEngine
 ```
 
 The onboarding layer prevents users from entering a class until the system has reliable camera framing and view orientation.
 
-Current intended onboarding behavior:
+Current onboarding behavior (updated #70):
 
 ```text
-Not Ready
+App launches → Camera toggle = OFF (camera setup panel hidden)
+→ User taps "Camera: OFF" button → Camera toggle = ON
 → show setup guidance
 → draw body framing box + fixed guide frame
 → wait for body framing + orientation Ready
-→ hold Ready for ~1500ms
-→ auto-start class
+→ Start button becomes enabled
+→ User taps Start → class begins (no auto-start)
 ```
 
 Integration status:
