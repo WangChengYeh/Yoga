@@ -21,7 +21,6 @@
     "overageStrategy": "always"
   },
   "tools": {
-    "sandbox": null,
     "shell": {
       "enableInteractiveShell": true
     }
