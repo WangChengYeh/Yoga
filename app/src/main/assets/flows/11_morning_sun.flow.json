@@ -1,0 +1,45 @@
+{
+  "version": "dsl-v2",
+  "flow": {
+    "id": "11_morning_sun",
+    "name": "晨間喚醒 · Morning Sun Flow",
+    "pose": "mountain",
+    "language": "zh-TW",
+    "level": "beginner"
+  },
+  "defaults": {
+    "runtime": {
+      "stabilityMs": 200,
+      "emaAlpha": 0.2,
+      "deadbandDegrees": 5
+    }
+  },
+  "steps": [
+    {
+      "cue": "站到墊子中央，雙腳穩穩踩地，讓早晨的呼吸慢慢展開。",
+      "detect": "standing_centered"
+    },
+    {
+      "cue": "吸氣，脊椎向上延伸，胸口打開，肩膀放鬆。",
+      "detect": "spine_lengthened"
+    },
+    {
+      "cue": "保持山式，感受身體被晨光喚醒，呼吸穩定流動。",
+      "detect": "mountain_hold",
+      "hold": {
+        "durationSec": 12
+      }
+    },
+    {
+      "cue": "再一次吐氣，把肩頸放鬆，脊椎持續向上拉長。",
+      "detect": "spine_lengthened"
+    },
+    {
+      "cue": "維持穩定站姿，準備銜接下一個動作。",
+      "detect": "ready_for_next_pose"
+    }
+  ],
+  "end": {
+    "cue": "晨間喚醒完成，帶著清晰能量開始今天。"
+  }
+}

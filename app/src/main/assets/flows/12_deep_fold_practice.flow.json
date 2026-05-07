@@ -1,0 +1,65 @@
+{
+  "version": "dsl-v2",
+  "flow": {
+    "id": "12_deep_fold_practice",
+    "name": "深度前彎 · Deep Fold Practice",
+    "pose": "forward_fold",
+    "language": "zh-TW",
+    "level": "advanced"
+  },
+  "defaults": {
+    "runtime": {
+      "stabilityMs": 300,
+      "emaAlpha": 0.15,
+      "deadbandDegrees": 3
+    }
+  },
+  "runtime": {
+    "hip": {
+      "hold": {
+        "min": 30
+      }
+    },
+    "knee": {
+      "hold": {
+        "min": 140
+      }
+    }
+  },
+  "steps": [
+    {
+      "cue": "站穩，雙腳與髖同寬，先把重心平均放在雙腳。",
+      "detect": "ready_forward_fold"
+    },
+    {
+      "cue": "吸氣拉長脊椎，維持胸口開展，準備從髖部折疊。",
+      "detect": "tall_spine_setup"
+    },
+    {
+      "cue": "吐氣，從髖部前折，保持背部延伸，不急著下壓。",
+      "detect": "hip_hinge"
+    },
+    {
+      "cue": "持續控制下行，讓大腿後側逐步打開，維持穩定呼吸。",
+      "detect": "controlled_forward_fold"
+    },
+    {
+      "cue": "停留在前彎深處，頭頸放鬆，每次吐氣讓身體再柔軟一點。",
+      "detect": "forward_hold",
+      "hold": {
+        "durationSec": 15
+      }
+    },
+    {
+      "cue": "吸氣啟動核心，慢慢回到站姿，避免快速起身。",
+      "detect": "return_standing"
+    },
+    {
+      "cue": "回到中立站姿，感受背側線條被完整伸展。",
+      "detect": "neutral_finish"
+    }
+  ],
+  "end": {
+    "cue": "深度前彎練習完成，柔軟度與控制力都更進一步。"
+  }
+}

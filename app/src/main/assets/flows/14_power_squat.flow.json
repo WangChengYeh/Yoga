@@ -1,0 +1,55 @@
+{
+  "version": "dsl-v2",
+  "flow": {
+    "id": "14_power_squat",
+    "name": "力量蹲 · Power Squat",
+    "pose": "squat",
+    "language": "zh-TW",
+    "level": "intermediate"
+  },
+  "defaults": {
+    "runtime": {
+      "stabilityMs": 200,
+      "emaAlpha": 0.2,
+      "deadbandDegrees": 5
+    }
+  },
+  "runtime": {
+    "knee": {
+      "descent": {
+        "max": 110
+      },
+      "hold": {
+        "max": 100
+      }
+    }
+  },
+  "steps": [
+    {
+      "cue": "站穩，雙腳略寬於髖，核心收緊，準備輸出力量。",
+      "detect": "squat_setup"
+    },
+    {
+      "cue": "吸氣臀部向後坐，控制下降速度，膝蓋對齊腳尖方向。",
+      "detect": "squat_descent"
+    },
+    {
+      "cue": "維持深蹲位置，穩定呼吸，感受大腿與臀部持續出力。",
+      "detect": "squat_hold",
+      "hold": {
+        "durationSec": 10
+      }
+    },
+    {
+      "cue": "吐氣推地起身，保持軀幹穩定回到高位。",
+      "detect": "squat_return"
+    },
+    {
+      "cue": "第二次下降，維持同樣控制與力量輸出。",
+      "detect": "squat_descent"
+    }
+  ],
+  "end": {
+    "cue": "力量蹲完成，腿部與核心都得到扎實訓練。"
+  }
+}

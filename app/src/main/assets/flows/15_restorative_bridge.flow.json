@@ -1,0 +1,48 @@
+{
+  "version": "dsl-v2",
+  "flow": {
+    "id": "15_restorative_bridge",
+    "name": "修復橋式 · Restorative Bridge",
+    "pose": "bridge",
+    "language": "zh-TW",
+    "level": "beginner"
+  },
+  "defaults": {
+    "runtime": {
+      "stabilityMs": 150,
+      "emaAlpha": 0.25,
+      "deadbandDegrees": 8
+    }
+  },
+  "runtime": {
+    "hip": {
+      "hold": {
+        "min": 60
+      }
+    }
+  },
+  "steps": [
+    {
+      "cue": "平躺準備，雙腳踩穩地面，讓呼吸慢慢放長。",
+      "detect": "bridge_setup"
+    },
+    {
+      "cue": "吸氣時緩緩抬起臀部，讓脊椎一節一節離地。",
+      "detect": "bridge_lift"
+    },
+    {
+      "cue": "停留在橋式，慢慢深呼吸，讓胸口與髖前側溫和打開。",
+      "detect": "bridge_hold",
+      "hold": {
+        "durationSec": 20
+      }
+    },
+    {
+      "cue": "吐氣慢慢回落，讓背部依序貼回地面，回到放鬆。",
+      "detect": "bridge_return"
+    }
+  ],
+  "end": {
+    "cue": "修復橋式完成，身體回到平穩，帶著放鬆感休息。"
+  }
+}
