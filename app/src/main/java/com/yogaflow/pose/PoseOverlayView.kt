@@ -14,6 +14,8 @@ class PoseOverlayView @JvmOverloads constructor(
 ) : View(context, attrs) {
 
     private var landmarks: List<NormalizedLandmark> = emptyList()
+    private var imageWidth: Int = 0
+    private var imageHeight: Int = 0
     private var framingStatus: CameraFramingStatus? = null
 
     private val pointPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -52,8 +54,10 @@ class PoseOverlayView @JvmOverloads constructor(
         0 to 12
     )
 
-    fun setLandmarks(newLandmarks: List<NormalizedLandmark>) {
+    fun setLandmarks(newLandmarks: List<NormalizedLandmark>, imageWidth: Int, imageHeight: Int) {
         landmarks = newLandmarks
+        this.imageWidth = imageWidth
+        this.imageHeight = imageHeight
         invalidate()
     }
 
@@ -73,22 +77,50 @@ class PoseOverlayView @JvmOverloads constructor(
     }
 
     private fun drawSkeleton(canvas: Canvas) {
+        val hasValidImageSize = imageWidth > 0 && imageHeight > 0
+        val viewWidth = width.toFloat()
+        val viewHeight = height.toFloat()
+
+        val scaledWidth: Float
+        val scaledHeight: Float
+        val offsetX: Float
+        val offsetY: Float
+        if (hasValidImageSize) {
+            val scaleX = viewWidth / imageWidth.toFloat()
+            val scaleY = viewHeight / imageHeight.toFloat()
+            val scale = maxOf(scaleX, scaleY)
+            scaledWidth = imageWidth.toFloat() * scale
+            scaledHeight = imageHeight.toFloat() * scale
+            offsetX = (viewWidth - scaledWidth) / 2f
+            offsetY = (viewHeight - scaledHeight) / 2f
+        } else {
+            scaledWidth = viewWidth
+            scaledHeight = viewHeight
+            offsetX = 0f
+            offsetY = 0f
+        }
+
         for ((startIndex, endIndex) in connections) {
             if (startIndex < landmarks.size && endIndex < landmarks.size) {
                 val start = landmarks[startIndex]
                 val end = landmarks[endIndex]
                 canvas.drawLine(
-                    start.x() * width,
-                    start.y() * height,
-                    end.x() * width,
-                    end.y() * height,
+                    start.x() * scaledWidth + offsetX,
+                    start.y() * scaledHeight + offsetY,
+                    end.x() * scaledWidth + offsetX,
+                    end.y() * scaledHeight + offsetY,
                     linePaint
                 )
             }
         }
 
         landmarks.forEach { point ->
-            canvas.drawCircle(point.x() * width, point.y() * height, 6f, pointPaint)
+            canvas.drawCircle(
+                point.x() * scaledWidth + offsetX,
+                point.y() * scaledHeight + offsetY,
+                6f,
+                pointPaint
+            )
         }
     }
 
