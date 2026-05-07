@@ -50,33 +50,14 @@ Always pass `--write` in Codex task prompts that need to build or run adb (e.g. 
 **Default model: `gpt-5.3-codex`** (set in `.codex/config.toml`). Do not pass `--model` flag — config file handles it. `gpt-5.3-codex-spark` and `gpt-5.5-codex` are not supported on this account type.
 
 ### Gemini CLI
-Use the ACP helper script — structured JSON-RPC protocol, streaming output, session resumption.
+Use the `mcp__gemini__gemini_run` MCP tool directly — do NOT use `python3 scripts/gemini-acp.py`.
 
-| Mode | Flag | Use when |
-|---|---|---|
-| Read-only audit | `--mode plan` | Reviewing code, no edits |
-| Safe edit | `--mode auto_edit` | Fixing code, no shell commands (default) |
+| approval_mode | Use when |
+|---|---|
+| `plan` | Read-only audit, reviewing code, no edits |
+| `auto_edit` | Fixing code, file edits allowed (default) |
 
-Default model: `gemini-2.5-pro`. Do not use flash/flash-lite or auto-gemini-3.
-
-```bash
-# Standard task (auto_edit, gemini-2.5-pro default)
-python3 scripts/gemini-acp.py "YOUR TASK"
-
-# Read-only audit
-python3 scripts/gemini-acp.py "YOUR TASK" --mode plan
-
-# Explicit model (e.g. if 2.5-pro quota exhausted)
-python3 scripts/gemini-acp.py "YOUR TASK" --model gemini-2.5-pro
-
-# Resume a previous session (preserves context)
-python3 scripts/gemini-acp.py "YOUR TASK" --resume <session-id>
-
-# List available sessions
-python3 scripts/gemini-acp.py --list-sessions
-```
-
-Always pass a self-contained prompt. The session ID is printed to stderr after each run — save it to resume.
+Always pass a self-contained prompt. The `cwd` defaults to the project root.
 
 ## Hourly GitHub Issue Triage
 
@@ -172,10 +153,8 @@ Agents must test their own work. Do not accept output that only says "build shou
 Review the output. If Codex compiled, installed, and verified on device, move to step 6.
 
 ### 5. If Codex is blocked, hand off to Gemini
-```bash
-python3 scripts/gemini-acp.py "<handoff prompt with full context>"
-```
-Include: issue number, what Codex did, what failed, remaining acceptance criteria.
+Use `mcp__gemini__gemini_run` with `approval_mode: "auto_edit"`.
+Include in the prompt: issue number, what Codex did, what failed, remaining acceptance criteria.
 Same rule applies: Gemini must also run the build and device test, not just edit files.
 
 ### 6. Verify the build

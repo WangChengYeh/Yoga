@@ -20,25 +20,31 @@
 Every Codex prompt must include all four sections:
 
 1. **Current state**
-- What already exists
-- What should **not** be redone
+   - What already exists
+   - What should **not** be redone
 
 2. **What is broken / missing**
-- Numbered list of gaps
-- Each item must include a `Fix:` instruction
+   - Numbered list of gaps
+   - Each item must include a `Fix:` instruction
 
 3. **Files to change**
-- Exact file paths only
+   - Exact file paths only
 
 4. **How to verify**
-- Must run:
-```bash
-./gradlew assembleDebug
-adb install <apk-path>
-adb logcat
-```
-- Must report actual command output (not just "should work")
+   - Must run:
+   ```bash
+   ./gradlew assembleDebug
+   adb install <apk-path>
+   adb logcat
+   ```
+   - Must report actual command output (not just "should work")
 
 ## When To Use
 - Use for all implementation tasks
 - Hand off to Gemini only if Codex is rate-limited or blocked
+
+## Project Context
+- Android on-device AI yoga coaching app
+- Kotlin (main logic) + Godot (avatar rendering) + MediaPipe (pose detection)
+- Architecture: `docs/architecture.md`
+- Roadmap: `docs/roadmap.md`
