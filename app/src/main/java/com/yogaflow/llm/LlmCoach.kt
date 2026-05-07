@@ -14,6 +14,8 @@ class LlmCoach(
 ) : CoachCueGenerator {
 
     private var llm: LlmInference? = null
+    val isLlmLoaded: Boolean
+        get() = llm != null
 
     init {
         try {

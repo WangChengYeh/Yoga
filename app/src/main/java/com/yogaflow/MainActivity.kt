@@ -224,8 +224,11 @@ class MainActivity : AppCompatActivity(), GodotHost {
             runOnUiThread { coachText.text = "Camera start failed: ${it.message.orEmpty()}" }
         }
 
+        val llmCoach = LlmCoach(this, llmInteractionDb)
+        llmStatus.text = if (llmCoach.isLlmLoaded) "LLM: ON" else "LLM: OFF (model missing)"
+
         coachCueController = CoachCueController(
-            llmCoach = LlmCoach(this, llmInteractionDb),
+            llmCoach = llmCoach,
             speaker = speaker,
             executor = coachExecutor,
             uiExecutor = { runnable -> runOnUiThread(runnable) },

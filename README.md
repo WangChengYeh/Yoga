@@ -74,6 +74,29 @@ Today, YogaFlow uses structured Flow JSON. Flows can be authored manually or pre
 
 ---
 
+## LLM Coach Setup
+
+The on-device LLM coach uses a Gemma model served via MediaPipe.
+Without the model file, the app runs in **rule-based fallback mode** (all coaching cues still work, but are not AI-polished).
+
+**To enable LLM coaching:**
+
+1. Download a MediaPipe LiteRT Gemma model from [Kaggle](https://www.kaggle.com/models/google/gemma/frameworks/litert/):
+   - Recommended: `gemma2-2b-it-gpu-int4.task` (GPU, smaller)
+   - Alternative: `gemma-2b-it-cpu-int4.task` (CPU only)
+
+2. Install via the provided script:
+   ```bash
+   bash scripts/install-gemma-model.sh /path/to/gemma.task
+   ```
+   This pushes the model to `/data/local/tmp/llm/gemma.task` on device.
+
+3. Restart the app. The status indicator shows **LLM: ON** when the model is loaded.
+
+> Model file is ~1–2 GB. It is not included in the repo.
+
+---
+
 ## How it works
 
 ### 1. Flow JSON defines the lesson
