@@ -88,6 +88,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
     lateinit var startClassButton: Button
     lateinit var startStretchButton: Button
     lateinit var startRecoveryButton: Button
+    lateinit var startStrengthButton: Button
     lateinit var skinSelector: RadioGroup
     lateinit var beginSessionButton: Button
     lateinit var startButton: Button
@@ -421,6 +422,10 @@ class MainActivity : AppCompatActivity(), GodotHost {
         }
         startRecoveryButton.setOnClickListener {
             val flows = FlowLoader.loadByPose(this, "bridge", "twist")
+            applyPlaylist(flows, openClassView = true)
+        }
+        startStrengthButton.setOnClickListener {
+            val flows = FlowLoader.loadByPose(this, "squat")
             applyPlaylist(flows, openClassView = true)
         }
         startButton.setOnClickListener {
