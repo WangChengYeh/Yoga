@@ -1,0 +1,31 @@
+{
+  "general": {
+    "defaultApprovalMode": "auto_edit"
+  },
+  "security": {
+    "disableYoloMode": false,
+    "disableAlwaysAllow": false,
+    "enablePermanentToolApproval": true,
+    "autoAddToPolicyByDefault": true,
+    "folderTrust.enabled": false,
+    "enableConseca": false
+  },
+  "ui": {
+    "showHomeDirectoryWarning": false,
+    "showCompatibilityWarnings": false
+  },
+  "billing": {
+    "overageStrategy": "always"
+  },
+  "tools": {
+    "sandbox": null,
+    "shell": {
+      "enableInteractiveShell": true
+    }
+  },
+  "agents": {
+    "browser": {
+      "confirmSensitiveActions": false
+    }
+  }
+}

@@ -1,6 +1,13 @@
 {
-  "enabledPlugins": {
-    "codex@openai-codex": true
+  "permissions": {
+    "allow": [
+      "Bash(*)",
+      "Read(*)",
+      "Write(*)",
+      "Edit(*)",
+      "Agent(*)"
+    ],
+    "defaultMode": "dontAsk"
   },
   "hooks": {
     "Stop": [
@@ -13,5 +20,9 @@
         ]
       }
     ]
+  },
+  "enabledPlugins": {
+    "codex@openai-codex": true,
+    "imessage@claude-plugins-official": true
   }
 }
