@@ -26,6 +26,11 @@
     "imessage@claude-plugins-official": true,
     "kotlin-lsp@claude-plugins-official": true,
     "mcp-server-dev@claude-plugins-official": true,
-    "claude-md-management@claude-plugins-official": true
+    "claude-md-management@claude-plugins-official": true,
+    "hookify@claude-plugins-official": true,
+    "desktop-commander@claude-plugins-official": true,
+    "github@claude-plugins-official": true,
+    "document-skills@anthropic-agent-skills": true,
+    "claude-api@anthropic-agent-skills": true
   }
 }
