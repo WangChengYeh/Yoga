@@ -8,7 +8,10 @@ import com.yogaflow.coach.CoachState
 import com.yogaflow.yoga.YogaPose
 import java.io.File
 
-class LlmCoach(context: Context) : CoachCueGenerator {
+class LlmCoach(
+    context: Context,
+    private val interactionDb: LlmInteractionDb? = null
+) : CoachCueGenerator {
 
     private var llm: LlmInference? = null
 
@@ -33,13 +36,22 @@ class LlmCoach(context: Context) : CoachCueGenerator {
 
     override fun generate(pose: YogaPose, state: CoachState, raw: String): String {
         val prompt = PromptBuilder.buildCoachPrompt(pose, state, raw)
+        val startMs = System.currentTimeMillis()
 
-        return try {
+        val (response, isFallback) = try {
             // TODO(#5): Use generateResponseAsync when callers can consume async results.
-            llm?.generateResponse(prompt) ?: raw
+            val llmResponse = llm?.generateResponse(prompt)
+            if (llmResponse == null) {
+                Pair(raw, true)
+            } else {
+                Pair(llmResponse, false)
+            }
         } catch (e: Exception) {
             Log.e("LLM", "generate failed", e)
-            raw
+            Pair(raw, true)
         }
+        val elapsedMs = System.currentTimeMillis() - startMs
+        interactionDb?.log(pose, state, raw, prompt, response, isFallback, elapsedMs)
+        return response
     }
 }

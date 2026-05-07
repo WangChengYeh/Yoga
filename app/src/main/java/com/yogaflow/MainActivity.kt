@@ -40,6 +40,8 @@ import com.yogaflow.flow.RuntimeOverrideKey
 import com.yogaflow.flow.RuntimeOverrideStore
 import com.yogaflow.flow.RuntimeParams
 import com.yogaflow.flow.YogaFlow
+import com.yogaflow.llm.LlmCoach
+import com.yogaflow.llm.LlmInteractionDb
 import com.yogaflow.pose.CameraPosePipeline
 import com.yogaflow.pose.PoseDetectionResult
 import com.yogaflow.pose.PoseGeometry
@@ -124,6 +126,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
     private lateinit var liveCoachSessionController: LiveCoachSessionController
     private lateinit var sessionRecorder: SessionRecorder
     private lateinit var godotAvatarBridge: GodotAvatarBridge
+    private lateinit var llmInteractionDb: LlmInteractionDb
     private var pendingTtsReady: Boolean? = null
     private val stateMachine = PoseStateMachine()
     private val autoTuningAdvisor = AutoTuningAdvisor()
@@ -187,6 +190,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
         applySuggestionButton = findViewById(R.id.applySuggestionButton)
         sessionRecorder = SessionRecorder(this)
         godotAvatarBridge = GodotAvatarBridge()
+        llmInteractionDb = LlmInteractionDb(this)
         loadDevelopmentSettings()
         applyDevelopmentIntentFlags(intent)
         loadThresholdPreferencesMain()
@@ -208,7 +212,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
         }
 
         coachCueController = CoachCueController(
-            llmCoach = com.yogaflow.llm.LlmCoach(this),
+            llmCoach = LlmCoach(this, llmInteractionDb),
             speaker = speaker,
             executor = coachExecutor,
             uiExecutor = { runnable -> runOnUiThread(runnable) },
