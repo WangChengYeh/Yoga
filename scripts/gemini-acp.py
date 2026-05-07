@@ -13,7 +13,26 @@ Usage:
 Default model: gemini-2.5-pro
 """
 
-import subprocess, json, sys, threading, queue, time, argparse, os
+from __future__ import annotations
+
+import argparse
+import asyncio
+import contextlib
+import os
+import subprocess
+import sys
+from typing import Any
+
+from acp import PROTOCOL_VERSION, Client, RequestError, connect_to_agent, text_block
+from acp.schema import (
+    AgentMessageChunk,
+    AllowedOutcome,
+    ClientCapabilities,
+    DeniedOutcome,
+    FileSystemCapabilities,
+    RequestPermissionResponse,
+    UserMessageChunk,
+)
 
 CWD = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -21,137 +40,136 @@ CWD = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FALLBACK_MODELS = ["gemini-2.5-pro"]
 
 
+class _QuotaError(Exception):
+    def __init__(self, message: str, session_id: str):
+        super().__init__(message)
+        self.session_id = session_id
+
+
 def _is_quota_error(msg: str) -> bool:
     low = msg.lower()
     return "quota" in low or "exhausted" in low or "rate limit" in low or "429" in low
 
 
-def _run_once(task: str, mode: str, resume_session: str | None, model: str) -> tuple[str, str | None]:
+class _GeminiAcpClient(Client):
+    """Minimal ACP client impl used by this script to receive streamed updates."""
+
+    def __init__(self, chunks: list[str]):
+        self._chunks = chunks
+
+    async def request_permission(self, options, session_id, tool_call, **kwargs: Any):
+        # Gemini CLI auto-handles approvals via --approval-mode; if asked anyway,
+        # choose first allow option, otherwise cancel.
+        for opt in options:
+            if getattr(opt, "kind", None) in {"allow_once", "allow_always"}:
+                return RequestPermissionResponse(
+                    outcome=AllowedOutcome(option_id=opt.option_id, outcome="selected")
+                )
+        return RequestPermissionResponse(outcome=DeniedOutcome(outcome="cancelled"))
+
+    async def session_update(self, session_id, update, **kwargs: Any) -> None:
+        if isinstance(update, AgentMessageChunk):
+            text = getattr(update.content, "text", None)
+            if text:
+                self._chunks.append(text)
+                sys.stdout.write(text)
+                sys.stdout.flush()
+        elif isinstance(update, UserMessageChunk):
+            return
+
+
+def _extract_request_error(err: RequestError) -> tuple[int | None, str, Any]:
+    payload = err.to_error_obj()
+    return payload.get("code"), payload.get("message", ""), payload.get("data")
+
+
+async def _run_once_async(task: str, mode: str, resume_session: str | None, model: str) -> tuple[str, str | None]:
     """Run one ACP attempt. Returns (response_text, session_id) or raises on quota error."""
-    proc = subprocess.Popen(
-        ["gemini", "--acp", "--approval-mode", mode],
-        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-        text=True, bufsize=1,
+    proc = await asyncio.create_subprocess_exec(
+        "gemini",
+        "--acp",
+        "--approval-mode",
+        mode,
+        stdin=asyncio.subprocess.PIPE,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=None,
     )
 
-    q: queue.Queue = queue.Queue()
-
-    def reader():
-        for line in proc.stdout:
-            line = line.strip()
-            if line.startswith("{"):
-                try:
-                    q.put(json.loads(line))
-                except json.JSONDecodeError:
-                    pass
-
-    threading.Thread(target=reader, daemon=True).start()
-
-    def send(msg: dict):
-        proc.stdin.write(json.dumps(msg) + "\n")
-        proc.stdin.flush()
-
-    def wait_id(req_id: int, timeout: float = 20) -> dict:
-        deadline = time.time() + timeout
-        while time.time() < deadline:
-            try:
-                msg = q.get(timeout=1)
-                if msg.get("id") == req_id:
-                    return msg
-            except queue.Empty:
-                pass
-        raise TimeoutError(f"No response for request id={req_id}")
-
-    # Handshake
-    send({"jsonrpc": "2.0", "id": 1, "method": "initialize",
-          "params": {"protocolVersion": 1, "clientInfo": {"name": "claude", "version": "1.0"}}})
-    wait_id(1)
-
-    send({"jsonrpc": "2.0", "id": 2, "method": "authenticate",
-          "params": {"methodId": "gemini-api-key"}})
-    wait_id(2)
-
-    # Session
-    if resume_session:
-        send({"jsonrpc": "2.0", "id": 3, "method": "session/load",
-              "params": {"sessionId": resume_session, "cwd": CWD, "mcpServers": []}})
-    else:
-        send({"jsonrpc": "2.0", "id": 3, "method": "session/new",
-              "params": {"cwd": CWD, "mcpServers": []}})
-
-    r = wait_id(3)
-    if "error" in r:
-        proc.stdin.close()
-        proc.kill()
-        raise RuntimeError(f"session init failed: {r['error']}")
-    session_id: str = r["result"]["sessionId"]
-
-    # Switch model
-    send({"jsonrpc": "2.0", "id": 10, "method": "session/set_model",
-          "params": {"sessionId": session_id, "modelId": model}})
-    mr = wait_id(10, timeout=10)
-    if "error" in mr:
-        print(f"[warn] model switch failed: {mr['error']['message']}", file=sys.stderr)
-    else:
-        print(f"[model] {model}", file=sys.stderr)
-
-    # Prompt
-    send({"jsonrpc": "2.0", "id": 4, "method": "session/prompt",
-          "params": {"sessionId": session_id,
-                     "prompt": [{"type": "text", "text": task}]}})
+    if proc.stdin is None or proc.stdout is None:
+        raise RuntimeError("gemini ACP process did not expose stdio pipes")
 
     chunks: list[str] = []
-    quota_err: str | None = None
-    deadline = time.time() + 300
-    while time.time() < deadline:
-        try:
-            msg = q.get(timeout=2)
-            if msg.get("method") == "session/update":
-                update = msg["params"].get("update", {})
-                if update.get("sessionUpdate") == "agent_message_chunk":
-                    text = update.get("content", {}).get("text", "")
-                    if text:
-                        chunks.append(text)
-                        sys.stdout.write(text)
-                        sys.stdout.flush()
-            elif msg.get("id") == 4:
-                if "error" in msg:
-                    err_msg = msg["error"].get("message", str(msg["error"]))
-                    if _is_quota_error(err_msg):
-                        quota_err = err_msg
-                    else:
-                        print(f"\n[error] {err_msg}", file=sys.stderr)
-                        proc.stdin.close()
-                        proc.kill()
-                        sys.exit(1)
-                else:
-                    sys.stdout.write("\n")
-                    meta = msg.get("result", {}).get("_meta", {})
-                    usage = meta.get("quota", {}).get("token_count", {})
-                    if usage:
-                        print(f"[tokens: in={usage.get('input_tokens',0)} out={usage.get('output_tokens',0)}]",
-                              file=sys.stderr)
-                break
-        except queue.Empty:
-            pass
+    client_impl = _GeminiAcpClient(chunks)
+    conn = connect_to_agent(client_impl, proc.stdin, proc.stdout)
+    session_id: str | None = None
 
-    proc.stdin.close()
     try:
-        proc.wait(timeout=10)
-    except subprocess.TimeoutExpired:
-        proc.kill()
+        await asyncio.wait_for(conn.initialize(
+            protocol_version=PROTOCOL_VERSION,
+            client_capabilities=ClientCapabilities(
+                fs=FileSystemCapabilities(read_text_file=True, write_text_file=True),
+                terminal=True,
+            ),
+        ), timeout=20)
 
-    if quota_err:
-        raise _QuotaError(quota_err, session_id)
+        with contextlib.suppress(RequestError, asyncio.TimeoutError):
+            await asyncio.wait_for(conn.authenticate(method_id="gemini-api-key"), timeout=20)
 
-    print(f"[session] {session_id}", file=sys.stderr)
-    return "".join(chunks), session_id
+        if resume_session:
+            try:
+                session = await asyncio.wait_for(
+                    conn.load_session(session_id=resume_session, cwd=CWD, mcp_servers=[]),
+                    timeout=20,
+                )
+            except RequestError as err:
+                _, msg, _ = _extract_request_error(err)
+                raise RuntimeError(f"session init failed: {msg}") from err
+        else:
+            try:
+                session = await asyncio.wait_for(conn.new_session(cwd=CWD, mcp_servers=[]), timeout=20)
+            except RequestError as err:
+                _, msg, _ = _extract_request_error(err)
+                raise RuntimeError(f"session init failed: {msg}") from err
+        session_id = session.session_id
+
+        try:
+            await conn.set_session_model(session_id=session_id, model_id=model)
+            print(f"[model] {model}", file=sys.stderr)
+        except (RequestError, asyncio.TimeoutError) as err:
+            if isinstance(err, RequestError):
+                _, msg, _ = _extract_request_error(err)
+            else:
+                msg = str(err)
+            print(f"[warn] model switch failed: {msg}", file=sys.stderr)
+
+        try:
+            await asyncio.wait_for(
+                conn.prompt(session_id=session_id, prompt=[text_block(task)]),
+                timeout=300,
+            )
+            sys.stdout.write("\n")
+        except RequestError as err:
+            _, msg, data = _extract_request_error(err)
+            if _is_quota_error(msg) or _is_quota_error(str(data)):
+                raise _QuotaError(msg or str(data), session_id) from err
+            print(f"\n[error] {msg or err}", file=sys.stderr)
+            raise SystemExit(1) from err
+
+        print(f"[session] {session_id}", file=sys.stderr)
+        return "".join(chunks), session_id
+    finally:
+        with contextlib.suppress(Exception):
+            await asyncio.wait_for(conn.close(), timeout=2)
+        if proc.returncode is None:
+            proc.kill()
+            try:
+                await asyncio.wait_for(proc.wait(), timeout=5)
+            except asyncio.TimeoutError:
+                pass
 
 
-class _QuotaError(Exception):
-    def __init__(self, message: str, session_id: str):
-        super().__init__(message)
-        self.session_id = session_id
+def _run_once(task: str, mode: str, resume_session: str | None, model: str) -> tuple[str, str | None]:
+    return asyncio.run(_run_once_async(task, mode, resume_session, model))
 
 
 def run_acp(task: str, mode: str = "auto_edit", resume_session: str | None = None,
@@ -163,6 +181,9 @@ def run_acp(task: str, mode: str = "auto_edit", resume_session: str | None = Non
         try:
             text, _ = _run_once(task, mode, resume_session, m)
             return text
+        except RuntimeError as e:
+            print(f"[error] {e}", file=sys.stderr)
+            sys.exit(1)
         except _QuotaError as e:
             if attempt < len(models_to_try) - 1:
                 next_model = models_to_try[attempt + 1]
