@@ -9,7 +9,7 @@ object FlowJsonValidator {
     private val validJoints = setOf("knee", "hip", "twist")
     private val validPhases = setOf("ready", "setup", "hinge", "fold", "hold", "return", "neutral", "start", "center", "descent", "lift")
     private val validBounds = setOf("min", "max")
-    private val validPoses = setOf("mountain", "forward_fold", "twist", "squat", "bridge")
+    private val validPoses = setOf("mountain", "forward_fold", "twist", "squat", "bridge", "warrior_1", "warrior_2", "downward_dog", "child_pose", "pigeon")
     private val validLevels = setOf("beginner", "intermediate", "advanced")
     private val validLanguages = setOf("zh-TW", "en-US")
     private val validDetectKeys = DetectKey.jsonKeys()

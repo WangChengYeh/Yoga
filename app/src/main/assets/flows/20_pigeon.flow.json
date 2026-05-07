@@ -1,0 +1,65 @@
+{
+  "version": "dsl-v2",
+  "flow": {
+    "id": "20_pigeon",
+    "name": "20 Pigeon",
+    "pose": "pigeon",
+    "language": "zh-TW",
+    "level": "intermediate"
+  },
+  "defaults": {
+    "runtime": {
+      "stabilityMs": 200,
+      "emaAlpha": 0.2,
+      "deadbandDegrees": 5,
+      "angles": {
+        "twist": {
+          "center": {
+            "max": 15
+          },
+          "start": {
+            "min": 15,
+            "max": 60
+          },
+          "hold": {
+            "min": 15,
+            "max": 60
+          }
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "state": "SETUP",
+      "durationMs": 3000,
+      "cue": "從四足跪姿開始，先穩定雙手與核心。",
+      "detect": "stable_base",
+      "correction": "手掌均勻受力，避免肩膀塌陷。"
+    },
+    {
+      "state": "MOVEMENT",
+      "durationMs": 4000,
+      "cue": "將一腳膝蓋帶向前方，另一腿向後延伸，骨盆保持正向。",
+      "detect": "twist_start",
+      "correction": "前腿不需強求平行，先確保骨盆穩定與舒適。"
+    },
+    {
+      "state": "HOLD",
+      "durationMs": 8000,
+      "cue": "停留鴿式，延展臀部與髖前側，維持平穩呼吸。",
+      "detect": "twist_hold",
+      "correction": "若骨盆歪斜，可在臀下墊高支撐。"
+    },
+    {
+      "state": "TRANSITION",
+      "durationMs": 3000,
+      "cue": "雙手推地回到四足跪姿，準備換邊或結束。",
+      "detect": "return_center",
+      "correction": "回收前腿時放慢速度，避免扭拉膝蓋。"
+    }
+  ],
+  "end": {
+    "cue": "鴿式完成，髖部已獲得深層伸展。"
+  }
+}

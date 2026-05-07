@@ -1,0 +1,65 @@
+{
+  "version": "dsl-v2",
+  "flow": {
+    "id": "16_warrior_1",
+    "name": "16 Warrior 1",
+    "pose": "warrior_1",
+    "language": "zh-TW",
+    "level": "intermediate"
+  },
+  "defaults": {
+    "runtime": {
+      "stabilityMs": 200,
+      "emaAlpha": 0.2,
+      "deadbandDegrees": 5,
+      "angles": {
+        "twist": {
+          "center": {
+            "max": 15
+          },
+          "start": {
+            "min": 15,
+            "max": 60
+          },
+          "hold": {
+            "min": 15,
+            "max": 60
+          }
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "state": "SETUP",
+      "durationMs": 3000,
+      "cue": "雙腳前後站穩，前腳朝前、後腳微外開，骨盆朝向前方。",
+      "detect": "stable_base",
+      "correction": "前膝對齊腳尖方向，後腳腳跟踩穩地面。"
+    },
+    {
+      "state": "MOVEMENT",
+      "durationMs": 4000,
+      "cue": "吸氣時雙手向上延伸，吐氣彎曲前膝，進入戰士一式。",
+      "detect": "twist_start",
+      "correction": "避免聳肩與腰椎過度壓迫，核心微收。"
+    },
+    {
+      "state": "HOLD",
+      "durationMs": 8000,
+      "cue": "保持胸口向前提起，後腿持續發力，穩定呼吸。",
+      "detect": "twist_hold",
+      "correction": "前膝不要內夾，後腿膝蓋保持伸直。"
+    },
+    {
+      "state": "TRANSITION",
+      "durationMs": 3000,
+      "cue": "吸氣伸直前膝，手臂放下，回到中立站姿。",
+      "detect": "return_center",
+      "correction": "重心平均回到雙腳，放鬆肩頸。"
+    }
+  ],
+  "end": {
+    "cue": "戰士一式完成，感受下肢與核心的穩定力量。"
+  }
+}

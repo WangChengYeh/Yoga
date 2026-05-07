@@ -1,0 +1,65 @@
+{
+  "version": "dsl-v2",
+  "flow": {
+    "id": "19_child_pose",
+    "name": "19 Child Pose",
+    "pose": "child_pose",
+    "language": "zh-TW",
+    "level": "intermediate"
+  },
+  "defaults": {
+    "runtime": {
+      "stabilityMs": 200,
+      "emaAlpha": 0.2,
+      "deadbandDegrees": 5,
+      "angles": {
+        "twist": {
+          "center": {
+            "max": 15
+          },
+          "start": {
+            "min": 15,
+            "max": 60
+          },
+          "hold": {
+            "min": 15,
+            "max": 60
+          }
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "state": "SETUP",
+      "durationMs": 3000,
+      "cue": "跪姿坐在腳跟上，膝蓋與髖同寬，肩膀放鬆。",
+      "detect": "stable_base",
+      "correction": "若膝蓋緊繃可略加寬距離，保持舒適。"
+    },
+    {
+      "state": "MOVEMENT",
+      "durationMs": 4000,
+      "cue": "吐氣時軀幹向前下沉，額頭靠近地面，手臂向前延伸。",
+      "detect": "twist_start",
+      "correction": "臀部盡量靠近腳跟，不要聳肩。"
+    },
+    {
+      "state": "HOLD",
+      "durationMs": 8000,
+      "cue": "停留在嬰兒式，感受背部與腰部被溫和放鬆。",
+      "detect": "twist_hold",
+      "correction": "呼吸放慢，腹部與大腿保持自然接觸。"
+    },
+    {
+      "state": "TRANSITION",
+      "durationMs": 3000,
+      "cue": "吸氣慢慢抬起上身，回到跪姿中立位。",
+      "detect": "return_center",
+      "correction": "起身時用核心帶動，避免頭部突然抬起。"
+    }
+  ],
+  "end": {
+    "cue": "嬰兒式完成，身心已回到更安定的狀態。"
+  }
+}

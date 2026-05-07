@@ -1,0 +1,65 @@
+{
+  "version": "dsl-v2",
+  "flow": {
+    "id": "18_downward_dog",
+    "name": "18 Downward Dog",
+    "pose": "downward_dog",
+    "language": "zh-TW",
+    "level": "intermediate"
+  },
+  "defaults": {
+    "runtime": {
+      "stabilityMs": 200,
+      "emaAlpha": 0.2,
+      "deadbandDegrees": 5,
+      "angles": {
+        "twist": {
+          "center": {
+            "max": 15
+          },
+          "start": {
+            "min": 15,
+            "max": 60
+          },
+          "hold": {
+            "min": 15,
+            "max": 60
+          }
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "state": "SETUP",
+      "durationMs": 3000,
+      "cue": "四足跪姿準備，雙手在肩下、雙膝在髖下，手掌平均推地。",
+      "detect": "stable_base",
+      "correction": "手指張開並壓穩虎口，避免手腕塌陷。"
+    },
+    {
+      "state": "MOVEMENT",
+      "durationMs": 4000,
+      "cue": "吐氣抬起膝蓋並推高臀部，讓身體形成倒 V 字。",
+      "detect": "twist_start",
+      "correction": "脊椎優先延伸，膝蓋可微彎不需勉強踩地。"
+    },
+    {
+      "state": "HOLD",
+      "durationMs": 8000,
+      "cue": "持續推地、拉長背部與腿後側，呼吸穩定而深長。",
+      "detect": "twist_hold",
+      "correction": "避免聳肩，讓頸部放鬆並維持手臂外旋。"
+    },
+    {
+      "state": "TRANSITION",
+      "durationMs": 3000,
+      "cue": "輕輕放下雙膝回到四足跪姿，回到中立呼吸。",
+      "detect": "return_center",
+      "correction": "下降時控制核心，避免腰部突然下沉。"
+    }
+  ],
+  "end": {
+    "cue": "下犬式完成，背線與腿後側已充分延展。"
+  }
+}

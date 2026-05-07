@@ -1,0 +1,65 @@
+{
+  "version": "dsl-v2",
+  "flow": {
+    "id": "17_warrior_2",
+    "name": "17 Warrior 2",
+    "pose": "warrior_2",
+    "language": "zh-TW",
+    "level": "intermediate"
+  },
+  "defaults": {
+    "runtime": {
+      "stabilityMs": 200,
+      "emaAlpha": 0.2,
+      "deadbandDegrees": 5,
+      "angles": {
+        "twist": {
+          "center": {
+            "max": 15
+          },
+          "start": {
+            "min": 15,
+            "max": 60
+          },
+          "hold": {
+            "min": 15,
+            "max": 60
+          }
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "state": "SETUP",
+      "durationMs": 3000,
+      "cue": "雙腳打開一大步，前腳朝前、後腳外開，軀幹保持直立。",
+      "detect": "stable_base",
+      "correction": "雙腳外側壓穩地板，骨盆不要前後傾斜過大。"
+    },
+    {
+      "state": "MOVEMENT",
+      "durationMs": 4000,
+      "cue": "彎曲前膝至小腿垂直地面，雙手平舉展開成一直線。",
+      "detect": "twist_start",
+      "correction": "前膝保持在腳踝上方，不要超過腳尖。"
+    },
+    {
+      "state": "HOLD",
+      "durationMs": 8000,
+      "cue": "眼睛看向前手指尖，胸口打開，持續穩定呼吸。",
+      "detect": "twist_hold",
+      "correction": "肩膀遠離耳朵，後腿持續踩穩。"
+    },
+    {
+      "state": "TRANSITION",
+      "durationMs": 3000,
+      "cue": "吸氣伸直前膝，雙手放下，回到站姿準備換邊。",
+      "detect": "return_center",
+      "correction": "回正時保持核心穩定，避免身體晃動。"
+    }
+  ],
+  "end": {
+    "cue": "戰士二式完成，雙腿與肩帶的耐力表現很好。"
+  }
+}
