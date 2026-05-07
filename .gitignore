@@ -1,2 +1,23 @@
 .gradle/
 build/
+
+# macOS metadata
+.DS_Store
+**/.DS_Store
+
+# Godot editor caches (generated, not source)
+godot/.godot/editor/
+godot/.godot/exported/
+
+# Android local config
+local.properties
+
+# Runtime artifacts
+*.hprof
+*.pck-*
+scripts/__pycache__/
+session-recordings/
+test-artifacts/
+window.xml
+yogaflow-screen.mp4
+sourceme
