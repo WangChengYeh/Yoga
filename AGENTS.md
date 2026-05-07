@@ -38,12 +38,13 @@ Every Codex prompt must include all four sections:
    adb shell am start -n com.yogaflow/.MainActivity
    # Screenshot — use precise date format, save to session-recordings/
    TS=$(date +%Y%m%d-%H%M%S)
-   mkdir -p /tmp/session-recordings
+   mkdir -p session-recordings
+   adb shell mkdir -p /sdcard/session-recordings
    adb shell screencap -p /sdcard/session-recordings/screencap-${TS}.png
-   adb pull /sdcard/session-recordings/screencap-${TS}.png /tmp/session-recordings/screencap-${TS}.png
+   adb pull /sdcard/session-recordings/screencap-${TS}.png session-recordings/screencap-${TS}.png
    adb logcat | grep -E "Yoga|Godot|MediaPipe|AndroidRuntime" | head -40
    ```
-   - Read `/tmp/session-recordings/screencap-${TS}.png` and describe what is visible on screen
+   - Read `session-recordings/screencap-${TS}.png` and describe what is visible on screen
    - Report actual command output — not "should work" or "needs manual verification"
    - A verification that only says "build passed" without a screenshot check is NOT accepted
    - **Screenshot naming rule (#72):** Always use `screencap-YYYYMMDD-HHmmss.png` format. Never use generic names like `yoga_screen.png`.

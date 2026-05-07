@@ -62,11 +62,12 @@ Every task must end with:
 4. Screenshot — use precise date format, save to `session-recordings/`:
    ```bash
    TS=$(date +%Y%m%d-%H%M%S)
-   mkdir -p /tmp/session-recordings
+   mkdir -p session-recordings
+   adb shell mkdir -p /sdcard/session-recordings
    adb shell screencap -p /sdcard/session-recordings/screencap-${TS}.png
-   adb pull /sdcard/session-recordings/screencap-${TS}.png /tmp/session-recordings/screencap-${TS}.png
+   adb pull /sdcard/session-recordings/screencap-${TS}.png session-recordings/screencap-${TS}.png
    ```
-5. Read `/tmp/session-recordings/screencap-${TS}.png` and describe what is visible — confirm the feature works visually
+5. Read `session-recordings/screencap-${TS}.png` and describe what is visible — confirm the feature works visually
 6. `adb logcat | grep -E "Yoga|Godot|MediaPipe|AndroidRuntime" | head -40`
 7. Report actual output — not "it should work" or "needs manual verification"
 8. **Screenshot naming rule (#72):** Always `screencap-YYYYMMDD-HHmmss.png`. Never use generic names like `yoga_screen.png`.

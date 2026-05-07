@@ -5,7 +5,16 @@
       "Read(*)",
       "Write(*)",
       "Edit(*)",
-      "Agent(*)"
+      "Agent(*)",
+      "mcp__gemini__gemini_run",
+      "mcp__plugin_imessage_imessage__reply",
+      "mcp__plugin_imessage_imessage__chat_messages",
+      "mcp__claude_ai_Google_Drive__authenticate",
+      "mcp__claude_ai_Google_Drive__complete_authentication",
+      "mcp__claude_ai_Gmail__authenticate",
+      "mcp__claude_ai_Gmail__complete_authentication",
+      "mcp__claude_ai_Google_Calendar__authenticate",
+      "mcp__claude_ai_Google_Calendar__complete_authentication"
     ],
     "defaultMode": "dontAsk"
   },
