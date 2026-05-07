@@ -22,12 +22,13 @@ sleep 1
 "$ADB" shell input keyevent KEYCODE_BACK  # dismiss any modal dialog (USB mode picker, etc.)
 sleep 1
 
-# Ensure app is running
-echo "[1/6] Launching app..."
+# Ensure app is running with self-test so avatar is visible and bridge connects
+echo "[1/6] Launching app (with avatarSelfTest to keep avatar visible)..."
 "$ADB" shell am force-stop "$PKG"
 sleep 1
-"$ADB" shell am start -n "$ACTIVITY" --ez devDisableCameraSetup true
-sleep 4
+"$ADB" shell am start -n "$ACTIVITY" --ez devDisableCameraSetup true --ez avatarSelfTest true
+echo "  Waiting 8s for Godot to init and WebSocket bridge to connect..."
+sleep 8
 
 # Move to far left
 echo "[2/6] Moving avatar to LEFT (-1.5)..."

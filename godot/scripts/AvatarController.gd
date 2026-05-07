@@ -16,6 +16,7 @@ var _override_x: float = 0.0
 var _override_y: float = 0.0
 
 func _ready() -> void:
+    print("AvatarController v2: override_position support active")
     _base_position = position
     _base_rotation = rotation
     _base_scale = scale
