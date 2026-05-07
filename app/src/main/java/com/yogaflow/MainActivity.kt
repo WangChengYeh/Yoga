@@ -110,6 +110,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
     var suppressTuningCallbacks = false
     var debugViewEnabled = false
     var cameraSetupDisabledForDevelopment = false
+    private var avatarPositionOverride: Pair<Float, Float>? = null
     var lastCountdownText = ""
     var currentSkin: String = "classic"
     var latestSuggestion: AutoTuningSuggestion? = null
@@ -460,6 +461,16 @@ class MainActivity : AppCompatActivity(), GodotHost {
         if (intent.getBooleanExtra(EXTRA_AVATAR_SELF_TEST, false)) {
             scheduleAvatarSelfTest()
         }
+        if (intent.getBooleanExtra(EXTRA_AVATAR_CLEAR_OVERRIDE, false)) {
+            avatarPositionOverride = null
+        }
+        val targetX = intent.getFloatExtra(EXTRA_AVATAR_TARGET_X, Float.NaN)
+        val targetY = intent.getFloatExtra(EXTRA_AVATAR_TARGET_Y, Float.NaN)
+        if (!targetX.isNaN() || !targetY.isNaN()) {
+            val x = if (targetX.isNaN()) avatarPositionOverride?.first ?: 0f else targetX
+            val y = if (targetY.isNaN()) avatarPositionOverride?.second ?: 0f else targetY
+            avatarPositionOverride = Pair(x, y)
+        }
     }
 
     private fun isDebuggableBuild(): Boolean {
@@ -681,7 +692,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
     ): PoseCoachFrame {
         val step = currentFlow.steps.getOrNull(flowEngine.currentStepNumber() - 1)
         val coachState = if (matched && state != CoachState.CORRECTION) "ok" else "needs_correction"
-        val avatarCommand = buildAvatarCommand(detect, state, matched, failReason, humanScreenSide(frame))
+        val avatarCommand = buildAvatarCommand(detect, state, matched, failReason, humanScreenSide(frame), avatarPositionOverride)
         return PoseCoachFrame(
             timestampMs = System.currentTimeMillis(),
             stepId = step?.detect?.jsonKey ?: detect,
@@ -718,7 +729,8 @@ class MainActivity : AppCompatActivity(), GodotHost {
         state: CoachState,
         matched: Boolean,
         failReason: String,
-        screenSide: String = "right"
+        screenSide: String = "right",
+        overridePosition: Pair<Float, Float>? = null
     ): AvatarCommand {
         val highlight = highlightFor(detect, failReason)
         val action = when {
@@ -738,7 +750,13 @@ class MainActivity : AppCompatActivity(), GodotHost {
             state == CoachState.MOVEMENT || state == CoachState.TRANSITION -> "attentive"
             else -> "calm"
         }
-        return AvatarCommand(action = action, emotion = emotion, highlight = highlight, screenSide = screenSide)
+        return AvatarCommand(
+            action = action,
+            emotion = emotion,
+            highlight = highlight,
+            screenSide = screenSide,
+            overridePosition = overridePosition
+        )
     }
 
     private fun humanScreenSide(frame: PoseDetectionResult): String {
@@ -883,6 +901,9 @@ class MainActivity : AppCompatActivity(), GodotHost {
         private const val EXTRA_DISABLE_CAMERA_SETUP = "devDisableCameraSetup"
         private const val EXTRA_ENABLE_CAMERA_SETUP = "devEnableCameraSetup"
         private const val EXTRA_AVATAR_SELF_TEST = "avatarSelfTest"
+        private const val EXTRA_AVATAR_TARGET_X = "avatarTargetX"
+        private const val EXTRA_AVATAR_TARGET_Y = "avatarTargetY"
+        private const val EXTRA_AVATAR_CLEAR_OVERRIDE = "avatarClearOverride"
         private val VIRTUAL_COACH_SCALE_INDICES = listOf(0, 11, 12, 23, 24, 25, 26, 27, 28)
     }
 }

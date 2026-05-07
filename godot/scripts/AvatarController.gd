@@ -11,6 +11,9 @@ var _base_position := Vector3.ZERO
 var _base_rotation := Vector3.ZERO
 var _base_scale := Vector3.ONE
 var _side_x_offset: float = 0.4
+var _override_active: bool = false
+var _override_x: float = 0.0
+var _override_y: float = 0.0
 
 func _ready() -> void:
     _base_position = position
@@ -53,11 +56,30 @@ func apply_pose_coach_frame(frame: Dictionary) -> void:
     var screen_side = avatar.get("screen_side", "right")
     var highlight = avatar.get("highlight", null)
     var severity = coach.get("severity", 0)
+    var override_pos = avatar.get("override_position", null)
 
+    if override_pos != null:
+        set_override_position(float(override_pos.get("x", 0.0)), float(override_pos.get("y", 0.0)))
+        play_action(action)
+        apply_highlight(highlight, severity)
+        apply_pose_metrics(pose)
+        return
+    clear_override_position()
     apply_screen_side(screen_side)
     play_action(action)
     apply_highlight(highlight, severity)
     apply_pose_metrics(pose)
+
+func set_override_position(world_x: float, world_y: float) -> void:
+    _override_active = true
+    _override_x = world_x
+    _override_y = world_y
+    var target = Vector3(_base_position.x + world_x, _base_position.y + world_y, _base_position.z)
+    var tween = create_tween()
+    tween.tween_property(self, "position", target, 0.6)
+
+func clear_override_position() -> void:
+    _override_active = false
 
 func apply_screen_side(side: String) -> void:
     match side:

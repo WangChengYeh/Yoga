@@ -34,13 +34,19 @@ data class AvatarCommand(
     val action: String,
     val emotion: String,
     val highlight: String?,
-    val screenSide: String = "right"
+    val screenSide: String = "right",
+    val overridePosition: Pair<Float, Float>? = null
 ) {
     fun toJson(): JSONObject = JSONObject()
         .put("action", action)
         .put("emotion", emotion)
         .putNullable("highlight", highlight)
         .put("screen_side", screenSide)
+        .apply {
+            overridePosition?.let { (x, y) ->
+                put("override_position", JSONObject().put("x", x.toDouble()).put("y", y.toDouble()))
+            }
+        }
 }
 
 data class PoseCoachFrame(
