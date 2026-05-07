@@ -47,11 +47,7 @@ sed -i '' 's/"workspace-write"/"danger-full-access"/' \
 ```
 Always pass `--write` in Codex task prompts that need to build or run adb (e.g. `codex:rescue --write <prompt>`).
 
-**Default model: `gpt-5.3-codex-spark` (alias: `spark`).** Always pass `--model spark` in every Codex invocation:
-```
-codex:rescue --write --model spark <prompt>
-```
-Do not omit `--model spark`. The `codex-1` default is less capable than spark for this project.
+**Default model: GPT-5** (confirmed — Codex reports "GPT-5" when no model is specified). Do not pass `--model` flag; the default is already the best available model for this account. `gpt-5.3-codex-spark` and `gpt-5.5-codex` are not supported on this account type.
 
 ### Gemini CLI
 Use the ACP helper script — structured JSON-RPC protocol, streaming output, session resumption.
