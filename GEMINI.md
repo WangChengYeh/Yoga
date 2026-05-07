@@ -45,7 +45,14 @@ Every handoff prompt must include:
 
 **PoseOverlayView coordinate mapping:** Landmarks are mapped using FILL_CENTER transform (scale = max(scaleX, scaleY), centered offsets) based on `imageWidth`/`imageHeight` from `PoseDetectionResult`. Do not use raw `landmark.x() * viewWidth`.
 
-**Build environment:** Local machine has JDK 8. Build requires JDK 17+. Flag this explicitly if `./gradlew assembleDebug` fails.
+**Build environment:** Local machine has JDK 8 as default. Build requires JDK 17+. Use the explicit Homebrew path — `java_home -v 17` resolves to JDK 8 on this machine and will NOT work:
+```bash
+JAVA_HOME=/opt/homebrew/opt/openjdk@17 ./gradlew assembleDebug
+```
+
+**Camera toggle — required before session start (#70):** A "Camera: OFF/ON" toggle button is in the bottom row. Camera setup and framing checks are idle until it is tapped ON. Any device test that tries to start a session must tap the Camera button first, then tap Start.
+
+**Flow library:** 15 flows in `app/src/main/assets/flows/` (01–15). All use dsl-v2 format, zh-TW cues.
 
 ## Verification Requirement
 Every task must end with:

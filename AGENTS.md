@@ -62,4 +62,18 @@ Every Codex prompt must include all four sections:
 
 **PoseOverlayView coordinate mapping:** Landmarks are mapped using FILL_CENTER transform (scale = max(scaleX, scaleY), centered offsets) based on `imageWidth`/`imageHeight` from `PoseDetectionResult`. Do not use raw `landmark.x() * viewWidth`.
 
-**Build environment:** Local machine has JDK 8. Build requires JDK 17+. Run `export JAVA_HOME=$(/usr/libexec/java_home -v 17) && ./gradlew assembleDebug` or flag the JDK issue explicitly in the report.
+**Build environment:** Local machine has JDK 8 as default. Build requires JDK 17+. Use the explicit Homebrew path — `java_home -v 17` resolves to JDK 8 on this machine and will NOT work:
+```bash
+JAVA_HOME=/opt/homebrew/opt/openjdk@17 ./gradlew assembleDebug
+```
+
+**Camera toggle — required before session start (#70):** A "Camera: OFF/ON" toggle button was added to the bottom row. The camera setup panel and framing checks are idle until the user taps it. Device test sequences MUST enable the camera first before tapping Start:
+```bash
+# 1. Enable camera (tap the Camera button, coordinates vary — check screenshot)
+adb shell input tap <camera_button_x> <camera_button_y>
+# 2. Wait for framing check, then tap Start
+adb shell input tap <start_button_x> <start_button_y>
+```
+If a session is not starting, the most likely cause is that the Camera toggle is still OFF.
+
+**Flow library:** 15 flows in `app/src/main/assets/flows/` (01–15). All use dsl-v2 format, zh-TW cues, and DetectKey enum values.
