@@ -463,6 +463,10 @@ class MainActivity : AppCompatActivity(), GodotHost {
         }
         if (intent.getBooleanExtra(EXTRA_AVATAR_CLEAR_OVERRIDE, false)) {
             avatarPositionOverride = null
+            sendAvatarPositionOverrideFrame(
+                message = "ADB override cleared",
+                overridePosition = null
+            )
         }
         val targetX = intent.getFloatExtra(EXTRA_AVATAR_TARGET_X, Float.NaN)
         val targetY = intent.getFloatExtra(EXTRA_AVATAR_TARGET_Y, Float.NaN)
@@ -470,6 +474,46 @@ class MainActivity : AppCompatActivity(), GodotHost {
             val x = if (targetX.isNaN()) avatarPositionOverride?.first ?: 0f else targetX
             val y = if (targetY.isNaN()) avatarPositionOverride?.second ?: 0f else targetY
             avatarPositionOverride = Pair(x, y)
+            avatarPositionOverride?.let { override ->
+                sendAvatarPositionOverrideFrame(
+                    message = "ADB position override",
+                    overridePosition = override
+                )
+            }
+        }
+    }
+
+    private fun sendAvatarPositionOverrideFrame(
+        message: String,
+        overridePosition: Pair<Float, Float>?
+    ) {
+        runOnUiThread {
+            virtualCoachView.visibility = View.VISIBLE
+            godotAvatarBridge.send(
+                PoseCoachFrame(
+                    timestampMs = System.currentTimeMillis(),
+                    stepId = "adb_override",
+                    phase = "running",
+                    pose = PoseMetrics(null, null, null, null, null),
+                    coach = CoachVisualState("ok", null, message, 0),
+                    avatar = AvatarCommand(
+                        action = "hold_mountain",
+                        emotion = "calm",
+                        highlight = null,
+                        screenSide = avatarScreenSideForOverride(overridePosition),
+                        overridePosition = overridePosition
+                    )
+                ),
+                force = true
+            )
+        }
+    }
+
+    private fun avatarScreenSideForOverride(overridePosition: Pair<Float, Float>?): String {
+        return when {
+            overridePosition == null -> "right"
+            overridePosition.first < 0f -> "left"
+            else -> "right"
         }
     }
 
@@ -570,7 +614,13 @@ class MainActivity : AppCompatActivity(), GodotHost {
             phase = "running",
             pose = PoseMetrics(null, null, null, null, null),
             coach = CoachVisualState("ok", null, "Self-test: $action", 0),
-            avatar = AvatarCommand(action = action, emotion = "calm", highlight = null, screenSide = "right")
+            avatar = AvatarCommand(
+                action = action,
+                emotion = "calm",
+                highlight = null,
+                screenSide = avatarScreenSideForOverride(avatarPositionOverride),
+                overridePosition = avatarPositionOverride
+            )
         )
     }
 
