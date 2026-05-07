@@ -6,6 +6,5 @@
 #
 # Existing sessions keep their current runtime policy; restart Codex from this
 # project for this file to take effect, if your launcher reads project config.
-model = "gpt-5.3-codex-spark"
 approval_policy = "never"
 sandbox_mode = "danger-full-access"
