@@ -4,9 +4,17 @@ import com.yogaflow.llm.LlmCoach
 import com.yogaflow.yoga.YogaPose
 import java.util.concurrent.Executor
 
+interface CoachCueGenerator {
+    fun generate(pose: YogaPose, state: CoachState, raw: String): String
+}
+
+interface CoachSpeechSink {
+    fun speakIfNeeded(text: String)
+}
+
 class CoachCueController(
-    private val llmCoach: LlmCoach,
-    private val speaker: CoachSpeaker,
+    private val llmCoach: CoachCueGenerator,
+    private val speaker: CoachSpeechSink,
     private val executor: Executor,
     private val uiExecutor: (Runnable) -> Unit,
     private val minCueIntervalMs: Long,
@@ -54,8 +62,9 @@ class CoachCueController(
 
     private fun shouldEmit(cue: String, severity: Int = 0): Boolean {
         val now = System.currentTimeMillis()
-        if (now - lastCoachAt < minCueIntervalMs) return false
-        if (cue == lastCoachCue && severity <= lastSeverity && now - lastCoachAt < sameCueIntervalMs) return false
+        val isHigherSeverity = severity > lastSeverity
+        if (!isHigherSeverity && now - lastCoachAt < minCueIntervalMs) return false
+        if (!isHigherSeverity && cue == lastCoachCue && now - lastCoachAt < sameCueIntervalMs) return false
         lastCoachCue = cue
         lastCoachAt = now
         lastSeverity = severity

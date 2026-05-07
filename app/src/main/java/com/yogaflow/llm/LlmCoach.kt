@@ -3,11 +3,12 @@ package com.yogaflow.llm
 import android.content.Context
 import android.util.Log
 import com.google.mediapipe.tasks.genai.llminference.LlmInference
+import com.yogaflow.coach.CoachCueGenerator
 import com.yogaflow.coach.CoachState
 import com.yogaflow.yoga.YogaPose
 import java.io.File
 
-class LlmCoach(context: Context) {
+class LlmCoach(context: Context) : CoachCueGenerator {
 
     private var llm: LlmInference? = null
 
@@ -30,7 +31,7 @@ class LlmCoach(context: Context) {
         }
     }
 
-    fun generate(pose: YogaPose, state: CoachState, raw: String): String {
+    override fun generate(pose: YogaPose, state: CoachState, raw: String): String {
         val prompt = PromptBuilder.buildCoachPrompt(pose, state, raw)
 
         return try {

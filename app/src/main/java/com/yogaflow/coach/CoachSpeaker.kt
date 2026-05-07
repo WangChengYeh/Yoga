@@ -5,7 +5,7 @@ import android.speech.tts.TextToSpeech
 class CoachSpeaker(
     private val tts: TextToSpeech,
     private val minIntervalMs: Long = 5000L
-) {
+) : CoachSpeechSink {
     private var ready = false
     private var pendingPhrase: String = ""
     private var lastPhrase: String = ""
@@ -20,7 +20,7 @@ class CoachSpeaker(
         }
     }
 
-    fun speakIfNeeded(text: String) {
+    override fun speakIfNeeded(text: String) {
         val phrase = toSpeechPhrase(text)
         val now = System.currentTimeMillis()
 

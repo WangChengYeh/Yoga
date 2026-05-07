@@ -19,7 +19,7 @@ object PromptBuilder {
 - 不自行重新判斷姿勢
 - 只把系統判斷轉成自然、簡短、可朗讀的教練語句
 - 只輸出 1 句中文
-- 不要輸出角度、JSON、Markdown 或解釋
+- 不要輸出角度、結構化資料、標記格式或解釋
 
 目前動作：${pose.displayName}
 動作分類：${pose.category}
