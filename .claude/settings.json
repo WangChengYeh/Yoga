@@ -23,6 +23,9 @@
   },
   "enabledPlugins": {
     "codex@openai-codex": true,
-    "imessage@claude-plugins-official": true
+    "imessage@claude-plugins-official": true,
+    "kotlin-lsp@claude-plugins-official": true,
+    "mcp-server-dev@claude-plugins-official": true,
+    "claude-md-management@claude-plugins-official": true
   }
 }
