@@ -751,7 +751,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
             ls != null && rs != null -> (ls.x() + rs.x()) / 2f
             else -> return "right"
         }
-        return if (screenX < 0.5f) "left" else "right"
+        return if (screenX < 0.5f) "right" else "left"
     }
 
     private fun severityFor(state: CoachState, matched: Boolean, failReason: String): Int {
