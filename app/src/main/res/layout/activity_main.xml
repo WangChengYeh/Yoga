@@ -575,6 +575,7 @@
             android:background="@drawable/rounded_panel"
             android:padding="16dp">
 
+            <!-- Header row: title, tab buttons, close -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -582,24 +583,36 @@
                 android:gravity="center_vertical"
                 android:layout_marginBottom="12dp">
 
-                <TextView
+                <Button
+                    android:id="@+id/historyTabList"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_height="36dp"
                     android:layout_weight="1"
-                    android:text="練習記錄"
-                    android:textSize="20sp"
-                    android:textColor="#FFFFFF"
-                    android:textStyle="bold" />
+                    android:text="記錄"
+                    android:textSize="13sp"
+                    android:backgroundTint="#FF5722" />
+
+                <Button
+                    android:id="@+id/historyTabStats"
+                    android:layout_width="0dp"
+                    android:layout_height="36dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="6dp"
+                    android:text="統計"
+                    android:textSize="13sp"
+                    android:backgroundTint="#444444" />
 
                 <Button
                     android:id="@+id/historyCloseButton"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
                     android:text="✕"
                     android:textSize="16sp" />
 
             </LinearLayout>
 
+            <!-- Tab: list -->
             <ListView
                 android:id="@+id/historyListView"
                 android:layout_width="match_parent"
@@ -618,6 +631,23 @@
                 android:textColor="#AAAAAA"
                 android:textSize="16sp"
                 android:visibility="gone" />
+
+            <!-- Tab: stats -->
+            <ScrollView
+                android:id="@+id/statsScrollView"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:id="@+id/statsContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="4dp" />
+
+            </ScrollView>
 
         </LinearLayout>
     </FrameLayout>

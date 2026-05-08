@@ -110,6 +110,10 @@ class MainActivity : AppCompatActivity(), GodotHost {
     lateinit var historyOverlay: View
     lateinit var historyListView: android.widget.ListView
     lateinit var historyEmptyText: android.widget.TextView
+    lateinit var historyTabList: android.widget.Button
+    lateinit var historyTabStats: android.widget.Button
+    lateinit var statsScrollView: android.widget.ScrollView
+    lateinit var statsContainer: android.widget.LinearLayout
     private lateinit var applySuggestionButton: Button
 
     lateinit var cameraPipeline: CameraPosePipeline
@@ -244,8 +248,14 @@ class MainActivity : AppCompatActivity(), GodotHost {
         historyOverlay = findViewById(R.id.historyOverlay)
         historyListView = findViewById(R.id.historyListView)
         historyEmptyText = findViewById(R.id.historyEmptyText)
-        findViewById<Button>(R.id.historyButton).setOnClickListener { showHistoryOverlay() }
+        historyTabList = findViewById(R.id.historyTabList)
+        historyTabStats = findViewById(R.id.historyTabStats)
+        statsScrollView = findViewById(R.id.statsScrollView)
+        statsContainer = findViewById(R.id.statsContainer)
+        findViewById<Button>(R.id.historyButton).setOnClickListener { showHistoryOverlay(tab = "list") }
         findViewById<Button>(R.id.historyCloseButton).setOnClickListener { historyOverlay.visibility = View.GONE }
+        historyTabList.setOnClickListener { showHistoryOverlay(tab = "list") }
+        historyTabStats.setOnClickListener { showHistoryOverlay(tab = "stats") }
 
         sessionRecorder = SessionRecorder(this)
         godotAvatarBridge = GodotAvatarBridge()
@@ -884,38 +894,154 @@ class MainActivity : AppCompatActivity(), GodotHost {
         sessionCompletionOverlay.visibility = View.GONE
     }
 
-    private fun showHistoryOverlay() {
+    private fun showHistoryOverlay(tab: String = "list") {
         val entries = sessionHistoryDb.getAll()
-        if (entries.isEmpty()) {
-            historyListView.visibility = View.GONE
-            historyEmptyText.visibility = View.VISIBLE
-        } else {
-            historyEmptyText.visibility = View.GONE
-            historyListView.visibility = View.VISIBLE
-            val items = entries.map { e ->
-                val date = java.text.SimpleDateFormat("MM/dd HH:mm", java.util.Locale.getDefault())
-                    .format(java.util.Date(e.tsMs))
-                val min = (e.durationMs / 60000).toInt()
-                val sec = ((e.durationMs % 60000) / 1000).toInt()
-                "${e.courseName}  $date  $min:%02d  步驟${e.stepsCompleted}  修正${e.correctionCount}次".format(sec)
-            }
-            historyListView.adapter = object: android.widget.ArrayAdapter<String>(
-                this,
-                android.R.layout.simple_list_item_1,
-                items
-            ) {
-                override fun getView(
-                    position: Int,
-                    convertView: View?,
-                    parent: android.view.ViewGroup
-                ): View {
-                    val view = super.getView(position, convertView, parent)
-                    (view.findViewById(android.R.id.text1) as android.widget.TextView).setTextColor(android.graphics.Color.WHITE)
-                    return view
+
+        // Tab button highlight
+        val activeColor = android.graphics.Color.parseColor("#FF5722")
+        val inactiveColor = android.graphics.Color.parseColor("#444444")
+        if (tab == "list") {
+            historyTabList.backgroundTintList = android.content.res.ColorStateList.valueOf(activeColor)
+            historyTabStats.backgroundTintList = android.content.res.ColorStateList.valueOf(inactiveColor)
+            statsScrollView.visibility = View.GONE
+            if (entries.isEmpty()) {
+                historyListView.visibility = View.GONE
+                historyEmptyText.visibility = View.VISIBLE
+            } else {
+                historyEmptyText.visibility = View.GONE
+                historyListView.visibility = View.VISIBLE
+                val items = entries.map { e ->
+                    val date = java.text.SimpleDateFormat("MM/dd HH:mm", java.util.Locale.getDefault())
+                        .format(java.util.Date(e.tsMs))
+                    val min = (e.durationMs / 60000).toInt()
+                    val sec = ((e.durationMs % 60000) / 1000).toInt()
+                    "${e.courseName}  $date  $min:%02d  步驟${e.stepsCompleted}  修正${e.correctionCount}次".format(sec)
+                }
+                historyListView.adapter = object : android.widget.ArrayAdapter<String>(
+                    this, android.R.layout.simple_list_item_1, items
+                ) {
+                    override fun getView(position: Int, convertView: View?, parent: android.view.ViewGroup): View {
+                        val view = super.getView(position, convertView, parent)
+                        (view.findViewById(android.R.id.text1) as android.widget.TextView)
+                            .setTextColor(android.graphics.Color.WHITE)
+                        return view
+                    }
                 }
             }
+        } else {
+            historyTabList.backgroundTintList = android.content.res.ColorStateList.valueOf(inactiveColor)
+            historyTabStats.backgroundTintList = android.content.res.ColorStateList.valueOf(activeColor)
+            historyListView.visibility = View.GONE
+            historyEmptyText.visibility = View.GONE
+            statsScrollView.visibility = View.VISIBLE
+            populateStats(entries)
         }
+
         historyOverlay.visibility = View.VISIBLE
+    }
+
+    private fun populateStats(entries: List<com.yogaflow.db.SessionHistoryDb.SessionEntry>) {
+        statsContainer.removeAllViews()
+
+        val totalSessions = entries.size
+        val totalMs = entries.sumOf { it.durationMs }
+        val totalMin = (totalMs / 60000).toInt()
+        val totalHrs = totalMin / 60
+        val remMin = totalMin % 60
+
+        val nowMs = System.currentTimeMillis()
+        val weekMs = 7L * 24 * 60 * 60 * 1000
+        val thisWeekCount = entries.count { nowMs - it.tsMs <= weekMs }
+
+        val courseGroups = entries.groupBy { it.courseName.ifBlank { "全課程" } }
+        val topCourse = courseGroups.maxByOrNull { it.value.size }?.key ?: "—"
+
+        fun statRow(label: String, value: String) = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.HORIZONTAL
+            setPadding(0, 10, 0, 10)
+            addView(android.widget.TextView(this@MainActivity).apply {
+                text = label
+                textSize = 14f
+                setTextColor(android.graphics.Color.parseColor("#AAAAAA"))
+                layoutParams = android.widget.LinearLayout.LayoutParams(0,
+                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            })
+            addView(android.widget.TextView(this@MainActivity).apply {
+                text = value
+                textSize = 14f
+                setTextColor(android.graphics.Color.WHITE)
+                gravity = android.view.Gravity.END
+            })
+        }
+
+        statsContainer.addView(statRow("總練習次數", "$totalSessions 次"))
+        statsContainer.addView(statRow("總練習時長",
+            if (totalHrs > 0) "${totalHrs}h ${remMin}m" else "${remMin} 分鐘"))
+        statsContainer.addView(statRow("本週練習", "$thisWeekCount 次"))
+        statsContainer.addView(statRow("最多練習課程", topCourse))
+
+        // Divider
+        statsContainer.addView(android.view.View(this).apply {
+            setBackgroundColor(android.graphics.Color.parseColor("#33FFFFFF"))
+            layoutParams = android.widget.LinearLayout.LayoutParams(
+                android.widget.LinearLayout.LayoutParams.MATCH_PARENT, 1).apply { topMargin = 12; bottomMargin = 12 }
+        })
+
+        // Per-course bar chart
+        statsContainer.addView(android.widget.TextView(this).apply {
+            text = "各課程練習次數"
+            textSize = 13f
+            setTextColor(android.graphics.Color.parseColor("#AAAAAA"))
+            setPadding(0, 0, 0, 8)
+        })
+
+        val maxCount = (courseGroups.values.maxOfOrNull { it.size } ?: 1).coerceAtLeast(1)
+        val barColors = listOf("#FF5722", "#2196F3", "#4CAF50", "#FF9800", "#9C27B0")
+        courseGroups.entries
+            .sortedByDescending { it.value.size }
+            .forEachIndexed { idx, (name, group) ->
+                val barColor = android.graphics.Color.parseColor(barColors[idx % barColors.size])
+                statsContainer.addView(android.widget.LinearLayout(this).apply {
+                    orientation = android.widget.LinearLayout.VERTICAL
+                    setPadding(0, 4, 0, 8)
+                    // Label row
+                    addView(android.widget.LinearLayout(this@MainActivity).apply {
+                        orientation = android.widget.LinearLayout.HORIZONTAL
+                        addView(android.widget.TextView(this@MainActivity).apply {
+                            text = name
+                            textSize = 13f
+                            setTextColor(android.graphics.Color.WHITE)
+                            layoutParams = android.widget.LinearLayout.LayoutParams(0,
+                                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                        })
+                        addView(android.widget.TextView(this@MainActivity).apply {
+                            text = "${group.size} 次"
+                            textSize = 13f
+                            setTextColor(android.graphics.Color.parseColor("#AAAAAA"))
+                        })
+                    })
+                    // Bar
+                    addView(android.widget.LinearLayout(this@MainActivity).apply {
+                        orientation = android.widget.LinearLayout.HORIZONTAL
+                        layoutParams = android.widget.LinearLayout.LayoutParams(
+                            android.widget.LinearLayout.LayoutParams.MATCH_PARENT, 12)
+                        val filledView = android.view.View(this@MainActivity).apply {
+                            setBackgroundColor(barColor)
+                            layoutParams = android.widget.LinearLayout.LayoutParams(
+                                0, android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                                group.size.toFloat())
+                        }
+                        val emptyView = android.view.View(this@MainActivity).apply {
+                            setBackgroundColor(android.graphics.Color.parseColor("#33FFFFFF"))
+                            layoutParams = android.widget.LinearLayout.LayoutParams(
+                                0, android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                                (maxCount - group.size).toFloat())
+                        }
+                        addView(filledView)
+                        if (group.size < maxCount) addView(emptyView)
+                    })
+                })
+            }
     }
 
     private fun updateDebugOverlay(
