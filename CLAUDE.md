@@ -52,87 +52,71 @@ git commit -m "..."
 git push origin main   # ← NEVER skip this
 ```
 
-## Project Agent Environment: CCB (claude_codex_bridge)
+## Agent Architecture: CCB + Role Definitions
 
-The project uses **CCB** (bfly123/claude_codex_bridge) as the multi-agent workspace.
-CCB manages Claude, Codex, and Gemini from a single terminal with agent-to-agent `/ask` delegation.
+The project runs on **CCB** (bfly123/claude_codex_bridge) as the primary multi-agent workspace.
 
-### Setup (one-time)
+### Roles (unchanged)
+| Agent | CCB role | Responsibility |
+|-------|----------|----------------|
+| **Claude Code** | PM (orchestrator, outside CCB) | Triage issues, write prompts, review output, commit, manage releases |
+| **Codex** | `writer` | Primary implementer — deep code changes, Gradle builds, adb device testing |
+| **Gemini** | `reviewer` | Secondary implementer — continues when Codex is rate-limited; reviews Codex output |
+
+Claude does not implement. Claude only orchestrates, reviews, and delegates.
+
+### CCB setup (one-time)
 ```bash
 git clone https://github.com/bfly123/claude_codex_bridge.git
-cd claude_codex_bridge && ./install.sh install
-ccb update   # pull latest stable release
+cd claude_codex_bridge && ./install.sh install && ccb update
 ```
 
 ### Project config: `.ccb/ccb.config`
 ```
 cmd; writer:codex; reviewer:gemini
 ```
-- `writer` (Codex) — primary implementer
-- `reviewer` (Gemini) — secondary implementer / reviewer
-- Claude Code runs as the PM orchestrator outside CCB panes
 
 ### Start / stop
 ```bash
-ccb          # start writer + reviewer panes from .ccb/ccb.config
-ccb kill     # stop background runtime
-ccb -n       # rebuild runtime state, keep config
+ccb        # launch writer(Codex) + reviewer(Gemini) panes
+ccb kill   # stop CCB runtime
+ccb -n     # rebuild runtime, keep config
 ```
 
-### Agent-to-agent delegation inside CCB
+### Primary delegation workflow (CCB)
+Claude PM writes a structured task prompt and delegates via CCB:
 ```
-/ask writer implement the mountain pose rules in PoseStateMachine.kt
-/ask reviewer review the changes Codex just made and check for INVALID confidence gaps
-```
-
-## Agent Strategy: Interleaving (not parallel)
-
-Use Codex and Gemini in sequence, handing off between them:
-
-- **Codex** — primary implementer. Deep code changes, multi-file refactors, PR-ready commits.
-- **Gemini** — secondary implementer. Runs when Codex is rate-limited, or to review/continue Codex's work.
-
-Interleaving pattern:
-```
-Codex → hits limit → Gemini continues → Codex resumes → ...
+/ask writer <task>      # → Codex implements
+/ask reviewer <task>    # → Gemini reviews or continues
 ```
 
-With CCB running, handoff is a single `/ask reviewer ...` command instead of a full context re-paste.
+Handoff: when Codex hits rate limit, Claude sends `/ask reviewer continue: <what Codex did> / <what remains>`.
 
-Never run both on the same task at the same time. Always check what the previous agent did before handing off.
+### Fallback invocation (CCB unavailable)
+When CCB is not running, fall back to direct tool invocation:
+- **Codex fallback**: `codex:rescue` skill (Agent tool, subagent_type `codex:codex-rescue`)
+  - Check resumable thread: `node "~/.claude/plugins/cache/openai-codex/codex/1.0.4/scripts/codex-companion.mjs" task-resume-candidate --json`
+- **Gemini fallback**: `mcp__gemini__gemini_run` MCP tool directly
 
-## How to Invoke Each Agent
-
-### Codex
-Use the `codex:rescue` skill. Codex runs as a subagent via the Agent tool.
-
-Check for a resumable thread first:
-```bash
-node "/Users/wangchengye/.claude/plugins/marketplaces/openai-codex/plugins/codex/scripts/codex-companion.mjs" task-resume-candidate --json
-```
-
-**Sandbox mode (patched):** When using `--write`, Codex runs with `danger-full-access` sandbox (allows Gradle builds, adb, and full disk access). The companion script at `~/.claude/plugins/cache/openai-codex/codex/1.0.4/scripts/codex-companion.mjs` line 488 has been patched from `"workspace-write"` → `"danger-full-access"`. If the plugin updates and resets this patch, re-apply:
+**Sandbox mode (Codex — patched):** When using `--write`, Codex runs with `danger-full-access` sandbox. The companion script at `~/.claude/plugins/cache/openai-codex/codex/1.0.4/scripts/codex-companion.mjs` line 488 has been patched from `"workspace-write"` → `"danger-full-access"`. If the plugin updates and resets this patch, re-apply:
 ```bash
 sed -i '' 's/"workspace-write"/"danger-full-access"/' \
   ~/.claude/plugins/cache/openai-codex/codex/1.0.4/scripts/codex-companion.mjs
 ```
-Always pass `--write` in Codex task prompts that need to build or run adb (e.g. `codex:rescue --write <prompt>`).
+Always pass `--write` in Codex fallback prompts that need to build or run adb.
 
-**Default model: `gpt-5.3-codex`** (set in `.codex/config.toml`). Do not pass `--model` flag — config file handles it. `gpt-5.3-codex-spark` and `gpt-5.5-codex` are not supported on this account type.
+**Default model: `gpt-5.3-codex`** (set in `.codex/config.toml`). Do not pass `--model` flag.
 
-### Gemini CLI
-Use the `mcp__gemini__gemini_run` MCP tool directly — do NOT use `python3 scripts/gemini-acp.py`.
+**Gemini fallback approval modes:**
 
 | approval_mode | Use when |
 |---|---|
 | `plan` | Read-only audit, reviewing code, no edits |
 | `auto_edit` | Fixing code, file edits allowed (default) |
 
-Always pass a self-contained prompt. The `cwd` defaults to the project root.
-
 ## Hourly GitHub Issue Triage
 
-Every hour, Claude should review the GitHub issues for this repository and keep implementation moving by delegating actionable work to Codex or Gemini CLI.
+Every hour, Claude should review the GitHub issues for this repository and keep implementation moving by delegating via CCB (primary) or direct tool invocation (fallback).
 
 Claude should not implement directly. Claude should triage, decide the next task, prepare a clear prompt, invoke the appropriate agent, review the result, and manage handoff.
 
@@ -143,8 +127,8 @@ Hourly loop:
 3. Prioritize actionable issues with clear acceptance criteria.
 4. Pick the highest-priority issue that can be worked on safely.
 5. Inspect related files, docs, recent commits, and current worktree status.
-6. Delegate the implementation to Codex first.
-7. If Codex is rate-limited, blocked, or needs review, hand off to Gemini CLI.
+6. Delegate to Codex (`writer`) via CCB: `/ask writer <task>`. Fallback: `codex:rescue` skill.
+7. If Codex is rate-limited or blocked, hand off to Gemini (`reviewer`) via CCB: `/ask reviewer continue: ...`. Fallback: `mcp__gemini__gemini_run`.
 8. Review the agent output before continuing.
 9. Run or request relevant checks when possible.
 10. Commit or accept the agent's commit only if the change is focused and matches the issue.
