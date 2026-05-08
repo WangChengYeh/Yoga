@@ -68,6 +68,37 @@ class SessionHistoryDb(context: Context) : SQLiteOpenHelper(
         )
     }
 
+    data class SessionEntry(
+        val tsMs: Long,
+        val durationMs: Long,
+        val stepsCompleted: Int,
+        val correctionCount: Int
+    )
+
+    fun getAll(): List<SessionEntry> {
+        val result = mutableListOf<SessionEntry>()
+        try {
+            val db = readableDatabase
+            val cursor = db.query(
+                TABLE_NAME, null, null, null, null, null,
+                "ts_ms DESC"
+            )
+            cursor.use {
+                while (it.moveToNext()) {
+                    result.add(SessionEntry(
+                        tsMs = it.getLong(it.getColumnIndexOrThrow("ts_ms")),
+                        durationMs = it.getLong(it.getColumnIndexOrThrow("duration_ms")),
+                        stepsCompleted = it.getInt(it.getColumnIndexOrThrow("steps_completed")),
+                        correctionCount = it.getInt(it.getColumnIndexOrThrow("correction_count"))
+                    ))
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to read session history", e)
+        }
+        return result
+    }
+
     companion object {
         private const val TAG = "SessionHistoryDb"
         private const val DATABASE_NAME = "session_history.db"

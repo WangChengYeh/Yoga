@@ -107,6 +107,9 @@ class MainActivity : AppCompatActivity(), GodotHost {
     lateinit var completionDurationText: TextView
     lateinit var completionStepsText: TextView
     lateinit var completionCorrectionsText: TextView
+    lateinit var historyOverlay: View
+    lateinit var historyListView: android.widget.ListView
+    lateinit var historyEmptyText: android.widget.TextView
     private lateinit var applySuggestionButton: Button
 
     lateinit var cameraPipeline: CameraPosePipeline
@@ -236,6 +239,13 @@ class MainActivity : AppCompatActivity(), GodotHost {
         completionStepsText = findViewById(R.id.completionStepsText)
         completionCorrectionsText = findViewById(R.id.completionCorrectionsText)
         findViewById<Button>(R.id.completionDoneButton).setOnClickListener { hideCompletionOverlay() }
+
+        historyOverlay = findViewById(R.id.historyOverlay)
+        historyListView = findViewById(R.id.historyListView)
+        historyEmptyText = findViewById(R.id.historyEmptyText)
+        findViewById<Button>(R.id.historyButton).setOnClickListener { showHistoryOverlay() }
+        findViewById<Button>(R.id.historyCloseButton).setOnClickListener { historyOverlay.visibility = View.GONE }
+
         sessionRecorder = SessionRecorder(this)
         godotAvatarBridge = GodotAvatarBridge()
         llmInteractionDb = LlmInteractionDb(this)
@@ -862,6 +872,40 @@ class MainActivity : AppCompatActivity(), GodotHost {
 
     private fun hideCompletionOverlay() {
         sessionCompletionOverlay.visibility = View.GONE
+    }
+
+    private fun showHistoryOverlay() {
+        val entries = sessionHistoryDb.getAll()
+        if (entries.isEmpty()) {
+            historyListView.visibility = View.GONE
+            historyEmptyText.visibility = View.VISIBLE
+        } else {
+            historyEmptyText.visibility = View.GONE
+            historyListView.visibility = View.VISIBLE
+            val items = entries.map { e ->
+                val date = java.text.SimpleDateFormat("MM/dd HH:mm", java.util.Locale.getDefault())
+                    .format(java.util.Date(e.tsMs))
+                val min = (e.durationMs / 60000).toInt()
+                val sec = ((e.durationMs % 60000) / 1000).toInt()
+                "$date  $min:%02d  步驟${e.stepsCompleted}  修正${e.correctionCount}次".format(sec)
+            }
+            historyListView.adapter = object: android.widget.ArrayAdapter<String>(
+                this,
+                android.R.layout.simple_list_item_1,
+                items
+            ) {
+                override fun getView(
+                    position: Int,
+                    convertView: View?,
+                    parent: android.view.ViewGroup
+                ): View {
+                    val view = super.getView(position, convertView, parent)
+                    (view.findViewById(android.R.id.text1) as android.widget.TextView).setTextColor(android.graphics.Color.WHITE)
+                    return view
+                }
+            }
+        }
+        historyOverlay.visibility = View.VISIBLE
     }
 
     private fun updateDebugOverlay(
