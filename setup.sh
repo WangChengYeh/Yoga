@@ -10,6 +10,8 @@ CLAUDE_SESSION="${CLAUDE_SESSION:-yoga-claude}"
 CCB_SESSION="${CCB_SESSION:-yoga-ccb}"
 WATCHDOG_INTERVAL="${WATCHDOG_INTERVAL:-3600}"
 CLAUDE_BOOT_WAIT_SECONDS="${CLAUDE_BOOT_WAIT_SECONDS:-2}"
+CCB_CLONE_DIR="${CCB_CLONE_DIR:-$HOME/claude_codex_bridge}"
+CCB_REPO="https://github.com/bfly123/claude_codex_bridge.git"
 
 require_cmd() {
   local cmd="$1"
@@ -20,6 +22,7 @@ require_cmd() {
 }
 
 require_cmd tmux
+require_cmd git
 
 if [ ! -f "$SOURCE_ME" ]; then
   echo "Missing file: $SOURCE_ME" >&2
@@ -29,6 +32,36 @@ fi
 if [ ! -x "$WATCHDOG_SCRIPT" ]; then
   echo "Missing executable watchdog script: $WATCHDOG_SCRIPT" >&2
   exit 1
+fi
+
+# --- CCB install (auto-clone if missing) ---
+install_ccb() {
+  echo "CCB not found — cloning and installing..."
+
+  if [ -d "$CCB_CLONE_DIR/.git" ]; then
+    echo "  Repo already exists at $CCB_CLONE_DIR — pulling latest..."
+    git -C "$CCB_CLONE_DIR" pull --ff-only
+  else
+    echo "  Cloning $CCB_REPO → $CCB_CLONE_DIR"
+    git clone "$CCB_REPO" "$CCB_CLONE_DIR"
+  fi
+
+  echo "  Running install.sh..."
+  bash "$CCB_CLONE_DIR/install.sh" install
+
+  echo "  Running ccb update..."
+  ccb update
+
+  echo "CCB installed successfully."
+}
+
+if ! command -v ccb >/dev/null 2>&1; then
+  if command -v node >/dev/null 2>&1; then
+    install_ccb
+  else
+    echo "WARNING: node not found — skipping CCB install." >&2
+    echo "  Install Node.js, then re-run setup.sh." >&2
+  fi
 fi
 
 # --- Watchdog ---
@@ -43,7 +76,6 @@ else
 fi
 
 # --- CCB agent workspace (writer:codex + reviewer:gemini) ---
-# Requires: npm install -g @bfly123/ccb && ccb update  (first-time only)
 if command -v ccb >/dev/null 2>&1; then
   if ! tmux has-session -t "$CCB_SESSION" 2>/dev/null; then
     tmux new-session -d -s "$CCB_SESSION"
@@ -55,9 +87,7 @@ if command -v ccb >/dev/null 2>&1; then
     echo "Session already exists: $CCB_SESSION (left unchanged)"
   fi
 else
-  echo "CCB not installed — skipping $CCB_SESSION session."
-  echo "  Install: git clone https://github.com/bfly123/claude_codex_bridge.git"
-  echo "           cd claude_codex_bridge && ./install.sh install && ccb update"
+  echo "CCB unavailable — skipping $CCB_SESSION session."
 fi
 
 # --- Claude Code PM session ---
@@ -89,4 +119,6 @@ List sessions:
 Agent delegation (inside CCB session):
   /ask writer <task>     → Codex implements
   /ask reviewer <task>   → Gemini reviews
+
+CCB clone location: $CCB_CLONE_DIR
 EOF
