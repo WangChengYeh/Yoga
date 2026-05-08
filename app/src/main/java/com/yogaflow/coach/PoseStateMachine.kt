@@ -99,6 +99,60 @@ class PoseStateMachine {
                 }
             }
 
+            "twist" -> buildMap {
+                val leftTwist = PoseGeometry.angle(frame, 13, 11, 23)
+                if (leftTwist.confidence != PoseGeometry.Confidence.INVALID) {
+                    put(11, leftTwist.degrees in 60.0..100.0)
+                    put(13, leftTwist.degrees in 60.0..100.0)
+                }
+                val rightTwist = PoseGeometry.angle(frame, 14, 12, 24)
+                if (rightTwist.confidence != PoseGeometry.Confidence.INVALID) {
+                    put(12, rightTwist.degrees in 60.0..100.0)
+                    put(14, rightTwist.degrees in 60.0..100.0)
+                }
+            }
+
+            "warrior_1" -> buildMap {
+                val frontKnee = PoseGeometry.angle(frame, 23, 25, 27)
+                if (frontKnee.confidence != PoseGeometry.Confidence.INVALID) {
+                    put(25, frontKnee.degrees in 80.0..100.0)
+                }
+                val leftArm = PoseGeometry.angle(frame, 11, 13, 15)
+                if (leftArm.confidence != PoseGeometry.Confidence.INVALID) {
+                    put(13, leftArm.degrees >= 160.0)
+                }
+                val rightArm = PoseGeometry.angle(frame, 12, 14, 16)
+                if (rightArm.confidence != PoseGeometry.Confidence.INVALID) {
+                    put(14, rightArm.degrees >= 160.0)
+                }
+            }
+
+            "child_pose" -> buildMap {
+                val leftHip = PoseGeometry.angle(frame, 11, 23, 25)
+                if (leftHip.confidence != PoseGeometry.Confidence.INVALID) {
+                    put(23, leftHip.degrees <= 60.0)
+                }
+                val rightHip = PoseGeometry.angle(frame, 12, 24, 26)
+                if (rightHip.confidence != PoseGeometry.Confidence.INVALID) {
+                    put(24, rightHip.degrees <= 60.0)
+                }
+                val leftKnee = PoseGeometry.angle(frame, 23, 25, 27)
+                if (leftKnee.confidence != PoseGeometry.Confidence.INVALID) {
+                    put(25, leftKnee.degrees <= 80.0)
+                }
+            }
+
+            "pigeon" -> buildMap {
+                val frontKnee = PoseGeometry.angle(frame, 23, 25, 27)
+                if (frontKnee.confidence != PoseGeometry.Confidence.INVALID) {
+                    put(25, frontKnee.degrees <= 100.0)
+                }
+                val backKnee = PoseGeometry.angle(frame, 24, 26, 28)
+                if (backKnee.confidence != PoseGeometry.Confidence.INVALID) {
+                    put(26, backKnee.degrees >= 150.0)
+                }
+            }
+
             else -> emptyMap()
         }
     }
@@ -173,6 +227,69 @@ class PoseStateMachine {
                         leftKnee.confidence != PoseGeometry.Confidence.INVALID && leftKnee.degrees < 80 ->
                             CoachState.CORRECTION to "${prefix}腳跟稍微往外移，膝蓋角度調整一下。"
                         else -> CoachState.HOLD to "${prefix}臀橋很好，持續夾緊臀部。"
+                    }
+                }
+            }
+
+            "twist" -> {
+                val leftTwist = PoseGeometry.angle(frame, 13, 11, 23)
+                if (leftTwist.confidence == PoseGeometry.Confidence.INVALID) {
+                    CoachState.CORRECTION to "請讓肩膀與髖部進入畫面，確認扭轉角度。"
+                } else {
+                    val prefix = confidencePrefix(leftTwist.confidence)
+                    when {
+                        leftTwist.degrees > 100 -> CoachState.MOVEMENT to "${prefix}持續深化扭轉，肩膀帶向另一側。"
+                        leftTwist.degrees < 60 -> CoachState.CORRECTION to "${prefix}扭轉太深，讓肩膀稍微回來一點。"
+                        else -> CoachState.HOLD to "${prefix}扭轉到位，保持自然呼吸。"
+                    }
+                }
+            }
+
+            "warrior_1" -> {
+                val frontKnee = PoseGeometry.angle(frame, 23, 25, 27)
+                val leftArm = PoseGeometry.angle(frame, 11, 13, 15)
+                if (frontKnee.confidence == PoseGeometry.Confidence.INVALID) {
+                    CoachState.CORRECTION to "請讓前腿進入畫面，我需要看到你的膝蓋。"
+                } else {
+                    val prefix = confidencePrefix(frontKnee.confidence)
+                    when {
+                        frontKnee.degrees > 100 -> CoachState.MOVEMENT to "${prefix}前膝繼續彎曲，讓小腿接近垂直。"
+                        frontKnee.degrees < 80 -> CoachState.CORRECTION to "${prefix}前膝不要超過腳尖，稍微抬高一點。"
+                        leftArm.confidence != PoseGeometry.Confidence.INVALID && leftArm.degrees < 160 ->
+                            CoachState.CORRECTION to "${prefix}雙手向上打直，手臂貼近耳朵。"
+                        else -> CoachState.HOLD to "${prefix}很好，骨盆朝向前方，穩定呼吸。"
+                    }
+                }
+            }
+
+            "child_pose" -> {
+                val leftHip = PoseGeometry.angle(frame, 11, 23, 25)
+                val leftKnee = PoseGeometry.angle(frame, 23, 25, 27)
+                if (leftHip.confidence == PoseGeometry.Confidence.INVALID) {
+                    CoachState.CORRECTION to "請讓全身進入畫面，確認髖部與雙腿可見。"
+                } else {
+                    val prefix = confidencePrefix(leftHip.confidence)
+                    when {
+                        leftHip.degrees > 60 -> CoachState.MOVEMENT to "${prefix}軀幹繼續往前下沉，靠近大腿。"
+                        leftKnee.confidence != PoseGeometry.Confidence.INVALID && leftKnee.degrees > 80 ->
+                            CoachState.CORRECTION to "${prefix}臀部往腳跟坐，膝蓋再彎一點。"
+                        else -> CoachState.HOLD to "${prefix}嬰兒式到位，放鬆背部與腰部。"
+                    }
+                }
+            }
+
+            "pigeon" -> {
+                val frontKnee = PoseGeometry.angle(frame, 23, 25, 27)
+                val backKnee = PoseGeometry.angle(frame, 24, 26, 28)
+                if (frontKnee.confidence == PoseGeometry.Confidence.INVALID) {
+                    CoachState.CORRECTION to "請讓雙腿進入畫面，確認前後腿都可見。"
+                } else {
+                    val prefix = confidencePrefix(frontKnee.confidence)
+                    when {
+                        backKnee.confidence != PoseGeometry.Confidence.INVALID && backKnee.degrees < 150 ->
+                            CoachState.CORRECTION to "${prefix}後腿持續向後延伸，膝蓋打直。"
+                        frontKnee.degrees > 100 -> CoachState.MOVEMENT to "${prefix}前腳膝蓋繼續彎曲，往身體靠近。"
+                        else -> CoachState.HOLD to "${prefix}鴿式到位，讓臀部慢慢放鬆沉降。"
                     }
                 }
             }

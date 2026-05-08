@@ -51,6 +51,27 @@ object YogaPoseCatalog {
             category = "Inversion",
             setupCue = "雙手推地，臀部向上，形成倒 V",
             correctionFocus = "腿後側延伸與手臂穩定"
+        ),
+        YogaPose(
+            id = "warrior_1",
+            displayName = "Warrior I",
+            category = "Standing",
+            setupCue = "前腳朝前，後腳外開，骨盆朝向前方",
+            correctionFocus = "前膝方向與手臂上舉"
+        ),
+        YogaPose(
+            id = "child_pose",
+            displayName = "Child's Pose",
+            category = "Restoration",
+            setupCue = "跪坐腳跟，膝蓋打開，準備前傾",
+            correctionFocus = "髖部下沉與背部延伸"
+        ),
+        YogaPose(
+            id = "pigeon",
+            displayName = "Pigeon Pose",
+            category = "Hip Opener",
+            setupCue = "前腳膝蓋帶向前，後腿向後延伸，骨盆正向",
+            correctionFocus = "臀部放鬆與骨盆水平"
         )
     )
 }
