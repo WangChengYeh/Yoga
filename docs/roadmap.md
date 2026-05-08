@@ -144,15 +144,22 @@ YogaFlow 3D has moved from a pose-detection demo into a product-level on-device 
 
 ---
 
+## Completed (recent)
+- ✔ Record course name per session in SessionHistoryDb (#104)
+- ✔ Progress tracking dashboard — 統計 tab with summary + per-course bar chart (#106)
+- ✔ Correction direction arrows — amber bisector arrows on deviated joints (#107)
+- ✔ Geometry rules coverage audit (#108)
+- ✔ Weekly summary bar — 本週 N 堂 · time · streak in history list (#105)
+
 ## Next Work
 
 ### P1
-- Progress tracking dashboard — session history stats and pose accuracy trends (#106)
-- Correction direction arrows — show WHERE to move joint on angle deviation overlay (#107)
+- Expand flow library from 15 → 30 flows (all categories)
+- ROM baseline — track each user's joint range of motion over time
 
 ### P2
-- Geometry rules coverage audit — add rules for all poses used in 15 flows (#108)
-- Expand flow library to 30 flows (currently 15)
+- Apple Fitness+ style home screen — carousel cards with course art
+- Bilateral balance analysis — compare left vs right side angles per pose
 
 ---
 
