@@ -47,6 +47,7 @@ import com.yogaflow.flow.RuntimeOverrideKey
 import com.yogaflow.flow.RuntimeOverrideStore
 import com.yogaflow.flow.RuntimeParams
 import com.yogaflow.flow.YogaFlow
+import com.yogaflow.db.SessionHistoryDb
 import com.yogaflow.llm.LlmCoach
 import com.yogaflow.llm.LlmInteractionDb
 import com.yogaflow.pose.CameraPosePipeline
@@ -146,6 +147,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
     private lateinit var sessionRecorder: SessionRecorder
     private lateinit var godotAvatarBridge: GodotAvatarBridge
     private lateinit var llmInteractionDb: LlmInteractionDb
+    private lateinit var sessionHistoryDb: SessionHistoryDb
     private val demoHandler = Handler(Looper.getMainLooper())
     private val demoActions = listOf("hold_mountain", "hold_forward_fold", "hold_squat", "hold_twist")
     private var demoActionIndex = 0
@@ -237,6 +239,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
         sessionRecorder = SessionRecorder(this)
         godotAvatarBridge = GodotAvatarBridge()
         llmInteractionDb = LlmInteractionDb(this)
+        sessionHistoryDb = SessionHistoryDb(this)
         loadDevelopmentSettings()
         applyDevelopmentIntentFlags(intent)
         loadThresholdPreferencesMain()
@@ -844,6 +847,11 @@ class MainActivity : AppCompatActivity(), GodotHost {
 
     private fun showCompletionOverlay() {
         val elapsedMs = System.currentTimeMillis() - sessionStartTimeMs
+        sessionHistoryDb.record(
+            durationMs = elapsedMs,
+            stepsCompleted = sessionStepsCompleted,
+            correctionCount = sessionCorrectionCount
+        )
         val minutes = (elapsedMs / 60000).toInt()
         val seconds = ((elapsedMs % 60000) / 1000).toInt()
         completionDurationText.text = "時長：%d:%02d".format(minutes, seconds)

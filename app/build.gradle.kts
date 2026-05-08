@@ -67,6 +67,10 @@ dependencies {
     // WebSocket bridge from Android/Kotlin to the embedded Godot avatar.
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
+    // Coroutines for async operations
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")
 }
