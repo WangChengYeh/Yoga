@@ -450,11 +450,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
             applyPlaylist(flows, openClassView = true)
         }
         startDemoButton.setOnClickListener {
-            isDemoMode = true
-            showClass()
-            overlayView.visibility = View.INVISIBLE
-            virtualCoachView.visibility = View.VISIBLE
-            startDemoCycle()
+            startDemoMode()
         }
         startButton.setOnClickListener {
             if (cameraReady) beginRunningSession()
@@ -557,6 +553,9 @@ class MainActivity : AppCompatActivity(), GodotHost {
         if (intent.getBooleanExtra(EXTRA_AVATAR_SELF_TEST, false)) {
             scheduleAvatarSelfTest()
         }
+        if (intent.getBooleanExtra(EXTRA_DEMO_MODE, false)) {
+            startDemoMode()
+        }
         if (intent.getBooleanExtra(EXTRA_AVATAR_CLEAR_OVERRIDE, false)) {
             avatarPositionOverride = null
             sendAvatarPositionOverrideFrame(
@@ -577,6 +576,14 @@ class MainActivity : AppCompatActivity(), GodotHost {
                 )
             }
         }
+    }
+
+    private fun startDemoMode() {
+        isDemoMode = true
+        showClass()
+        overlayView.visibility = View.INVISIBLE
+        virtualCoachView.visibility = View.VISIBLE
+        startDemoCycle()
     }
 
     private fun sendAvatarPositionOverrideFrame(
@@ -1072,6 +1079,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
         private const val EXTRA_DISABLE_CAMERA_SETUP = "devDisableCameraSetup"
         private const val EXTRA_ENABLE_CAMERA_SETUP = "devEnableCameraSetup"
         private const val EXTRA_AVATAR_SELF_TEST = "avatarSelfTest"
+        private const val EXTRA_DEMO_MODE = "demoMode"
         private const val EXTRA_AVATAR_TARGET_X = "avatarTargetX"
         private const val EXTRA_AVATAR_TARGET_Y = "avatarTargetY"
         private const val EXTRA_AVATAR_CLEAR_OVERRIDE = "avatarClearOverride"
