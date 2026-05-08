@@ -171,11 +171,10 @@ class MainActivity : AppCompatActivity(), GodotHost {
         super.onGodotSetupCompleted()
         Log.i("YogaFlow", "Godot setup completed")
         runOnUiThread {
-            window.setFormat(android.graphics.PixelFormat.TRANSLUCENT)
             android.os.Handler(mainLooper).postDelayed({
                 val surfaceView = findSurfaceViewInHierarchy(virtualCoachView)
                 if (surfaceView != null) {
-                    surfaceView.setZOrderMediaOverlay(true)
+                    surfaceView.setZOrderOnTop(true)
                     surfaceView.holder.setFormat(android.graphics.PixelFormat.TRANSLUCENT)
                     Log.i("YogaFlow", "Godot SurfaceView transparent configured")
                 } else {
@@ -201,6 +200,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        window.setFormat(android.graphics.PixelFormat.TRANSLUCENT)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         WindowCompat.setDecorFitsSystemWindows(window, false)
