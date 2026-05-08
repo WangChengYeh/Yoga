@@ -102,6 +102,10 @@ class MainActivity : AppCompatActivity(), GodotHost {
     lateinit var moreButton: Button
     lateinit var secondaryButtonRow: View
     lateinit var sessionRecordStatus: TextView
+    lateinit var sessionCompletionOverlay: View
+    lateinit var completionDurationText: TextView
+    lateinit var completionStepsText: TextView
+    lateinit var completionCorrectionsText: TextView
     private lateinit var applySuggestionButton: Button
 
     lateinit var cameraPipeline: CameraPosePipeline
@@ -116,6 +120,9 @@ class MainActivity : AppCompatActivity(), GodotHost {
     lateinit var currentPose: YogaPose
 
     var sessionState = SessionState.IDLE
+    private var sessionStartTimeMs: Long = 0L
+    private var sessionCorrectionCount: Int = 0
+    private var sessionStepsCompleted: Int = 0
     var cameraReady = false
     var cameraReadySince = 0L
     var autoStartedCurrentSetup = false
@@ -222,6 +229,11 @@ class MainActivity : AppCompatActivity(), GodotHost {
         })
         cameraToggleButton = findViewById(R.id.cameraToggleButton)
         applySuggestionButton = findViewById(R.id.applySuggestionButton)
+        sessionCompletionOverlay = findViewById(R.id.sessionCompletionOverlay)
+        completionDurationText = findViewById(R.id.completionDurationText)
+        completionStepsText = findViewById(R.id.completionStepsText)
+        completionCorrectionsText = findViewById(R.id.completionCorrectionsText)
+        findViewById<Button>(R.id.completionDoneButton).setOnClickListener { hideCompletionOverlay() }
         sessionRecorder = SessionRecorder(this)
         godotAvatarBridge = GodotAvatarBridge()
         llmInteractionDb = LlmInteractionDb(this)
@@ -685,6 +697,9 @@ class MainActivity : AppCompatActivity(), GodotHost {
         overlayView.setFramingStatus(null)
         virtualCoachView.visibility = View.VISIBLE
         coachCueController.reset()
+        sessionStartTimeMs = System.currentTimeMillis()
+        sessionCorrectionCount = 0
+        sessionStepsCompleted = 0
         updateUi(animated = false)
     }
 
@@ -700,6 +715,9 @@ class MainActivity : AppCompatActivity(), GodotHost {
         virtualCoachView.visibility = View.VISIBLE
         sessionState = SessionState.RUNNING
         coachCueController.reset()
+        sessionStartTimeMs = System.currentTimeMillis()
+        sessionCorrectionCount = 0
+        sessionStepsCompleted = 0
         updateUi(animated = false)
     }
 
@@ -797,6 +815,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
     }
 
     private fun onFlowCompleted(text: String) {
+        sessionStepsCompleted += currentFlow.steps.size
         recordSessionCue(CoachState.HOLD, text, "flow_completed")
         val next = playlist.moveNext()
         if (next == null) {
@@ -804,6 +823,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
             coachText.text = text
             virtualCoachView.visibility = View.INVISIBLE
             updateUi(animated = true)
+            showCompletionOverlay()
             return
         }
 
@@ -816,9 +836,24 @@ class MainActivity : AppCompatActivity(), GodotHost {
     }
 
     private fun speakCoachCue(state: CoachState, cue: String) {
+        if (state == CoachState.CORRECTION) sessionCorrectionCount++
         if (!isCurrentFlowInitialized()) return
         val severity = if (state == CoachState.CORRECTION) 2 else 0
         coachCueController.speak(currentPose, currentFlow.id, flowEngine.currentStepNumber(), state, cue, severity = severity)
+    }
+
+    private fun showCompletionOverlay() {
+        val elapsedMs = System.currentTimeMillis() - sessionStartTimeMs
+        val minutes = (elapsedMs / 60000).toInt()
+        val seconds = ((elapsedMs % 60000) / 1000).toInt()
+        completionDurationText.text = "時長：%d:%02d".format(minutes, seconds)
+        completionStepsText.text = "完成步驟：$sessionStepsCompleted"
+        completionCorrectionsText.text = "修正提示：$sessionCorrectionCount 次"
+        sessionCompletionOverlay.visibility = View.VISIBLE
+    }
+
+    private fun hideCompletionOverlay() {
+        sessionCompletionOverlay.visibility = View.GONE
     }
 
     private fun updateDebugOverlay(
