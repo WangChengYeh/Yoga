@@ -132,12 +132,14 @@ YogaFlow 3D has moved from a pose-detection demo into a product-level on-device 
 - ✔ Add Godot 3D avatar coach overlay (GodotFragment + WebSocket IPC)
 - ✔ Avatar auto-positioning — moves to opposite side of detected human
 - ✔ Selectable coach skins (Classic, Nature, Ocean)
-- Joint angle deviation overlay — red/green visual feedback on skeleton when angle deviates from target (#94)
-- Session completion screen — post-session summary (duration, poses, correction count) (#95)
+- ✔ Joint angle deviation overlay — red/green visual feedback on skeleton when angle deviates from target (#94)
+- ✔ Session completion screen — post-session summary (duration, poses, correction count) (#95)
+- ✔ Session history — persist completion summaries to SQLite + history list overlay (#100, #102)
+- ✔ Styled gradient cover cards for Stretch, Recovery, Strength (#103)
 
 ### P2: Content expansion
 - ✔ Expand flow library to 15 flows (target: 10–30)
-- Add more pose-specific geometry rules (#96)
+- ✔ Add pose-specific geometry rules for warrior_2, downward_dog, bridge, warrior_1, child_pose, pigeon, twist, mountain (#96, #98, #99)
 - ✔ beginner / flexibility / recovery / strength categories on home screen
 
 ---
