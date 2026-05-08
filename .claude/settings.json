@@ -16,7 +16,7 @@
       "mcp__claude_ai_Google_Calendar__authenticate",
       "mcp__claude_ai_Google_Calendar__complete_authentication"
     ],
-    "defaultMode": "dontAsk"
+    "defaultMode": "bypassPermissions"
   },
   "hooks": {
     "Stop": [
@@ -50,5 +50,6 @@
         "--mcp"
       ]
     }
-  }
+  },
+  "skipDangerousModePermissionPrompt": true
 }

@@ -16,6 +16,7 @@ REPO="WangChengYeh/Yoga"
 IDLE_STAMP="/tmp/claude-yogaflow-idle-since"
 ONE_HOUR=3600
 ROLE="You are the project manager for YogaFlow 3D. You do not implement directly — you orchestrate Codex and Gemini CLI. Delegate all implementation to agents, review their output, and keep the project moving."
+HOOK_LOGGER="$(cd "$(dirname "$0")" && pwd)/hook_event_logger.sh"
 
 # ── 0. Read hook input ───────────────────────────────────────────────────────
 INPUT=$(cat)
@@ -28,8 +29,17 @@ import json, sys
 print(json.dumps({'decision': 'block', 'reason': sys.argv[1]}))" "$msg"
 }
 
+log_event() {
+  local event="$1"
+  local detail="${2:-}"
+  if [ -x "$HOOK_LOGGER" ]; then
+    "$HOOK_LOGGER" "$event" "$detail" "claude-stop-hook" >/dev/null 2>&1 || true
+  fi
+}
+
 # ── 1. In-progress work (staged but uncommitted) ─────────────────────────────
 if ! git diff --cached --quiet 2>/dev/null; then
+  log_event "staged_changes" "Continue current task due to staged changes"
   emit "$ROLE Staged uncommitted changes exist in the repo. Continue the current task to completion, then commit."
   exit 0
 fi
@@ -42,12 +52,14 @@ ISSUE_COUNT=$(GITHUB_TOKEN="" gh issue list \
 
 if [ "$ISSUE_COUNT" -gt 0 ]; then
   rm -f "$IDLE_STAMP"
+  log_event "open_issues" "Open issues found in $REPO"
   emit "$ROLE Open GitHub issues found in $REPO. Run the project triage loop per CLAUDE.md: fetch open issues, pick the highest-priority one, delegate to Codex or Gemini, commit, and comment on the issue."
   exit 0
 fi
 
 # ── 3. Nothing to do — only now respect stop_hook_active to prevent re-injection loop
 if [ "$HOOK_ACTIVE" = "true" ]; then
+  log_event "hook_active_skip" "stop_hook_active=true"
   exit 0
 fi
 
@@ -57,10 +69,12 @@ NOW=$(date +%s)
 if [ -f "$IDLE_STAMP" ]; then
   ELAPSED=$(( NOW - $(cat "$IDLE_STAMP") ))
   if [ "$ELAPSED" -lt "$ONE_HOUR" ]; then
+    log_event "cooldown_skip" "elapsed=${ELAPSED}s"
     exit 0
   fi
 fi
 
 echo "$NOW" > "$IDLE_STAMP"
+log_event "cooldown_elapsed_recheck" "elapsed>=${ONE_HOUR}s"
 emit "$ROLE All issues in $REPO are closed. 1-hour cooldown elapsed — re-checking for newly filed issues. If still none, go idle and wait for the user."
 exit 0
