@@ -477,7 +477,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
 
     private fun applyCameraSetupEnabled(enabled: Boolean) {
         cameraSetupEnabled = enabled
-        cameraToggleButton.text = if (enabled) "Camera: ON" else "Camera: OFF"
+        cameraToggleButton.text = "Camera"
         if (enabled) {
             cameraSetupController.reset()
             cameraReady = false
