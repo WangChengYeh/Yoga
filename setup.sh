@@ -12,6 +12,7 @@ WATCHDOG_INTERVAL="${WATCHDOG_INTERVAL:-3600}"
 CLAUDE_BOOT_WAIT_SECONDS="${CLAUDE_BOOT_WAIT_SECONDS:-2}"
 CCB_CLONE_DIR="${CCB_CLONE_DIR:-$HOME/claude_codex_bridge}"
 CCB_REPO="https://github.com/bfly123/claude_codex_bridge.git"
+CCB_TAG="${CCB_TAG:-v6.0.29}"  # pin to stable release; override with CCB_TAG=vX.Y.Z
 
 require_cmd() {
   local cmd="$1"
@@ -39,11 +40,12 @@ install_ccb() {
   echo "CCB not found — cloning and installing..."
 
   if [ -d "$CCB_CLONE_DIR/.git" ]; then
-    echo "  Repo already exists at $CCB_CLONE_DIR — pulling latest..."
-    git -C "$CCB_CLONE_DIR" pull --ff-only
+    echo "  Repo already exists at $CCB_CLONE_DIR — checking out stable tag $CCB_TAG..."
+    git -C "$CCB_CLONE_DIR" fetch --tags
+    git -C "$CCB_CLONE_DIR" checkout "$CCB_TAG"
   else
-    echo "  Cloning $CCB_REPO → $CCB_CLONE_DIR"
-    git clone "$CCB_REPO" "$CCB_CLONE_DIR"
+    echo "  Cloning $CCB_REPO at tag $CCB_TAG → $CCB_CLONE_DIR"
+    git clone --branch "$CCB_TAG" --depth 1 "$CCB_REPO" "$CCB_CLONE_DIR"
   fi
 
   echo "  Running install.sh..."
