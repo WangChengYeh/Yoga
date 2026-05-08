@@ -1,4 +1,4 @@
-# YogaFlow 3D — Claude Mission
+# Claude Agent
 
 ## Role
 

@@ -35,3 +35,10 @@ Manual test:
 scripts/hook_event_logger.sh test_event "manual verification"
 python3 scripts/export_sqlite_logs_csv.py --table hook_events --limit 10 --out logs/hook_events_latest.csv
 ```
+
+## Hourly Agent Hello Hook
+
+`scripts/codex_hourly_agent_hello.sh` writes hourly greetings to `logs/agent_greetings.log`.
+
+- It is safe to run repeatedly; it only emits once per hour (`logs/agent_greetings.last` cooldown file).
+- `scripts/claude-stop-hook.sh` invokes it automatically with `SELF_AGENT=claude`, so Claude greets peer agents (for example: Codex/Gemini).
