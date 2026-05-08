@@ -17,6 +17,7 @@ class PoseOverlayView @JvmOverloads constructor(
     private var imageWidth: Int = 0
     private var imageHeight: Int = 0
     private var framingStatus: CameraFramingStatus? = null
+    private var jointStatus: Map<Int, Boolean> = emptyMap()
 
     private val pointPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
@@ -63,6 +64,11 @@ class PoseOverlayView @JvmOverloads constructor(
 
     fun setFramingStatus(status: CameraFramingStatus?) {
         framingStatus = status
+        invalidate()
+    }
+
+    fun setJointStatus(status: Map<Int, Boolean>) {
+        jointStatus = status
         invalidate()
     }
 
@@ -114,7 +120,12 @@ class PoseOverlayView @JvmOverloads constructor(
             }
         }
 
-        landmarks.forEach { point ->
+        landmarks.forEachIndexed { index, point ->
+            pointPaint.color = when (jointStatus[index]) {
+                true -> Color.rgb(0x4C, 0xAF, 0x50)
+                false -> Color.rgb(0xF4, 0x43, 0x36)
+                null -> Color.WHITE
+            }
             canvas.drawCircle(
                 point.x() * scaledWidth + offsetX,
                 point.y() * scaledHeight + offsetY,

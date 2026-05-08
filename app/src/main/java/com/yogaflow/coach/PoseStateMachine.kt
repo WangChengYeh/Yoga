@@ -6,6 +6,50 @@ import com.yogaflow.yoga.YogaPose
 
 class PoseStateMachine {
 
+    fun getJointStatus(pose: YogaPose, frame: PoseDetectionResult): Map<Int, Boolean> {
+        return when (pose.id) {
+            "forward_fold" -> {
+                buildMap {
+                    val leftKnee = PoseGeometry.angle(frame, 23, 25, 27)
+                    if (leftKnee.confidence != PoseGeometry.Confidence.INVALID) {
+                        put(25, leftKnee.degrees >= 150.0)
+                    }
+
+                    val rightKnee = PoseGeometry.angle(frame, 24, 26, 28)
+                    if (rightKnee.confidence != PoseGeometry.Confidence.INVALID) {
+                        put(26, rightKnee.degrees >= 150.0)
+                    }
+
+                    val leftHip = PoseGeometry.angle(frame, 11, 23, 25)
+                    if (leftHip.confidence != PoseGeometry.Confidence.INVALID) {
+                        put(23, leftHip.degrees <= 140.0)
+                    }
+
+                    val rightHip = PoseGeometry.angle(frame, 12, 24, 26)
+                    if (rightHip.confidence != PoseGeometry.Confidence.INVALID) {
+                        put(24, rightHip.degrees <= 140.0)
+                    }
+                }
+            }
+
+            "squat" -> {
+                buildMap {
+                    val leftKnee = PoseGeometry.angle(frame, 23, 25, 27)
+                    if (leftKnee.confidence != PoseGeometry.Confidence.INVALID) {
+                        put(25, leftKnee.degrees in 120.0..160.0)
+                    }
+
+                    val rightKnee = PoseGeometry.angle(frame, 24, 26, 28)
+                    if (rightKnee.confidence != PoseGeometry.Confidence.INVALID) {
+                        put(26, rightKnee.degrees in 120.0..160.0)
+                    }
+                }
+            }
+
+            else -> emptyMap()
+        }
+    }
+
     fun update(pose: YogaPose, frame: PoseDetectionResult): Pair<CoachState, String> {
         return when (pose.id) {
             "forward_fold" -> {

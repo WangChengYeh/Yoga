@@ -649,6 +649,11 @@ class MainActivity : AppCompatActivity(), GodotHost {
 
     private fun handlePoseFrame(frame: PoseDetectionResult) {
         overlayView.setLandmarks(frame.imageLandmarks, frame.imageWidth, frame.imageHeight)
+        if (sessionState == SessionState.RUNNING && currentPose != null) {
+            overlayView.setJointStatus(stateMachine.getJointStatus(currentPose!!, frame))
+        } else {
+            overlayView.setJointStatus(emptyMap())
+        }
         if (isDemoMode) return
         if (!isCurrentFlowInitialized()) {
             virtualCoachView.visibility = View.INVISIBLE
