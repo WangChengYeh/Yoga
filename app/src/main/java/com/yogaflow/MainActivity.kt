@@ -88,9 +88,9 @@ class MainActivity : AppCompatActivity(), GodotHost {
     lateinit var squatThresholdSeekBar: SeekBar
     lateinit var bridgeThresholdSeekBar: SeekBar
     lateinit var startClassButton: Button
-    lateinit var startStretchButton: Button
-    lateinit var startRecoveryButton: Button
-    lateinit var startStrengthButton: Button
+    lateinit var startStretchButton: FrameLayout
+    lateinit var startRecoveryButton: FrameLayout
+    lateinit var startStrengthButton: FrameLayout
     lateinit var startDemoButton: Button
     lateinit var skinSelector: RadioGroup
     lateinit var beginSessionButton: Button

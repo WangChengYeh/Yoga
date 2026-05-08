@@ -339,26 +339,107 @@
                 </LinearLayout>
             </FrameLayout>
 
-            <Button
+            <FrameLayout
                 android:id="@+id/startStretchButton"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="160dp"
                 android:layout_marginTop="20dp"
-                android:text="Stretch Class · Forward Fold" />
+                android:background="@drawable/cover_stretch"
+                android:clickable="true"
+                android:focusable="true">
 
-            <Button
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:gravity="bottom"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="伸展課程"
+                        android:textColor="#FFFFFF"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Stretch Class · Forward Fold"
+                        android:textColor="#DDDDDD"
+                        android:textSize="13sp" />
+                </LinearLayout>
+            </FrameLayout>
+
+            <FrameLayout
                 android:id="@+id/startRecoveryButton"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="160dp"
                 android:layout_marginTop="12dp"
-                android:text="Recovery Class · Twist" />
+                android:background="@drawable/cover_recovery"
+                android:clickable="true"
+                android:focusable="true">
 
-            <Button
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:gravity="bottom"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="恢復課程"
+                        android:textColor="#FFFFFF"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Recovery Class · Twist"
+                        android:textColor="#DDDDDD"
+                        android:textSize="13sp" />
+                </LinearLayout>
+            </FrameLayout>
+
+            <FrameLayout
                 android:id="@+id/startStrengthButton"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="160dp"
                 android:layout_marginTop="12dp"
-                android:text="Strength Class · Squat" />
+                android:background="@drawable/cover_strength"
+                android:clickable="true"
+                android:focusable="true">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:gravity="bottom"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="力量課程"
+                        android:textColor="#FFFFFF"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Strength Class · Squat"
+                        android:textColor="#DDDDDD"
+                        android:textSize="13sp" />
+                </LinearLayout>
+            </FrameLayout>
 
             <Button
                 android:id="@+id/startDemoButton"
