@@ -6,6 +6,65 @@ import com.yogaflow.yoga.YogaPose
 
 class PoseStateMachine {
 
+    /** Three-landmark angle correction: a-b-c, b is the vertex joint. */
+    data class JointCorrection(
+        val a: Int,
+        val b: Int,
+        val c: Int,
+        /** Positive = current angle too large (need to decrease). Negative = too small (need to increase). */
+        val deviationDeg: Float
+    )
+
+    /**
+     * Returns signed deviation for each joint that is outside its target range, for poses that
+     * have geometry rules. Only warrior_2 and downward_dog are covered (acceptance criteria for #107).
+     */
+    fun getJointCorrections(pose: YogaPose, frame: PoseDetectionResult): Map<Int, JointCorrection> {
+        return when (pose.id) {
+            "warrior_2" -> buildMap {
+                val frontKnee = PoseGeometry.angle(frame, 23, 25, 27)
+                if (frontKnee.confidence != PoseGeometry.Confidence.INVALID) {
+                    val target = 95.0
+                    val dev = (frontKnee.degrees - target).toFloat()
+                    if (dev > 15f || dev < -15f) put(25, JointCorrection(23, 25, 27, dev))
+                }
+                val leftArm = PoseGeometry.angle(frame, 11, 13, 15)
+                if (leftArm.confidence != PoseGeometry.Confidence.INVALID) {
+                    val dev = (leftArm.degrees - 165.0).toFloat()
+                    if (dev < -15f) put(13, JointCorrection(11, 13, 15, dev))
+                }
+                val rightArm = PoseGeometry.angle(frame, 12, 14, 16)
+                if (rightArm.confidence != PoseGeometry.Confidence.INVALID) {
+                    val dev = (rightArm.degrees - 165.0).toFloat()
+                    if (dev < -15f) put(14, JointCorrection(12, 14, 16, dev))
+                }
+            }
+            "downward_dog" -> buildMap {
+                val leftKnee = PoseGeometry.angle(frame, 23, 25, 27)
+                if (leftKnee.confidence != PoseGeometry.Confidence.INVALID) {
+                    val dev = (leftKnee.degrees - 165.0).toFloat()
+                    if (dev < -15f) put(25, JointCorrection(23, 25, 27, dev))
+                }
+                val rightKnee = PoseGeometry.angle(frame, 24, 26, 28)
+                if (rightKnee.confidence != PoseGeometry.Confidence.INVALID) {
+                    val dev = (rightKnee.degrees - 165.0).toFloat()
+                    if (dev < -15f) put(26, JointCorrection(24, 26, 28, dev))
+                }
+                val leftElbow = PoseGeometry.angle(frame, 11, 13, 15)
+                if (leftElbow.confidence != PoseGeometry.Confidence.INVALID) {
+                    val dev = (leftElbow.degrees - 160.0).toFloat()
+                    if (dev < -15f) put(13, JointCorrection(11, 13, 15, dev))
+                }
+                val rightElbow = PoseGeometry.angle(frame, 12, 14, 16)
+                if (rightElbow.confidence != PoseGeometry.Confidence.INVALID) {
+                    val dev = (rightElbow.degrees - 160.0).toFloat()
+                    if (dev < -15f) put(14, JointCorrection(12, 14, 16, dev))
+                }
+            }
+            else -> emptyMap()
+        }
+    }
+
     fun getJointStatus(pose: YogaPose, frame: PoseDetectionResult): Map<Int, Boolean> {
         return when (pose.id) {
             "forward_fold" -> {

@@ -683,8 +683,10 @@ class MainActivity : AppCompatActivity(), GodotHost {
         overlayView.setLandmarks(frame.imageLandmarks, frame.imageWidth, frame.imageHeight)
         if (sessionState == SessionState.RUNNING && currentPose != null) {
             overlayView.setJointStatus(stateMachine.getJointStatus(currentPose!!, frame))
+            overlayView.setJointCorrections(stateMachine.getJointCorrections(currentPose!!, frame))
         } else {
             overlayView.setJointStatus(emptyMap())
+            overlayView.setJointCorrections(emptyMap())
         }
         if (isDemoMode) return
         if (!isCurrentFlowInitialized()) {
