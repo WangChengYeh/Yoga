@@ -36,6 +36,8 @@ internal fun MainActivity.bindViewsMain() {
     restartButton = findViewById(R.id.restartButton)
     sessionRecordButton = findViewById(R.id.sessionRecordButton)
     debugToggleButton = findViewById(R.id.debugToggleButton)
+    moreButton = findViewById(R.id.moreButton)
+    secondaryButtonRow = findViewById(R.id.secondaryButtonRow)
     sessionRecordStatus = findViewById(R.id.sessionRecordStatus)
     virtualCoachView.bringToFront()
 }

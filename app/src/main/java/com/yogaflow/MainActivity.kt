@@ -99,6 +99,8 @@ class MainActivity : AppCompatActivity(), GodotHost {
     lateinit var sessionRecordButton: Button
     lateinit var debugToggleButton: Button
     lateinit var cameraToggleButton: Button
+    lateinit var moreButton: Button
+    lateinit var secondaryButtonRow: View
     lateinit var sessionRecordStatus: TextView
     private lateinit var applySuggestionButton: Button
 
@@ -466,6 +468,11 @@ class MainActivity : AppCompatActivity(), GodotHost {
         sessionRecordButton.setOnClickListener { toggleSessionRecording() }
         debugToggleButton.setOnClickListener { applyDebugViewEnabled(!debugViewEnabled) }
         cameraToggleButton.setOnClickListener { applyCameraSetupEnabled(!cameraSetupEnabled) }
+        moreButton.setOnClickListener {
+            val isVisible = secondaryButtonRow.visibility == View.VISIBLE
+            secondaryButtonRow.visibility = if (isVisible) View.GONE else View.VISIBLE
+            moreButton.text = if (isVisible) "⋮" else "✕"
+        }
     }
 
     private fun applyCameraSetupEnabled(enabled: Boolean) {
