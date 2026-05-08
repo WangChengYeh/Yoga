@@ -56,6 +56,11 @@ internal fun MainActivity.animateFlowTransition() {
 }
 
 internal fun MainActivity.showHome() {
+    if (isDemoMode) {
+        isDemoMode = false
+        stopDemoCycle()
+        overlayView.visibility = View.VISIBLE
+    }
     homeView.visibility = View.VISIBLE
     classView.visibility = View.VISIBLE
 }

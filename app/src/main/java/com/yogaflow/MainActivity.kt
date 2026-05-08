@@ -7,6 +7,8 @@ import android.content.pm.ApplicationInfo
 import android.media.AudioAttributes
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.speech.tts.TextToSpeech
 import android.util.Log
 import android.view.View
@@ -17,6 +19,7 @@ import android.widget.ProgressBar
 import android.widget.RadioGroup
 import android.widget.SeekBar
 import android.widget.TextView
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.view.PreviewView
@@ -87,6 +90,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
     lateinit var startStretchButton: Button
     lateinit var startRecoveryButton: Button
     lateinit var startStrengthButton: Button
+    lateinit var startDemoButton: Button
     lateinit var skinSelector: RadioGroup
     lateinit var beginSessionButton: Button
     lateinit var startButton: Button
@@ -117,6 +121,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
     var suppressTuningCallbacks = false
     var debugViewEnabled = false
     var cameraSetupDisabledForDevelopment = false
+    var isDemoMode = false
     private var avatarPositionOverride: Pair<Float, Float>? = null
     var lastCountdownText = ""
     var currentSkin: String = "classic"
@@ -132,6 +137,10 @@ class MainActivity : AppCompatActivity(), GodotHost {
     private lateinit var sessionRecorder: SessionRecorder
     private lateinit var godotAvatarBridge: GodotAvatarBridge
     private lateinit var llmInteractionDb: LlmInteractionDb
+    private val demoHandler = Handler(Looper.getMainLooper())
+    private val demoActions = listOf("hold_mountain", "hold_forward_fold", "hold_squat", "hold_twist")
+    private var demoActionIndex = 0
+    private var demoRunnable: Runnable? = null
     private var pendingTtsReady: Boolean? = null
     private val stateMachine = PoseStateMachine()
     private val autoTuningAdvisor = AutoTuningAdvisor()
@@ -199,6 +208,16 @@ class MainActivity : AppCompatActivity(), GodotHost {
         }
 
         bindViewsMain()
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (homeView.visibility != View.VISIBLE) {
+                    showHome()
+                } else {
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                }
+            }
+        })
         cameraToggleButton = findViewById(R.id.cameraToggleButton)
         applySuggestionButton = findViewById(R.id.applySuggestionButton)
         sessionRecorder = SessionRecorder(this)
@@ -338,6 +357,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
     }
 
     override fun onDestroy() {
+        stopDemoCycle()
         saveThresholdPreferencesMain()
         godotAvatarBridge.close()
         cameraPipeline.stop()
@@ -428,6 +448,13 @@ class MainActivity : AppCompatActivity(), GodotHost {
         startStrengthButton.setOnClickListener {
             val flows = FlowLoader.loadByPose(this, "squat")
             applyPlaylist(flows, openClassView = true)
+        }
+        startDemoButton.setOnClickListener {
+            isDemoMode = true
+            showClass()
+            overlayView.visibility = View.INVISIBLE
+            virtualCoachView.visibility = View.VISIBLE
+            startDemoCycle()
         }
         startButton.setOnClickListener {
             if (cameraReady) beginRunningSession()
@@ -695,6 +722,27 @@ class MainActivity : AppCompatActivity(), GodotHost {
                 overridePosition = avatarPositionOverride
             )
         )
+    }
+
+    private fun startDemoCycle() {
+        stopDemoCycle()
+        demoActionIndex = 0
+        demoRunnable = object : Runnable {
+            override fun run() {
+                if (!isDemoMode) return
+                val action = demoActions[demoActionIndex % demoActions.size]
+                demoActionIndex += 1
+                virtualCoachView.visibility = View.VISIBLE
+                godotAvatarBridge.send(buildSelfTestFrame(action), force = true)
+                demoHandler.postDelayed(this, 3000L)
+            }
+        }
+        demoRunnable?.run()
+    }
+
+    internal fun stopDemoCycle() {
+        demoRunnable?.let { demoHandler.removeCallbacks(it) }
+        demoRunnable = null
     }
 
     private fun togglePause() {

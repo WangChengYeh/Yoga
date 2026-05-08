@@ -28,6 +28,7 @@ internal fun MainActivity.bindViewsMain() {
     startStretchButton = findViewById(R.id.startStretchButton)
     startRecoveryButton = findViewById(R.id.startRecoveryButton)
     startStrengthButton = findViewById(R.id.startStrengthButton)
+    startDemoButton = findViewById(R.id.startDemoButton)
     skinSelector = findViewById(R.id.skinSelector)
     beginSessionButton = findViewById(R.id.beginSessionButton)
     startButton = findViewById(R.id.startButton)
