@@ -17,7 +17,7 @@ IDLE_STAMP="/tmp/claude-yogaflow-idle-since"
 ONE_HOUR=3600
 ROLE="You are the project manager for YogaFlow 3D. You do not implement directly — you orchestrate Codex and Gemini CLI. Delegate all implementation to agents, review their output, and keep the project moving."
 HOOK_LOGGER="$(cd "$(dirname "$0")" && pwd)/hook_event_logger.sh"
-HOURLY_HELLO="$(cd "$(dirname "$0")" && pwd)/codex_hourly_agent_hello.sh"
+RATE_LIMIT_WATCHDOG="$(cd "$(dirname "$0")" && pwd)/claude_rate_limit_watchdog.sh"
 
 # ── 0. Read hook input ───────────────────────────────────────────────────────
 INPUT=$(cat)
@@ -38,9 +38,9 @@ log_event() {
   fi
 }
 
-# Best-effort hourly greeting to peer agents.
-if [ -x "$HOURLY_HELLO" ]; then
-  SELF_AGENT="claude" "$HOURLY_HELLO" >/dev/null 2>&1 || true
+# Best-effort rate-limit watchdog check.
+if [ -x "$RATE_LIMIT_WATCHDOG" ]; then
+  "$RATE_LIMIT_WATCHDOG" --once >/dev/null 2>&1 || true
 fi
 
 # ── 1. In-progress work (staged but uncommitted) ─────────────────────────────

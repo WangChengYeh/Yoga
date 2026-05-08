@@ -36,9 +36,24 @@ scripts/hook_event_logger.sh test_event "manual verification"
 python3 scripts/export_sqlite_logs_csv.py --table hook_events --limit 10 --out logs/hook_events_latest.csv
 ```
 
-## Hourly Agent Hello Hook
+## Claude Rate-Limit Watchdog
 
-`scripts/codex_hourly_agent_hello.sh` writes hourly greetings to `logs/agent_greetings.log`.
+Detect `/rate-limit-options` in tmux panes and send `ESC` automatically.
 
-- It is safe to run repeatedly; it only emits once per hour (`logs/agent_greetings.last` cooldown file).
-- `scripts/claude-stop-hook.sh` invokes it automatically with `SELF_AGENT=claude`, so Claude greets peer agents (for example: Codex/Gemini).
+```bash
+# One-time check
+scripts/claude_rate_limit_watchdog.sh --once
+
+# Hourly background watchdog (default interval = 3600s)
+scripts/claude_rate_limit_watchdog.sh --daemon --interval 3600
+
+# Target a specific pane
+scripts/claude_rate_limit_watchdog.sh --daemon --pane %3
+```
+
+Notes:
+- Requires `tmux`.
+- Scans all tmux panes by default; use `--pane` to limit to one pane.
+- Logs to `logs/claude_rate_limit_watchdog.log`.
+- Pattern match is literal `/rate-limit-options`.
+- `scripts/claude-stop-hook.sh` invokes `scripts/claude_rate_limit_watchdog.sh --once` automatically as a best-effort pre-check on each stop-hook run.
