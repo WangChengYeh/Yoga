@@ -116,9 +116,9 @@ YogaFlow 3D has moved from a pose-detection demo into a product-level on-device 
 
 ---
 
-## Remaining Product Work
+## Completed (P0–P2 all shipped)
 
-### P0: Verify on device
+### P0: Device verification
 - ✔ Gradle build verified (JDK 17 via Homebrew)
 - ✔ MediaPipe pose detection running on device
 - ✔ CameraX RGBA pipeline confirmed
@@ -132,27 +132,38 @@ YogaFlow 3D has moved from a pose-detection demo into a product-level on-device 
 - ✔ Add Godot 3D avatar coach overlay (GodotFragment + WebSocket IPC)
 - ✔ Avatar auto-positioning — moves to opposite side of detected human
 - ✔ Selectable coach skins (Classic, Nature, Ocean)
-- ✔ Joint angle deviation overlay — red/green visual feedback on skeleton when angle deviates from target (#94)
+- ✔ Joint angle deviation overlay — red/green visual feedback on skeleton (#94)
 - ✔ Session completion screen — post-session summary (duration, poses, correction count) (#95)
 - ✔ Session history — persist completion summaries to SQLite + history list overlay (#100, #102)
 - ✔ Styled gradient cover cards for Stretch, Recovery, Strength (#103)
 
 ### P2: Content expansion
-- ✔ Expand flow library to 15 flows (target: 10–30)
+- ✔ Expand flow library to 15 flows
 - ✔ Add pose-specific geometry rules for warrior_2, downward_dog, bridge, warrior_1, child_pose, pigeon, twist, mountain (#96, #98, #99)
-- ✔ beginner / flexibility / recovery / strength categories on home screen
+- ✔ Beginner / flexibility / recovery / strength categories on home screen
+
+---
+
+## Next Work
+
+### P1
+- Progress tracking dashboard — session history stats and pose accuracy trends (#106)
+- Correction direction arrows — show WHERE to move joint on angle deviation overlay (#107)
+
+### P2
+- Geometry rules coverage audit — add rules for all poses used in 15 flows (#108)
+- Expand flow library to 30 flows (currently 15)
 
 ---
 
 ## Future
 
-- Personalized coaching
+- Personalized coaching (ROM baseline, fatigue sensing, bilateral balance analysis)
 - AI-generated flows
-- YouTube-aligned class generation
+- YouTube-aligned class generation — import video, extract coach skeleton, generate flow
 - 100+ flow library
 - Multi-model perception: Pose + Hand + Face
-- Native 3D coach model with pose animations
+- Native 3D coach model with full pose animations
 - Downloadable coach skin packs
-- Biomechanics scoring
-- Progress tracking
+- Biomechanics scoring and goal gap analysis
 - Apple Fitness+ style course cards and carousel UI
