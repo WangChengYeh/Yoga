@@ -21,18 +21,20 @@ class SessionHistoryDb(context: Context) : SQLiteOpenHelper(
                 ts_ms INTEGER NOT NULL,
                 duration_ms INTEGER NOT NULL,
                 steps_completed INTEGER NOT NULL,
-                correction_count INTEGER NOT NULL
+                correction_count INTEGER NOT NULL,
+                course_name TEXT NOT NULL DEFAULT ''
             )
             """.trimIndent()
         )
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        db.execSQL("DROP TABLE IF EXISTS $TABLE_NAME")
-        onCreate(db)
+        if (oldVersion < 2) {
+            db.execSQL("ALTER TABLE $TABLE_NAME ADD COLUMN course_name TEXT NOT NULL DEFAULT ''")
+        }
     }
 
-    fun record(durationMs: Long, stepsCompleted: Int, correctionCount: Int) {
+    fun record(durationMs: Long, stepsCompleted: Int, correctionCount: Int, courseName: String = "") {
         try {
             val db = writableDatabase
             val values = ContentValues().apply {
@@ -40,10 +42,11 @@ class SessionHistoryDb(context: Context) : SQLiteOpenHelper(
                 put("duration_ms", durationMs)
                 put("steps_completed", stepsCompleted)
                 put("correction_count", correctionCount)
+                put("course_name", courseName)
             }
             db.insert(TABLE_NAME, null, values)
             trimIfNeeded(db)
-            Log.d(TAG, "Recorded session history (duration=$durationMs, steps=$stepsCompleted, corrections=$correctionCount)")
+            Log.d(TAG, "Recorded session history (course=$courseName, duration=$durationMs, steps=$stepsCompleted, corrections=$correctionCount)")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to record session history", e)
         }
@@ -72,7 +75,8 @@ class SessionHistoryDb(context: Context) : SQLiteOpenHelper(
         val tsMs: Long,
         val durationMs: Long,
         val stepsCompleted: Int,
-        val correctionCount: Int
+        val correctionCount: Int,
+        val courseName: String
     )
 
     fun getAll(): List<SessionEntry> {
@@ -89,7 +93,8 @@ class SessionHistoryDb(context: Context) : SQLiteOpenHelper(
                         tsMs = it.getLong(it.getColumnIndexOrThrow("ts_ms")),
                         durationMs = it.getLong(it.getColumnIndexOrThrow("duration_ms")),
                         stepsCompleted = it.getInt(it.getColumnIndexOrThrow("steps_completed")),
-                        correctionCount = it.getInt(it.getColumnIndexOrThrow("correction_count"))
+                        correctionCount = it.getInt(it.getColumnIndexOrThrow("correction_count")),
+                        courseName = it.getString(it.getColumnIndexOrThrow("course_name")) ?: ""
                     ))
                 }
             }
@@ -102,7 +107,7 @@ class SessionHistoryDb(context: Context) : SQLiteOpenHelper(
     companion object {
         private const val TAG = "SessionHistoryDb"
         private const val DATABASE_NAME = "session_history.db"
-        private const val DATABASE_VERSION = 1
+        private const val DATABASE_VERSION = 2
         private const val TABLE_NAME = "session_history"
         private const val MAX_ROWS = 1000
     }

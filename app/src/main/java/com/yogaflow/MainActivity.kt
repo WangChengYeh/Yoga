@@ -127,6 +127,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
     private var sessionStartTimeMs: Long = 0L
     private var sessionCorrectionCount: Int = 0
     private var sessionStepsCompleted: Int = 0
+    private var selectedCourseName: String = "全課程"
     var cameraReady = false
     var cameraReadySince = 0L
     var autoStartedCurrentSetup = false
@@ -463,16 +464,22 @@ class MainActivity : AppCompatActivity(), GodotHost {
     }
 
     private fun bindActions() {
-        startClassButton.setOnClickListener { loadDiscoveredPlaylist() }
+        startClassButton.setOnClickListener {
+            selectedCourseName = "全課程"
+            loadDiscoveredPlaylist()
+        }
         startStretchButton.setOnClickListener {
+            selectedCourseName = "Stretch 伸展"
             val flows = FlowLoader.loadByPose(this, "forward_fold")
             applyPlaylist(flows, openClassView = true)
         }
         startRecoveryButton.setOnClickListener {
+            selectedCourseName = "Recovery 恢復"
             val flows = FlowLoader.loadByPose(this, "bridge", "twist")
             applyPlaylist(flows, openClassView = true)
         }
         startStrengthButton.setOnClickListener {
+            selectedCourseName = "Strength 力量"
             val flows = FlowLoader.loadByPose(this, "squat")
             applyPlaylist(flows, openClassView = true)
         }
@@ -860,7 +867,8 @@ class MainActivity : AppCompatActivity(), GodotHost {
         sessionHistoryDb.record(
             durationMs = elapsedMs,
             stepsCompleted = sessionStepsCompleted,
-            correctionCount = sessionCorrectionCount
+            correctionCount = sessionCorrectionCount,
+            courseName = selectedCourseName
         )
         val minutes = (elapsedMs / 60000).toInt()
         val seconds = ((elapsedMs % 60000) / 1000).toInt()
@@ -887,7 +895,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
                     .format(java.util.Date(e.tsMs))
                 val min = (e.durationMs / 60000).toInt()
                 val sec = ((e.durationMs % 60000) / 1000).toInt()
-                "$date  $min:%02d  步驟${e.stepsCompleted}  修正${e.correctionCount}次".format(sec)
+                "${e.courseName}  $date  $min:%02d  步驟${e.stepsCompleted}  修正${e.correctionCount}次".format(sec)
             }
             historyListView.adapter = object: android.widget.ArrayAdapter<String>(
                 this,
