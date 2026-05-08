@@ -612,7 +612,19 @@
 
             </LinearLayout>
 
-            <!-- Tab: list -->
+            <!-- Tab: list — weekly summary bar -->
+            <TextView
+                android:id="@+id/historySummaryBar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#1AFFFFFF"
+                android:padding="10dp"
+                android:gravity="center"
+                android:textColor="#FFFFFF"
+                android:textSize="13sp"
+                android:layout_marginBottom="6dp"
+                android:visibility="gone" />
+
             <ListView
                 android:id="@+id/historyListView"
                 android:layout_width="match_parent"

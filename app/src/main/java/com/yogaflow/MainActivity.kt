@@ -112,6 +112,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
     lateinit var historyEmptyText: android.widget.TextView
     lateinit var historyTabList: android.widget.Button
     lateinit var historyTabStats: android.widget.Button
+    lateinit var historySummaryBar: android.widget.TextView
     lateinit var statsScrollView: android.widget.ScrollView
     lateinit var statsContainer: android.widget.LinearLayout
     private lateinit var applySuggestionButton: Button
@@ -250,6 +251,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
         historyEmptyText = findViewById(R.id.historyEmptyText)
         historyTabList = findViewById(R.id.historyTabList)
         historyTabStats = findViewById(R.id.historyTabStats)
+        historySummaryBar = findViewById(R.id.historySummaryBar)
         statsScrollView = findViewById(R.id.statsScrollView)
         statsContainer = findViewById(R.id.statsContainer)
         findViewById<Button>(R.id.historyButton).setOnClickListener { showHistoryOverlay(tab = "list") }
@@ -904,6 +906,17 @@ class MainActivity : AppCompatActivity(), GodotHost {
             historyTabList.backgroundTintList = android.content.res.ColorStateList.valueOf(activeColor)
             historyTabStats.backgroundTintList = android.content.res.ColorStateList.valueOf(inactiveColor)
             statsScrollView.visibility = View.GONE
+            // Weekly summary bar
+            val summary = sessionHistoryDb.getWeeklySummary()
+            if (summary.sessionCount > 0) {
+                val totalMin = (summary.totalMs / 60000).toInt()
+                val timeStr = if (totalMin >= 60) "${totalMin / 60}h ${totalMin % 60}m" else "${totalMin}m"
+                val streakStr = if (summary.streakDays > 0) "  ·  🔥 ${summary.streakDays} 天連續" else ""
+                historySummaryBar.text = "本週 ${summary.sessionCount} 堂  ·  $timeStr$streakStr"
+                historySummaryBar.visibility = View.VISIBLE
+            } else {
+                historySummaryBar.visibility = View.GONE
+            }
             if (entries.isEmpty()) {
                 historyListView.visibility = View.GONE
                 historyEmptyText.visibility = View.VISIBLE
@@ -933,6 +946,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
             historyTabStats.backgroundTintList = android.content.res.ColorStateList.valueOf(activeColor)
             historyListView.visibility = View.GONE
             historyEmptyText.visibility = View.GONE
+            historySummaryBar.visibility = View.GONE
             statsScrollView.visibility = View.VISIBLE
             populateStats(entries)
         }
