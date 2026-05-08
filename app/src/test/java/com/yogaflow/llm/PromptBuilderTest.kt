@@ -26,7 +26,7 @@ class PromptBuilderTest {
             assertFalse(prompt.contains("Markdown"))
             assertFalse(prompt.contains("°"))
             assertFalse(prompt.contains("degrees"))
-            assertTrue(prompt.endsWith("請輸出一句即時教練語句。"))
+            assertTrue(prompt.endsWith("請輸出一句私人教練語句。"))
         }
     }
 }
