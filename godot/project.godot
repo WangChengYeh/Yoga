@@ -21,3 +21,7 @@ config/features=PackedStringArray("4.6", "Forward Plus")
 [rendering]
 
 viewport/transparent_background=true
+
+[display]
+
+window/per_pixel_transparency/allowed=true
