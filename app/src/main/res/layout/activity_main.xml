@@ -134,7 +134,8 @@
             android:id="@+id/flowName"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="top|center_horizontal"
+            android:layout_gravity="top|start"
+            android:layout_marginStart="12dp"
             android:layout_marginTop="36dp"
             android:text="Flow"
             android:textColor="#FFFFFF"
@@ -146,7 +147,8 @@
             android:id="@+id/progressText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="top|center_horizontal"
+            android:layout_gravity="top|start"
+            android:layout_marginStart="12dp"
             android:layout_marginTop="64dp"
             android:text="Step 1/4"
             android:textColor="#FFFFFF"
@@ -155,9 +157,10 @@
         <ProgressBar
             android:id="@+id/progressBar"
             style="?android:attr/progressBarStyleHorizontal"
-            android:layout_width="220dp"
+            android:layout_width="200dp"
             android:layout_height="8dp"
-            android:layout_gravity="top|center_horizontal"
+            android:layout_gravity="top|start"
+            android:layout_marginStart="12dp"
             android:layout_marginTop="84dp"
             android:max="100"
             android:progress="0" />
@@ -166,7 +169,8 @@
             android:id="@+id/countdownText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="top|center_horizontal"
+            android:layout_gravity="top|start"
+            android:layout_marginStart="12dp"
             android:layout_marginTop="100dp"
             android:text="Ready"
             android:textColor="#FFFFFF"
@@ -204,6 +208,13 @@
                 android:orientation="horizontal">
 
                 <Button
+                    android:id="@+id/cameraToggleButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Camera: OFF" />
+
+                <Button
                     android:id="@+id/startButton"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -225,6 +236,13 @@
                     android:text="Restart" />
 
                 <Button
+                    android:id="@+id/applySuggestionButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Apply" />
+
+                <Button
                     android:id="@+id/sessionRecordButton"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -237,20 +255,6 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="Debug" />
-
-                <Button
-                    android:id="@+id/cameraToggleButton"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Camera: OFF" />
-
-                <Button
-                    android:id="@+id/applySuggestionButton"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Apply" />
 
             </LinearLayout>
         </LinearLayout>
