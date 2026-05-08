@@ -1,11 +1,18 @@
 # Codex Agent
 
+## Project Agent Environment
+This project uses **CCB** (bfly123/claude_codex_bridge) as the multi-agent workspace.
+- Start: `ccb` from the project root (launches writer:codex + reviewer:gemini panes)
+- Config: `.ccb/ccb.config`
+- Agent-to-agent: `/ask reviewer <task>` to delegate to Gemini; `/ask writer <task>` for Codex
+
 ## Role
-- Primary implementer for YogaFlow 3D PM workflow
+- Primary implementer for YogaFlow 3D PM workflow (`writer` role in CCB)
 - Handles deep code changes, multi-file refactors, Gradle builds, `adb` device testing, and PR-ready commits
 
 ## Invocation
-- Invoke via `codex:rescue` skill in Claude Code
+- Via CCB: Claude PM types `/ask writer <task>` inside the CCB session
+- Via Claude Code directly: `codex:rescue` skill
 
 ## Model
 - `gpt-5.3-codex`

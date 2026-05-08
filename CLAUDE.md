@@ -52,6 +52,39 @@ git commit -m "..."
 git push origin main   # ← NEVER skip this
 ```
 
+## Project Agent Environment: CCB (claude_codex_bridge)
+
+The project uses **CCB** (bfly123/claude_codex_bridge) as the multi-agent workspace.
+CCB manages Claude, Codex, and Gemini from a single terminal with agent-to-agent `/ask` delegation.
+
+### Setup (one-time)
+```bash
+git clone https://github.com/bfly123/claude_codex_bridge.git
+cd claude_codex_bridge && ./install.sh install
+ccb update   # pull latest stable release
+```
+
+### Project config: `.ccb/ccb.config`
+```
+cmd; writer:codex; reviewer:gemini
+```
+- `writer` (Codex) — primary implementer
+- `reviewer` (Gemini) — secondary implementer / reviewer
+- Claude Code runs as the PM orchestrator outside CCB panes
+
+### Start / stop
+```bash
+ccb          # start writer + reviewer panes from .ccb/ccb.config
+ccb kill     # stop background runtime
+ccb -n       # rebuild runtime state, keep config
+```
+
+### Agent-to-agent delegation inside CCB
+```
+/ask writer implement the mountain pose rules in PoseStateMachine.kt
+/ask reviewer review the changes Codex just made and check for INVALID confidence gaps
+```
+
 ## Agent Strategy: Interleaving (not parallel)
 
 Use Codex and Gemini in sequence, handing off between them:
@@ -63,6 +96,8 @@ Interleaving pattern:
 ```
 Codex → hits limit → Gemini continues → Codex resumes → ...
 ```
+
+With CCB running, handoff is a single `/ask reviewer ...` command instead of a full context re-paste.
 
 Never run both on the same task at the same time. Always check what the previous agent did before handing off.
 
