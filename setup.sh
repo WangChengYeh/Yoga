@@ -48,15 +48,24 @@ update_ai_clis
 
 # --- CLI_Bridge install (auto-clone if missing) ---
 install_cli_bridge() {
-  echo "CLI_Bridge not found — cloning and installing..."
-
-  if [ -d "$CLI_BRIDGE_CLONE_DIR/.git" ]; then
-    echo "  Repo already exists at $CLI_BRIDGE_CLONE_DIR — checking out stable tag $CLI_BRIDGE_TAG..."
-    git -C "$CLI_BRIDGE_CLONE_DIR" fetch --tags
-    git -C "$CLI_BRIDGE_CLONE_DIR" checkout "$CLI_BRIDGE_TAG"
+  local target_tag="$CLI_BRIDGE_TAG"
+  
+  if [ ! -d "$CLI_BRIDGE_CLONE_DIR/.git" ]; then
+    echo "CLI_Bridge not found — cloning..."
+    echo "  Cloning $CLI_BRIDGE_REPO at tag $target_tag → $CLI_BRIDGE_CLONE_DIR"
+    git clone --branch "$target_tag" --depth 1 "$CLI_BRIDGE_REPO" "$CLI_BRIDGE_CLONE_DIR"
   else
-    echo "  Cloning $CLI_BRIDGE_REPO at tag $CLI_BRIDGE_TAG → $CLI_BRIDGE_CLONE_DIR"
-    git clone --branch "$CLI_BRIDGE_TAG" --depth 1 "$CLI_BRIDGE_REPO" "$CLI_BRIDGE_CLONE_DIR"
+    local current_tag
+    current_tag=$(git -C "$CLI_BRIDGE_CLONE_DIR" describe --tags 2>/dev/null || echo "unknown")
+    
+    if [ "$current_tag" != "$target_tag" ]; then
+      echo "CLI_Bridge version mismatch (current: $current_tag, target: $target_tag) — upgrading..."
+      git -C "$CLI_BRIDGE_CLONE_DIR" fetch --tags
+      git -C "$CLI_BRIDGE_CLONE_DIR" checkout "$target_tag"
+    else
+      echo "CLI_Bridge is already at target version $target_tag."
+      return 0
+    fi
   fi
 
   echo "  Running install.sh..."
@@ -65,16 +74,18 @@ install_cli_bridge() {
   echo "  Running ccb update..."
   ccb update
 
-  echo "CLI_Bridge installed successfully."
+  echo "CLI_Bridge setup complete."
 }
 
-if ! command -v ccb >/dev/null 2>&1; then
+if ! command -v ccb >/dev/null 2>&1 || [ "$(git -C "$CLI_BRIDGE_CLONE_DIR" describe --tags 2>/dev/null)" != "$CLI_BRIDGE_TAG" ]; then
   if command -v node >/dev/null 2>&1; then
     install_cli_bridge
   else
-    echo "ERROR: node not found — cannot install CLI_Bridge." >&2
-    echo "  Install Node.js, then re-run setup.sh." >&2
-    exit 1
+    if ! command -v ccb >/dev/null 2>&1; then
+      echo "ERROR: node not found — cannot install CLI_Bridge." >&2
+      echo "  Install Node.js, then re-run setup.sh." >&2
+      exit 1
+    fi
   fi
 fi
 
