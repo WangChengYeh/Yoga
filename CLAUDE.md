@@ -54,7 +54,7 @@ git push origin main   # ← NEVER skip this
 
 ## Agent Architecture: CLI_Bridge + Role Definitions
 
-The project runs on **CLI_Bridge** (bfly123/claude_codex_bridge) as the primary multi-agent workspace.
+The project runs on **CLI_Bridge** (WangChengYeh/CLI_Bridge) as the primary multi-agent workspace.
 
 ### Roles (unchanged)
 | Agent | CLI_Bridge role | Responsibility |
