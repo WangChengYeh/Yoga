@@ -8,7 +8,7 @@ SOURCE_ME="$PROJECT_ROOT/sourceme"
 WATCHDOG_SESSION="${WATCHDOG_SESSION:-yoga-watchdog}"
 CLI_BRIDGE_SESSION="${CLI_BRIDGE_SESSION:-yoga-ccb}"
 WATCHDOG_INTERVAL="${WATCHDOG_INTERVAL:-3600}"
-CLI_BRIDGE_CLONE_DIR="${CLI_BRIDGE_CLONE_DIR:-$HOME/.local/cli_bridge}"
+CLI_BRIDGE_CLONE_DIR="${CLI_BRIDGE_CLONE_DIR:-$HOME/cli_bridge}"
 CLI_BRIDGE_REPO="https://github.com/WangChengYeh/CLI_Bridge.git"
 CLI_BRIDGE_TAG="${CLI_BRIDGE_TAG:-v7.0.0}"  # pin to stable release; override with CLI_BRIDGE_TAG=vX.Y.Z
 
