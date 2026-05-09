@@ -52,22 +52,22 @@ git commit -m "..."
 git push origin main   # ← NEVER skip this
 ```
 
-## Agent Architecture: CCB + Role Definitions
+## Agent Architecture: CLI_Bridge + Role Definitions
 
-The project runs on **CCB** (bfly123/claude_codex_bridge) as the primary multi-agent workspace.
+The project runs on **CLI_Bridge** (bfly123/claude_codex_bridge) as the primary multi-agent workspace.
 
 ### Roles (unchanged)
-| Agent | CCB role | Responsibility |
+| Agent | CLI_Bridge role | Responsibility |
 |-------|----------|----------------|
-| **Claude Code** | PM (orchestrator, outside CCB) | Triage issues, write prompts, review output, commit, manage releases |
+| **Claude Code** | PM (orchestrator, outside CLI_Bridge) | Triage issues, write prompts, review output, commit, manage releases |
 | **Codex** | `writer` | Primary implementer — deep code changes, Gradle builds, adb device testing |
 | **Gemini** | `reviewer` | Secondary implementer — continues when Codex is rate-limited; reviews Codex output |
 
 Claude does not implement. Claude only orchestrates, reviews, and delegates.
 
-### CCB setup (one-time)
+### CLI_Bridge setup (one-time)
 ```bash
-git clone https://github.com/bfly123/claude_codex_bridge.git
+git clone https://github.com/WangChengYeh/CLI_Bridge.git
 cd claude_codex_bridge && ./install.sh install && ccb update
 ```
 
@@ -79,12 +79,12 @@ cmd; writer:codex; reviewer:gemini
 ### Start / stop
 ```bash
 ccb        # launch writer(Codex) + reviewer(Gemini) panes
-ccb kill   # stop CCB runtime
+ccb kill   # stop CLI_Bridge runtime
 ccb -n     # rebuild runtime, keep config
 ```
 
-### Primary delegation workflow (CCB)
-Claude PM writes a structured task prompt and delegates via CCB:
+### Primary delegation workflow (CLI_Bridge)
+Claude PM writes a structured task prompt and delegates via CLI_Bridge:
 ```
 /ask writer <task>      # → Codex implements
 /ask reviewer <task>    # → Gemini reviews or continues
@@ -92,8 +92,8 @@ Claude PM writes a structured task prompt and delegates via CCB:
 
 Handoff: when Codex hits rate limit, Claude sends `/ask reviewer continue: <what Codex did> / <what remains>`.
 
-### Fallback invocation (CCB unavailable)
-When CCB is not running, fall back to direct tool invocation:
+### Fallback invocation (CLI_Bridge unavailable)
+When CLI_Bridge is not running, fall back to direct tool invocation:
 - **Codex fallback**: `codex:rescue` skill (Agent tool, subagent_type `codex:codex-rescue`)
   - Check resumable thread: `node "~/.claude/plugins/cache/openai-codex/codex/1.0.4/scripts/codex-companion.mjs" task-resume-candidate --json`
 - **Gemini fallback**: `mcp__gemini__gemini_run` MCP tool directly
@@ -116,7 +116,7 @@ Always pass `--write` in Codex fallback prompts that need to build or run adb.
 
 ## Hourly GitHub Issue Triage
 
-Every hour, Claude should review the GitHub issues for this repository and keep implementation moving by delegating via CCB (primary) or direct tool invocation (fallback).
+Every hour, Claude should review the GitHub issues for this repository and keep implementation moving by delegating via CLI_Bridge (primary) or direct tool invocation (fallback).
 
 Claude should not implement directly. Claude should triage, decide the next task, prepare a clear prompt, invoke the appropriate agent, review the result, and manage handoff.
 
@@ -127,8 +127,8 @@ Hourly loop:
 3. Prioritize actionable issues with clear acceptance criteria.
 4. Pick the highest-priority issue that can be worked on safely.
 5. Inspect related files, docs, recent commits, and current worktree status.
-6. Delegate to Codex (`writer`) via CCB: `/ask writer <task>`. Fallback: `codex:rescue` skill.
-7. If Codex is rate-limited or blocked, hand off to Gemini (`reviewer`) via CCB: `/ask reviewer continue: ...`. Fallback: `mcp__gemini__gemini_run`.
+6. Delegate to Codex (`writer`) via CLI_Bridge: `/ask writer <task>`. Fallback: `codex:rescue` skill.
+7. If Codex is rate-limited or blocked, hand off to Gemini (`reviewer`) via CLI_Bridge: `/ask reviewer continue: ...`. Fallback: `mcp__gemini__gemini_run`.
 8. Review the agent output before continuing.
 9. Run or request relevant checks when possible.
 10. Commit or accept the agent's commit only if the change is focused and matches the issue.

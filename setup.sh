@@ -6,13 +6,11 @@ WATCHDOG_SCRIPT="$PROJECT_ROOT/scripts/claude_rate_limit_watchdog.sh"
 SOURCE_ME="$PROJECT_ROOT/sourceme"
 
 WATCHDOG_SESSION="${WATCHDOG_SESSION:-yoga-watchdog}"
-CLAUDE_SESSION="${CLAUDE_SESSION:-yoga-claude}"
-CCB_SESSION="${CCB_SESSION:-yoga-ccb}"
+CLI_BRIDGE_SESSION="${CLI_BRIDGE_SESSION:-yoga-ccb}"
 WATCHDOG_INTERVAL="${WATCHDOG_INTERVAL:-3600}"
-CLAUDE_BOOT_WAIT_SECONDS="${CLAUDE_BOOT_WAIT_SECONDS:-2}"
-CCB_CLONE_DIR="${CCB_CLONE_DIR:-$HOME/claude_codex_bridge}"
-CCB_REPO="https://github.com/bfly123/claude_codex_bridge.git"
-CCB_TAG="${CCB_TAG:-v6.0.29}"  # pin to stable release; override with CCB_TAG=vX.Y.Z
+CLI_BRIDGE_CLONE_DIR="${CLI_BRIDGE_CLONE_DIR:-$HOME/claude_codex_bridge}"
+CLI_BRIDGE_REPO="https://github.com/WangChengYeh/CLI_Bridge.git"
+CLI_BRIDGE_TAG="${CLI_BRIDGE_TAG:-v7.0.0}"  # pin to stable release; override with CLI_BRIDGE_TAG=vX.Y.Z
 
 require_cmd() {
   local cmd="$1"
@@ -35,34 +33,35 @@ if [ ! -x "$WATCHDOG_SCRIPT" ]; then
   exit 1
 fi
 
-# --- CCB install (auto-clone if missing) ---
-install_ccb() {
-  echo "CCB not found — cloning and installing..."
+# --- CLI_Bridge install (auto-clone if missing) ---
+install_cli_bridge() {
+  echo "CLI_Bridge not found — cloning and installing..."
 
-  if [ -d "$CCB_CLONE_DIR/.git" ]; then
-    echo "  Repo already exists at $CCB_CLONE_DIR — checking out stable tag $CCB_TAG..."
-    git -C "$CCB_CLONE_DIR" fetch --tags
-    git -C "$CCB_CLONE_DIR" checkout "$CCB_TAG"
+  if [ -d "$CLI_BRIDGE_CLONE_DIR/.git" ]; then
+    echo "  Repo already exists at $CLI_BRIDGE_CLONE_DIR — checking out stable tag $CLI_BRIDGE_TAG..."
+    git -C "$CLI_BRIDGE_CLONE_DIR" fetch --tags
+    git -C "$CLI_BRIDGE_CLONE_DIR" checkout "$CLI_BRIDGE_TAG"
   else
-    echo "  Cloning $CCB_REPO at tag $CCB_TAG → $CCB_CLONE_DIR"
-    git clone --branch "$CCB_TAG" --depth 1 "$CCB_REPO" "$CCB_CLONE_DIR"
+    echo "  Cloning $CLI_BRIDGE_REPO at tag $CLI_BRIDGE_TAG → $CLI_BRIDGE_CLONE_DIR"
+    git clone --branch "$CLI_BRIDGE_TAG" --depth 1 "$CLI_BRIDGE_REPO" "$CLI_BRIDGE_CLONE_DIR"
   fi
 
   echo "  Running install.sh..."
-  bash "$CCB_CLONE_DIR/install.sh" install
+  bash "$CLI_BRIDGE_CLONE_DIR/install.sh" install
 
   echo "  Running ccb update..."
   ccb update
 
-  echo "CCB installed successfully."
+  echo "CLI_Bridge installed successfully."
 }
 
 if ! command -v ccb >/dev/null 2>&1; then
   if command -v node >/dev/null 2>&1; then
-    install_ccb
+    install_cli_bridge
   else
-    echo "WARNING: node not found — skipping CCB install." >&2
+    echo "ERROR: node not found — cannot install CLI_Bridge." >&2
     echo "  Install Node.js, then re-run setup.sh." >&2
+    exit 1
   fi
 fi
 
@@ -77,33 +76,15 @@ else
   echo "Session already exists: $WATCHDOG_SESSION (left unchanged)"
 fi
 
-# --- CCB agent workspace (writer:codex + reviewer:gemini) ---
-if command -v ccb >/dev/null 2>&1; then
-  if ! tmux has-session -t "$CCB_SESSION" 2>/dev/null; then
-    tmux new-session -d -s "$CCB_SESSION"
-    tmux send-keys -t "$CCB_SESSION" "cd \"$PROJECT_ROOT\"" C-m
-    tmux send-keys -t "$CCB_SESSION" "source \"$SOURCE_ME\"" C-m
-    tmux send-keys -t "$CCB_SESSION" "ccb" C-m
-    echo "Created tmux session: $CCB_SESSION (CCB launched — writer:codex + reviewer:gemini)"
-  else
-    echo "Session already exists: $CCB_SESSION (left unchanged)"
-  fi
+# --- CLI_Bridge workspace: pm:claude + writer:codex + reviewer:gemini ---
+if ! tmux has-session -t "$CLI_BRIDGE_SESSION" 2>/dev/null; then
+  tmux new-session -d -s "$CLI_BRIDGE_SESSION"
+  tmux send-keys -t "$CLI_BRIDGE_SESSION" "cd \"$PROJECT_ROOT\"" C-m
+  tmux send-keys -t "$CLI_BRIDGE_SESSION" "source \"$SOURCE_ME\"" C-m
+  tmux send-keys -t "$CLI_BRIDGE_SESSION" "ccb" C-m
+  echo "Created tmux session: $CLI_BRIDGE_SESSION (CLI_Bridge launched — pm:claude + writer:codex + reviewer:gemini)"
 else
-  echo "CCB unavailable — skipping $CCB_SESSION session."
-fi
-
-# --- Claude Code PM session ---
-if ! tmux has-session -t "$CLAUDE_SESSION" 2>/dev/null; then
-  tmux new-session -d -s "$CLAUDE_SESSION"
-  tmux send-keys -t "$CLAUDE_SESSION" "cd \"$PROJECT_ROOT\"" C-m
-  tmux send-keys -t "$CLAUDE_SESSION" "source \"$SOURCE_ME\"" C-m
-  tmux send-keys -t "$CLAUDE_SESSION" "claude" C-m
-  sleep "$CLAUDE_BOOT_WAIT_SECONDS"
-  tmux send-keys -t "$CLAUDE_SESSION" "go project" C-m
-  echo "Created tmux session: $CLAUDE_SESSION (claude launched)"
-else
-  tmux send-keys -t "$CLAUDE_SESSION" "go project" C-m
-  echo "Session already exists: $CLAUDE_SESSION (sent: go project)"
+  echo "Session already exists: $CLI_BRIDGE_SESSION (left unchanged)"
 fi
 
 cat <<EOF
@@ -112,15 +93,15 @@ Setup complete.
 
 Attach sessions:
   tmux attach -t $WATCHDOG_SESSION   # rate-limit watchdog
-  tmux attach -t $CCB_SESSION        # CCB: writer(Codex) + reviewer(Gemini)
-  tmux attach -t $CLAUDE_SESSION     # Claude Code PM
+  tmux attach -t $CLI_BRIDGE_SESSION        # CLI_Bridge: pm(Claude) + writer(Codex) + reviewer(Gemini)
 
 List sessions:
   tmux ls
 
-Agent delegation (inside CCB session):
+Agent delegation (inside CLI_Bridge session):
+  /ask pm <task>         → Claude PM orchestrates
   /ask writer <task>     → Codex implements
   /ask reviewer <task>   → Gemini reviews
 
-CCB clone location: $CCB_CLONE_DIR
+CLI_Bridge clone location: $CLI_BRIDGE_CLONE_DIR
 EOF
