@@ -67,8 +67,8 @@ Claude does not implement. Claude only orchestrates, reviews, and delegates.
 
 ### CLI_Bridge setup (one-time)
 ```bash
-git clone https://github.com/WangChengYeh/CLI_Bridge.git
-cd claude_codex_bridge && ./install.sh install && ccb update
+git clone https://github.com/WangChengYeh/CLI_Bridge.git ~/.local/cli_bridge
+cd ~/.local/cli_bridge && ./install.sh install && ccb update
 ```
 
 ### Project config: `.ccb/ccb.config`
