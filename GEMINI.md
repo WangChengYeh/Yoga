@@ -14,7 +14,7 @@
 | `auto_edit` | Fixing code, file edits allowed (default) |
 
 ## Default Model
-- `gemini-2.5-pro`
+- `auto-gemini-3` (Gemini 3 Auto)
 - Never use flash/flash-lite models
 
 ## When To Use
