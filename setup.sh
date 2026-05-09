@@ -22,6 +22,8 @@ require_cmd() {
 
 require_cmd tmux
 require_cmd git
+require_cmd node
+require_cmd npm
 
 if [ ! -f "$SOURCE_ME" ]; then
   echo "Missing file: $SOURCE_ME" >&2
@@ -32,6 +34,17 @@ if [ ! -x "$WATCHDOG_SCRIPT" ]; then
   echo "Missing executable watchdog script: $WATCHDOG_SCRIPT" >&2
   exit 1
 fi
+
+# --- AI CLI updates ---
+update_ai_clis() {
+  echo "Checking and updating AI CLIs (claude, gemini, codex) in $HOME/.local..."
+  mkdir -p "$HOME/.local"
+  npm install -g --prefix="$HOME/.local" --quiet @anthropic-ai/claude-code @google/gemini-cli @openai/codex
+  echo "AI CLIs updated."
+}
+
+# Run AI CLI updates
+update_ai_clis
 
 # --- CLI_Bridge install (auto-clone if missing) ---
 install_cli_bridge() {
