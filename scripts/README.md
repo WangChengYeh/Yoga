@@ -47,8 +47,8 @@ scripts/claude_rate_limit_watchdog.sh --once
 # Hourly background watchdog (default interval = 3600s)
 scripts/claude_rate_limit_watchdog.sh --daemon --interval 3600
 
-# Target a specific pane
-scripts/claude_rate_limit_watchdog.sh --daemon --pane %3
+# Typically managed via ccb (CLI_Cowork_Bridge)
+# The 'cmd' component in ccb is now used instead of a standalone tmux session.
 ```
 
 Notes:
