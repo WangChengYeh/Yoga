@@ -116,16 +116,8 @@ fi
 # Initialize CCB Sync/iMessage
 setup_ccb_sync
 
-# --- CLI_Cowork_Bridge workspace: cmd + pm:claude + writer:codex + reviewer:gemini ---
-if ! tmux has-session -t "$CLI_COWORK_BRIDGE_SESSION" 2>/dev/null; then
-  tmux new-session -d -s "$CLI_COWORK_BRIDGE_SESSION"
-  tmux send-keys -t "$CLI_COWORK_BRIDGE_SESSION" "cd \"$PROJECT_ROOT\"" C-m
-  tmux send-keys -t "$CLI_COWORK_BRIDGE_SESSION" "source \"$SOURCE_ME\"" C-m
-  tmux send-keys -t "$CLI_COWORK_BRIDGE_SESSION" "ccb" C-m
-  echo "Created tmux session: $CLI_COWORK_BRIDGE_SESSION (CLI_Cowork_Bridge launched — cmd + pm:claude + writer:codex + reviewer:gemini)"
-else
-  echo "Session already exists: $CLI_COWORK_BRIDGE_SESSION (left unchanged)"
-fi
+echo "Launching CLI_Cowork_Bridge (ccb)..."
+exec ccb
 
 cat <<EOF
 
