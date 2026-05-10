@@ -5,12 +5,10 @@ PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WATCHDOG_SCRIPT="$PROJECT_ROOT/scripts/claude_rate_limit_watchdog.sh"
 SOURCE_ME="$PROJECT_ROOT/sourceme"
 
-WATCHDOG_SESSION="${WATCHDOG_SESSION:-yoga-watchdog}"
 CLI_COWORK_BRIDGE_SESSION="${CLI_COWORK_BRIDGE_SESSION:-yoga-ccb}"
-WATCHDOG_INTERVAL="${WATCHDOG_INTERVAL:-3600}"
 CLI_COWORK_BRIDGE_CLONE_DIR="${CLI_COWORK_BRIDGE_CLONE_DIR:-$HOME/cli_cowork_bridge}"
 CLI_COWORK_BRIDGE_REPO="https://github.com/WangChengYeh/CLI_Cowork_Bridge.git"
-CLI_COWORK_BRIDGE_TAG="v7.1.0"  # pin to stable release; override with CLI_COWORK_BRIDGE_TAG=vX.Y.Z
+CLI_COWORK_BRIDGE_TAG="main"  # using main for latest fixes
 
 require_cmd() {
   local cmd="$1"
@@ -39,12 +37,38 @@ fi
 update_ai_clis() {
   echo "Checking and updating AI CLIs (claude, gemini, codex) in $HOME/.local..."
   mkdir -p "$HOME/.local"
+  # Use npm with --prefix to avoid global sudo issues if configured in $HOME/.local
   npm install -g --prefix="$HOME/.local" --quiet @anthropic-ai/claude-code @google/gemini-cli @openai/codex
   echo "AI CLIs updated."
 }
 
 # Run AI CLI updates
 update_ai_clis
+
+# --- CLI_Cowork_Bridge Sync & iMessage Setup ---
+setup_ccb_sync() {
+  echo "Setting up CCB Sync and iMessage..."
+  
+  local recipient="${IMESSAGE_RECIPIENT:-+886978813320}"
+  echo "  Using iMessage recipient: $recipient"
+
+  if ! ccb imessage doctor | grep -q "platform_supported=True"; then
+    echo "  WARNING: iMessage integration is not supported on this platform or needs Full Disk Access."
+    return 0
+  fi
+
+  echo "  Stopping existing daemon if running..."
+  ccb daemon stop >/dev/null 2>&1 || true
+
+  echo "  Starting CCB daemon with iMessage sync..."
+  ccb daemon start --imessage --recipients "$recipient"
+  
+  if ccb daemon status | grep -q "state=running"; then
+    echo "  CCB daemon is running and synced."
+  else
+    echo "  WARNING: CCB daemon failed to start. Check .ccb/runtime-daemon.log"
+  fi
+}
 
 # --- CLI_Cowork_Bridge install (auto-clone if missing) ---
 install_cli_cowork_bridge() {
@@ -72,7 +96,7 @@ install_cli_cowork_bridge() {
   bash "$CLI_COWORK_BRIDGE_CLONE_DIR/install.sh" install
 
   echo "  Running ccb update..."
-  #ccb update
+  ccb update || true
 
   echo "CLI_Cowork_Bridge setup complete."
 }
@@ -89,24 +113,16 @@ if ! command -v ccb >/dev/null 2>&1 || [ "$(git -C "$CLI_COWORK_BRIDGE_CLONE_DIR
   fi
 fi
 
-# --- Watchdog ---
-if ! tmux has-session -t "$WATCHDOG_SESSION" 2>/dev/null; then
-  tmux new-session -d -s "$WATCHDOG_SESSION"
-  tmux send-keys -t "$WATCHDOG_SESSION" "cd \"$PROJECT_ROOT\"" C-m
-  tmux send-keys -t "$WATCHDOG_SESSION" "source \"$SOURCE_ME\"" C-m
-  tmux send-keys -t "$WATCHDOG_SESSION" "\"$WATCHDOG_SCRIPT\" --daemon --interval \"$WATCHDOG_INTERVAL\"" C-m
-  echo "Created tmux session: $WATCHDOG_SESSION (watchdog running)"
-else
-  echo "Session already exists: $WATCHDOG_SESSION (left unchanged)"
-fi
+# Initialize CCB Sync/iMessage
+setup_ccb_sync
 
-# --- CLI_Cowork_Bridge workspace: pm:claude + writer:codex + reviewer:gemini ---
+# --- CLI_Cowork_Bridge workspace: cmd + pm:claude + writer:codex + reviewer:gemini ---
 if ! tmux has-session -t "$CLI_COWORK_BRIDGE_SESSION" 2>/dev/null; then
   tmux new-session -d -s "$CLI_COWORK_BRIDGE_SESSION"
   tmux send-keys -t "$CLI_COWORK_BRIDGE_SESSION" "cd \"$PROJECT_ROOT\"" C-m
   tmux send-keys -t "$CLI_COWORK_BRIDGE_SESSION" "source \"$SOURCE_ME\"" C-m
   tmux send-keys -t "$CLI_COWORK_BRIDGE_SESSION" "ccb" C-m
-  echo "Created tmux session: $CLI_COWORK_BRIDGE_SESSION (CLI_Cowork_Bridge launched — pm:claude + writer:codex + reviewer:gemini)"
+  echo "Created tmux session: $CLI_COWORK_BRIDGE_SESSION (CLI_Cowork_Bridge launched — cmd + pm:claude + writer:codex + reviewer:gemini)"
 else
   echo "Session already exists: $CLI_COWORK_BRIDGE_SESSION (left unchanged)"
 fi
@@ -115,9 +131,13 @@ cat <<EOF
 
 Setup complete.
 
-Attach sessions:
-  tmux attach -t $WATCHDOG_SESSION   # rate-limit watchdog
-  tmux attach -t $CLI_COWORK_BRIDGE_SESSION        # CLI_Cowork_Bridge: pm(Claude) + writer(Codex) + reviewer(Gemini)
+Attach session:
+  tmux attach -t $CLI_COWORK_BRIDGE_SESSION        # CLI_Cowork_Bridge: cmd(Watchdog) + pm(Claude) + writer(Codex) + reviewer(Gemini)
+
+Daemon & Sync:
+  ccb daemon status      # Check sync health and PID
+  ccb daemon stop        # Stop the background sync worker
+  ccb imessage doctor    # Verify iMessage connectivity
 
 List sessions:
   tmux ls
@@ -126,6 +146,7 @@ Agent delegation (inside CLI_Cowork_Bridge session):
   /ask pm <task>         → Claude PM orchestrates
   /ask writer <task>     → Codex implements
   /ask reviewer <task>   → Gemini reviews
+  /ask cmd <command>     → Execute shell command / watchdog status
 
 CLI_Cowork_Bridge clone location: $CLI_COWORK_BRIDGE_CLONE_DIR
 EOF
