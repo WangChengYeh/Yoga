@@ -39,7 +39,7 @@ from acp.schema import (
 
 CWD = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-MODEL = "gemini-3.0-pro"
+MODEL = "auto-gemini-3"
 QUOTA_SLEEP_SECS = 60
 
 
@@ -177,7 +177,7 @@ def _run_once(task: str, mode: str, resume_session: str | None, model: str) -> t
 
 def run_acp(task: str, mode: str = "auto_edit", resume_session: str | None = None,
             model: str = MODEL) -> str:
-    """Run ACP with gemini-3.0-pro; sleeps and retries indefinitely on quota exhaustion."""
+    """Run ACP with auto-gemini-3; sleeps and retries indefinitely on quota exhaustion."""
     while True:
         try:
             text, _ = _run_once(task, mode, resume_session, model)
