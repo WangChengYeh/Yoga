@@ -11,33 +11,37 @@
     "runtime": {
       "stabilityMs": 150,
       "emaAlpha": 0.25,
-      "deadbandDegrees": 8
-    }
-  },
-  "runtime": {
-    "hip": {
-      "hold": {
-        "min": 60
+      "deadbandDegrees": 8,
+      "angles": {
+        "hip": {
+          "lift": { "min": 60, "max": 180 },
+          "hold": { "min": 60, "max": 180 }
+        }
       }
     }
   },
   "steps": [
     {
+      "state": "SETUP",
+      "durationMs": 3000,
       "cue": "平躺準備，雙腳踩穩地面，讓呼吸慢慢放長。",
       "detect": "bridge_setup"
     },
     {
+      "state": "MOVEMENT",
+      "durationMs": 4000,
       "cue": "吸氣時緩緩抬起臀部，讓脊椎一節一節離地。",
       "detect": "bridge_lift"
     },
     {
+      "state": "HOLD",
+      "durationMs": 20000,
       "cue": "停留在橋式，慢慢深呼吸，讓胸口與髖前側溫和打開。",
-      "detect": "bridge_hold",
-      "hold": {
-        "durationSec": 20
-      }
+      "detect": "bridge_hold"
     },
     {
+      "state": "TRANSITION",
+      "durationMs": 3000,
       "cue": "吐氣慢慢回落，讓背部依序貼回地面，回到放鬆。",
       "detect": "bridge_return"
     }

@@ -11,50 +11,69 @@
     "runtime": {
       "stabilityMs": 300,
       "emaAlpha": 0.15,
-      "deadbandDegrees": 3
-    }
-  },
-  "runtime": {
-    "hip": {
-      "hold": {
-        "min": 30
-      }
-    },
-    "knee": {
-      "hold": {
-        "min": 140
+      "deadbandDegrees": 3,
+      "angles": {
+        "knee": {
+          "ready": { "min": 140 },
+          "setup": { "min": 140 },
+          "hinge": { "min": 130 },
+          "fold": { "min": 130 },
+          "hold": { "min": 140 },
+          "return": { "min": 130 },
+          "neutral": { "min": 140 }
+        },
+        "hip": {
+          "ready": { "min": 85 },
+          "setup": { "min": 85 },
+          "hinge": { "max": 140 },
+          "fold": { "min": 35, "max": 130 },
+          "hold": { "min": 30, "max": 120 },
+          "return": { "min": 85 },
+          "neutral": { "min": 85 }
+        }
       }
     }
   },
   "steps": [
     {
+      "state": "SETUP",
+      "durationMs": 3000,
       "cue": "站穩，雙腳與髖同寬，先把重心平均放在雙腳。",
       "detect": "ready_forward_fold"
     },
     {
+      "state": "SETUP",
+      "durationMs": 3000,
       "cue": "吸氣拉長脊椎，維持胸口開展，準備從髖部折疊。",
       "detect": "tall_spine_setup"
     },
     {
+      "state": "MOVEMENT",
+      "durationMs": 4000,
       "cue": "吐氣，從髖部前折，保持背部延伸，不急著下壓。",
       "detect": "hip_hinge"
     },
     {
+      "state": "MOVEMENT",
+      "durationMs": 4000,
       "cue": "持續控制下行，讓大腿後側逐步打開，維持穩定呼吸。",
       "detect": "controlled_forward_fold"
     },
     {
+      "state": "HOLD",
+      "durationMs": 15000,
       "cue": "停留在前彎深處，頭頸放鬆，每次吐氣讓身體再柔軟一點。",
-      "detect": "forward_hold",
-      "hold": {
-        "durationSec": 15
-      }
+      "detect": "forward_hold"
     },
     {
+      "state": "MOVEMENT",
+      "durationMs": 4000,
       "cue": "吸氣啟動核心，慢慢回到站姿，避免快速起身。",
       "detect": "return_standing"
     },
     {
+      "state": "TRANSITION",
+      "durationMs": 3000,
       "cue": "回到中立站姿，感受背側線條被完整伸展。",
       "detect": "neutral_finish"
     }

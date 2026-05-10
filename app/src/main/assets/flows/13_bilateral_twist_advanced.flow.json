@@ -11,48 +11,56 @@
     "runtime": {
       "stabilityMs": 250,
       "emaAlpha": 0.2,
-      "deadbandDegrees": 4
-    }
-  },
-  "runtime": {
-    "twist": {
-      "hold": {
-        "min": 35
+      "deadbandDegrees": 4,
+      "angles": {
+        "twist": {
+          "center": { "max": 20 },
+          "start": { "min": 15, "max": 65 },
+          "hold": { "min": 35, "max": 80 }
+        }
       }
     }
   },
   "steps": [
     {
+      "state": "SETUP",
+      "durationMs": 3000,
       "cue": "先建立穩定基底，骨盆與脊椎回到正中。",
       "detect": "stable_base"
     },
     {
+      "state": "MOVEMENT",
+      "durationMs": 4000,
       "cue": "吸氣拉長，吐氣向左開始扭轉，動作從核心發動。",
       "detect": "twist_start"
     },
     {
+      "state": "HOLD",
+      "durationMs": 12000,
       "cue": "維持左側扭轉，吸氣延伸、吐氣加深，保持肩頸放鬆。",
-      "detect": "twist_hold",
-      "hold": {
-        "durationSec": 12
-      }
+      "detect": "twist_hold"
     },
     {
+      "state": "MOVEMENT",
+      "durationMs": 4000,
       "cue": "慢慢回到正中間，讓脊椎中立。",
       "detect": "return_center"
     },
     {
+      "state": "MOVEMENT",
+      "durationMs": 4000,
       "cue": "再次吸氣拉長，吐氣向右開始扭轉，維持下盤穩定。",
       "detect": "twist_start"
     },
     {
+      "state": "HOLD",
+      "durationMs": 12000,
       "cue": "維持右側扭轉，呼吸均勻，把旋轉集中在胸椎。",
-      "detect": "twist_hold",
-      "hold": {
-        "durationSec": 12
-      }
+      "detect": "twist_hold"
     },
     {
+      "state": "TRANSITION",
+      "durationMs": 3000,
       "cue": "控制速度回正，感受左右兩側都被充分喚醒。",
       "detect": "return_center"
     }

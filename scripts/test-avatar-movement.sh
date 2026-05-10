@@ -30,6 +30,11 @@ sleep 1
 echo "  Waiting 8s for Godot to init and WebSocket bridge to connect..."
 sleep 8
 
+# Tap Camera button to enable camera setup (Required per #70)
+echo "  Tapping Camera button..."
+"$ADB" shell input tap 200 1000
+sleep 2
+
 # Move to far left
 echo "[2/6] Moving avatar to LEFT (-1.5)..."
 "$ADB" shell am start -n "$ACTIVITY" --ef avatarTargetX -1.5 --ef avatarTargetY 0.0
