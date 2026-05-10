@@ -157,15 +157,33 @@ YogaFlow 3D 的核心 App 採免費模式，讓使用者不付費也能使用完
 
 ## 12. Agentic AI 開發流程
 
-本專案採用多 AI 代理協作開發模式：
+本專案採用 PM、RD、AE 三角色的 Agentic AI 協作模式，讓產品規格、核心技術與應用落地可以並行推進。
 
-| 代理 | 角色 | 職責 |
-|------|------|------|
-| **Claude (PM)** | 專案經理 | 讀取 GitHub Issues、決定優先順序、審查輸出、提交 |
-| **Codex** | 主要實作者 | 多檔案代碼修改、重構、構建驗證 |
-| **Gemini CLI** | 次要實作者 | Codex 受阻時接手、代碼審查 |
+| 角色 | 定位 | 主要職責 | 產出 |
+|------|------|----------|------|
+| **PM（Product Manager）** | 規格與需求負責人 | 定義使用者場景、產品需求、商業模式、功能優先級與驗收標準 | PRD、User Story、Issue、驗收條件 |
+| **RD（Research & Development）** | 核心技術實作者 | 實作姿勢偵測、3D 骨架、角度計算、Flow Engine、on-device AI 與效能優化 | 核心模組、演算法、SDK、測試報告 |
+| **AE（Application Engineer）** | 應用整合與體驗落地 | 將 RD 核心能力整合到 App，完成 UI/UX、教練互動、場景流程、輔具推薦與商業化功能 | App 功能、Demo、整合文件、使用流程 |
 
-指令頻道：GitHub Issues（任務來源）+ Claude iMessage 頻道（即時指令）
+### 協作節奏
+
+```
+PM 定規格與驗收標準
+    ↓
+RD 開發核心能力與技術模組
+    ↓
+AE 整合成可用 App 與展示場景
+    ↓
+PM 驗收體驗、重新排序需求
+```
+
+### Agentic AI 分工
+
+- **PM Agent**：整理需求、拆解 GitHub Issues、維護 roadmap、確認每個功能的使用者價值與驗收標準
+- **RD Agent**：修改核心程式碼、建立測試、處理 MediaPipe / CameraX / 3D 骨架 / LLM on-device 等技術問題
+- **AE Agent**：負責 App 端串接、Demo 場景、提示詞文案、教練互動流程與商業化功能整合
+
+指令頻道：GitHub Issues 作為任務來源，Pull Request 作為交付與審查節點。
 
 ---
 
