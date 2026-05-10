@@ -1,5 +1,5 @@
 {
-  "numStartups": 7,
+  "numStartups": 8,
   "tipsHistory": {
     "new-user-warmup": 3,
     "plan-mode-for-complex-tasks": 3,
@@ -461,13 +461,13 @@
         "AvatarController.gd",
         "ForwardFoldDetectionMapper.kt"
       ],
-      "lastGracefulShutdown": false,
+      "lastGracefulShutdown": true,
       "exampleFilesGeneratedAt": 1778392383866,
       "lastCost": 0.0694827,
       "lastAPIDuration": 8901,
       "lastAPIDurationWithoutRetries": 8899,
       "lastToolDuration": 62,
-      "lastDuration": 986889,
+      "lastDuration": 1515452,
       "lastLinesAdded": 0,
       "lastLinesRemoved": 0,
       "lastTotalInputTokens": 7,
@@ -475,8 +475,8 @@
       "lastTotalCacheCreationInputTokens": 13286,
       "lastTotalCacheReadInputTokens": 58264,
       "lastTotalWebSearchRequests": 0,
-      "lastFpsAverage": 0.66,
-      "lastFpsLow1Pct": 32.75,
+      "lastFpsAverage": 1.48,
+      "lastFpsLow1Pct": 45.97,
       "lastModelUsage": {
         "claude-sonnet-4-6": {
           "inputTokens": 7,
@@ -489,13 +489,13 @@
       },
       "lastSessionId": "11031dcb-6cfd-4562-92d6-3644a5540935",
       "lastSessionMetrics": {
-        "frame_duration_ms_count": 18,
-        "frame_duration_ms_min": 0.16808300000002419,
-        "frame_duration_ms_max": 30.53195800000003,
-        "frame_duration_ms_avg": 3.16553011111111,
-        "frame_duration_ms_p50": 0.7683544999999867,
-        "frame_duration_ms_p95": 12.846857999999967,
-        "frame_duration_ms_p99": 26.99493799999999
+        "frame_duration_ms_count": 14,
+        "frame_duration_ms_min": 0.16525000000001455,
+        "frame_duration_ms_max": 21.751500000000078,
+        "frame_duration_ms_avg": 2.5366369285713404,
+        "frame_duration_ms_p50": 0.7107085000001234,
+        "frame_duration_ms_p95": 11.5022733499999,
+        "frame_duration_ms_p99": 19.701654670000032
       },
       "hasCompletedProjectOnboarding": true,
       "lastHintSessionId": "11031dcb-6cfd-4562-92d6-3644a5540935",

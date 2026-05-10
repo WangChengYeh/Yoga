@@ -18,6 +18,24 @@
             "command": "/Users/wangchengye/miniforge3/bin/python3 /Users/wangchengye/Documents/GitHub/CLI_Cowork_Bridge/bin/ccb-provider-finish-hook --provider gemini --completion-dir /Users/wangchengye/Documents/GitHub/Yoga/.ccb/agents/ae/provider-runtime/gemini/completion --agent-name ae --workspace /Users/wangchengye/Documents/GitHub/Yoga"
           }
         ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/wangchengye/miniforge3/bin/python3 /Users/wangchengye/Documents/GitHub/CLI_Cowork_Bridge/bin/ccb-provider-finish-hook --provider gemini --completion-dir /Users/wangchengye/Documents/GitHub/Yoga/.ccb/agents/test_agent/provider-runtime/gemini/completion --agent-name test_agent --workspace /Users/wangchengye/Documents/GitHub/Yoga"
+          }
+        ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/wangchengye/miniforge3/bin/python3 /Users/wangchengye/Documents/GitHub/CLI_Cowork_Bridge/bin/ccb-provider-finish-hook --provider gemini --completion-dir /Users/wangchengye/Documents/GitHub/Yoga/.ccb/agents/it/provider-runtime/gemini/completion --agent-name it --workspace /Users/wangchengye/Documents/GitHub/Yoga"
+          }
+        ]
       }
     ]
   }
