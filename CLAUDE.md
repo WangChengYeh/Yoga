@@ -60,8 +60,8 @@ The project runs on **CLI_Cowork_Bridge** (WangChengYeh/CLI_Cowork_Bridge) as th
 | Agent | CLI_Cowork_Bridge role | Responsibility |
 |-------|----------|----------------|
 | **Claude Code** | PM (orchestrator, outside CLI_Cowork_Bridge) | Triage issues, write prompts, review output, commit, manage releases |
-| **Codex** | `writer` | Primary implementer — deep code changes, Gradle builds, adb device testing |
-| **Gemini** | `reviewer` | Secondary implementer — continues when Codex is rate-limited; reviews Codex output |
+| **Codex** | `RD` | Primary implementer — deep code changes, Gradle builds, adb device testing |
+| **Gemini** | `AE` | Application to user and find out issues |
 
 Claude does not implement. Claude only orchestrates, reviews, and delegates.
 
