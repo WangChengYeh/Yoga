@@ -265,15 +265,7 @@ Flow files live in:
 app/src/main/assets/flows/
 ```
 
-Current production flows:
-
-```text
-01_mountain_warmup.flow.json
-02_forward_fold_main.flow.json
-03_twist_cooldown.flow.json
-04_squat.flow.json
-05_bridge.flow.json
-```
+Current packaged library: 20 `.flow.json` files (`01_…` through `20_…`), covering mountain, forward_fold, twist, squat, bridge, warrior_1, warrior_2, downward_dog, child_pose, and pigeon across beginner / flexibility / recovery / strength categories. Target per roadmap is 30+.
 
 Full DSL notes:
 
@@ -444,7 +436,7 @@ Near-term engineering priorities:
 Tracked roadmap:
 
 ```text
-docs/detection-refactor-roadmap.md
+docs/roadmap.md
 ```
 
 ---
@@ -480,10 +472,11 @@ Core: CameraX + MediaPipe + Flow DSL + local coach loop
 Privacy: local-first
 ```
 
-Current known gap:
+Current known gaps:
 
 ```text
-CameraSetupController exists, but latest main still needs final MainActivity wiring cleanup.
+Gemma LLM model file is not bundled; rule-based fallback coach is the default.
+YouTube/teacher-video-to-flow authoring pipeline is not yet automated.
 ```
 
 ---

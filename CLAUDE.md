@@ -318,4 +318,11 @@ Claude should ask agents to leave behind reusable scripts whenever they discover
 - Kotlin (main logic) + Godot (avatar rendering) + MediaPipe (pose detection)
 - Architecture: `docs/architecture.md`
 - Roadmap: `docs/roadmap.md`
+- Project status (one-pager): `docs/project-status.md`
+- Test plan / verification commands: `docs/test-plan.md`
+- Flow DSL v2: `docs/flow-dsl.md`
+- Avatar overlay architecture: `docs/avatar-overlay-architecture.md`
 - Avatar design direction: `docs/godot-avatar-coach-overlay.md`
+- Avatar rig / asset pipeline: `docs/avatar-rig-skeleton.md`, `docs/avatar-notes.md`
+- Product proposal / pitch: `docs/Proposal.md`
+- Environment / tmux multi-agent setup: `docs/project-environment-setup.md`

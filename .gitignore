@@ -23,3 +23,22 @@ yogaflow-screen.mp4
 sourceme
 
 logs/
+
+# Stray dev / device-test dumps at repo root
+/screencap-*.png
+/avatar-*.png
+/logcat.txt
+/logs_*.sqlite*
+*.bak
+
+# Local agent / tooling caches
+.ccb/ccbd/
+.ccb/room/
+.ccb/runtime-daemon.json
+.claude-server-commander/
+.claude/backups/
+.claude/plugins/
+.claude/projects/
+.gemini/installation_id
+.tmp/
+Library/
