@@ -9,7 +9,8 @@ class AvatarCoachStateMapper {
         matched: Boolean,
         failReason: String,
         poseId: String?,
-        overridePosition: Pair<Float, Float>? = null
+        overridePosition: Pair<Float, Float>? = null,
+        defaultSide: String = "demo_area"
     ): AvatarIntent {
         val highlight = highlightFor(detect, failReason)
         val action = when {
@@ -33,14 +34,14 @@ class AvatarCoachStateMapper {
             action = action,
             emotion = emotion,
             highlight = highlight,
-            position = positionFor(state, highlight),
+            position = positionFor(state, highlight, defaultSide),
             facing = "user",
             scale = 1.0f,
             overridePosition = overridePosition
         )
     }
 
-    private fun positionFor(state: CoachState, highlight: String?): String {
+    private fun positionFor(state: CoachState, highlight: String?, defaultSide: String): String {
         if (state == CoachState.CORRECTION) {
             return when (highlight) {
                 "knees" -> "near_knees"
@@ -49,7 +50,7 @@ class AvatarCoachStateMapper {
                 else -> "center"
             }
         }
-        return "demo_area"
+        return defaultSide
     }
 
     private fun highlightFor(detect: String, failReason: String): String? {

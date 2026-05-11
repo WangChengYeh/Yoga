@@ -173,8 +173,9 @@ The avatar is free to occupy any screen position. Movement from current to targe
 tween — `tween_property(avatar_node, "position", target, 0.35)` — so transitions are smooth
 regardless of where the avatar starts or ends.
 
-Historical note: an earlier version used a 110dp × 196dp corner PiP. That layout has been
-replaced by the full-screen overlay; the AGENTS.md / GEMINI.md PiP rule no longer applies.
+Historical note: an earlier version used a 110dp × 196dp corner PiP pinned to `bottom|end`.
+That layout was replaced by the full-screen overlay; the corresponding "do not revert to
+match_parent" rule in AGENTS.md / GEMINI.md was removed when this doc shipped.
 
 ---
 
@@ -250,7 +251,7 @@ Field meaning:
 | `emotion`           | Kotlin decides, Godot executes     | Coach expression style: `calm`, `focused`, `encouraging`                                                                                             |
 | `highlight`         | Kotlin decides, Godot executes     | Body area to mark, e.g. `knees`, `hips`, `spine`                                                                                                     |
 | `position`          | Kotlin decides intent, Godot maps  | Semantic shortcut name (`left_side`, `right_side`, `center`, `demo_area`, `near_knees`, `near_hips`, `near_spine`). Resolves to a Vector3 offset.   |
-| `override_position` | Kotlin (or ADB) sets explicit `{x, y}` world floats | Free target position. When present, supersedes `position` and `screen_side`. Latched until an explicit clear frame. |
+| `override_position` | Kotlin (or ADB) sets explicit `{x, y}` world floats | Free target position. When present, supersedes the `position` semantic shortcut. Latched until an explicit clear frame. |
 | `facing`            | Kotlin decides intent, Godot maps  | Direction the avatar faces: `user`, `left_side`, `right_side`                                                                                        |
 | `scale`             | Kotlin may suggest, Godot clamps   | Relative visual size; Godot clamps to `[0.8, 1.2]`                                                                                                   |
 
@@ -390,13 +391,19 @@ is in the frame so the avatar steps aside instead of overlapping the user. This 
 ordinary `position` value — there is no separate `screen_side` field anymore. Example:
 
 ```kotlin
-private fun avatarOppositeSide(frame: PoseDetectionResult): String {
-    val screenX = frame.imageLandmarks.getOrNull(0)?.x()   // landmark 0 = nose
-        ?: ((frame.imageLandmarks.getOrNull(11)?.x() ?: 0.5f) +
-            (frame.imageLandmarks.getOrNull(12)?.x() ?: 0.5f)) / 2f
+// Shipped in com.yogaflow.avatar.AvatarPositioning.
+fun oppositeSide(frame: PoseDetectionResult?): String {
+    val landmarks = frame?.imageLandmarks ?: return "demo_area"
+    val screenX = noseX(landmarks)                   // landmark 0 if visible
+        ?: shoulderMidpointX(landmarks)              // (LM 11 + LM 12) / 2 if both visible
+        ?: return "demo_area"
     return if (screenX < 0.5f) "right_side" else "left_side"
 }
 ```
+
+Visibility is gated by MediaPipe's per-landmark confidence (`landmark.visibility()`) — an
+unreliable nose falls through to the shoulder midpoint, and an unreliable pair falls through to
+`demo_area`. Returns the **avatar's target side**, not where the user is.
 
 Known limitation: when the user spans the full frame (deep forward fold, prone poses) some
 overlap is unavoidable on either side. Acceptable for v1.

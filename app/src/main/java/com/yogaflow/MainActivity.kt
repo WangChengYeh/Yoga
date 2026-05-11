@@ -27,6 +27,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import com.yogaflow.avatar.AvatarIntent
+import com.yogaflow.avatar.AvatarPositioning
 import com.yogaflow.coach.AvatarCoachStateMapper
 import com.yogaflow.coach.CoachCueController
 import com.yogaflow.coach.CoachSpeaker
@@ -1153,7 +1154,8 @@ class MainActivity : AppCompatActivity(), GodotHost {
             matched = matched,
             failReason = failReason,
             poseId = currentPose.id,
-            overridePosition = avatarPositionOverride
+            overridePosition = avatarPositionOverride,
+            defaultSide = AvatarPositioning.oppositeSide(frame)
         )
         return PoseCoachFrame(
             timestampMs = System.currentTimeMillis(),
