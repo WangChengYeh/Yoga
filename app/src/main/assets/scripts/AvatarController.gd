@@ -15,13 +15,13 @@ var _override_x: float = 0.0
 var _override_y: float = 0.0
 
 var _semantic_offsets := {
-    "left_side": Vector3(-0.18, 0.0, 0.0),
-    "right_side": Vector3(0.18, 0.0, 0.0),
+    "left_side": Vector3(-1.45, 0.0, 0.0),
+    "right_side": Vector3(1.45, 0.0, 0.0),
     "center": Vector3(0.0, 0.0, 0.0),
     "demo_area": Vector3(0.0, 0.0, 0.0),
-    "near_knees": Vector3(0.0, -0.14, 0.12),
-    "near_hips": Vector3(0.0, -0.05, 0.10),
-    "near_spine": Vector3(0.0, 0.03, 0.08)
+    "near_knees": Vector3(0.0, -0.35, 0.32),
+    "near_hips": Vector3(0.0, -0.14, 0.24),
+    "near_spine": Vector3(0.0, 0.08, 0.18)
 }
 
 func _ready() -> void:
@@ -107,7 +107,9 @@ func set_override_position(world_x: float, world_y: float) -> void:
     _override_active = true
     _override_x = world_x
     _override_y = world_y
-    var target = Vector3(_base_position.x + world_x, _base_position.y + world_y, _base_position.z)
+    # Treat override as absolute semantic scene position so -1.5/0/+1.5
+    # reliably maps left/center/right regardless of current base anchor.
+    var target = Vector3(world_x, _base_position.y + world_y, _base_position.z)
     var tween = create_tween()
     tween.tween_property(self, "position", target, 0.35)
 
