@@ -52,7 +52,7 @@ JAVA_HOME=/opt/homebrew/opt/openjdk@17 ./gradlew assembleDebug
 
 **Camera toggle — required before session start (#70):** A "Camera: OFF/ON" toggle button is in the bottom row. Camera setup and framing checks are idle until it is tapped ON. Any device test that tries to start a session must tap the Camera button first, then tap Start.
 
-**Flow library:** 15 flows in `app/src/main/assets/flows/` (01–15). All use dsl-v2 format, zh-TW cues.
+**Flow library:** 20 flows in `app/src/main/assets/flows/` (01–20). All use dsl-v2 format, zh-TW cues. Target per roadmap: 30+. New poses without strict mappers use routed fallback behavior.
 
 ## Verification Requirement
 Every task must end with:

@@ -88,4 +88,4 @@ adb shell input tap <start_button_x> <start_button_y>
 ```
 If a session is not starting, the most likely cause is that the Camera toggle is still OFF.
 
-**Flow library:** 15 flows in `app/src/main/assets/flows/` (01–15). All use dsl-v2 format, zh-TW cues, and DetectKey enum values.
+**Flow library:** 20 flows in `app/src/main/assets/flows/` (01–20). All use dsl-v2 format, zh-TW cues, and DetectKey enum values. Target per roadmap: 30+. New poses without strict geometric mappers (warrior_1, warrior_2, downward_dog, child_pose, pigeon) use the intentionally routed fallback behavior in `PoseDetectionRouter`.

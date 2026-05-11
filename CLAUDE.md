@@ -63,8 +63,6 @@ The project runs on **CLI_Cowork_Bridge** (WangChengYeh/CLI_Cowork_Bridge) as th
 | **Codex** | `RD` | Primary implementer — deep code changes, Gradle builds, adb device testing |
 | **Gemini** | `AE` | Application to user and find out issues |
 
-Claude does not implement. Claude only orchestrates, reviews, and delegates.
-
 ### CLI_Cowork_Bridge setup (one-time)
 ```bash
 git clone https://github.com/WangChengYeh/CLI_Cowork_Bridge.git
@@ -73,7 +71,8 @@ cd cli_cowork_bridge && ./install.sh install && ccb update
 
 ### Project config: `.ccb/ccb.config`
 ```
-cmd; writer:codex; reviewer:gemini
+it:gemini, pm:claude; rd:codex, ae:gemini
+
 ```
 
 ### Start / stop
