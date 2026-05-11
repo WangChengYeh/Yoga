@@ -39,17 +39,29 @@ class PoseDetectionRouter(
                 val r = bridgeDetectionMapper.evaluate(detect, frame, params)
                 PoseDetectionMappingResult(r.matched, r.state, r.cue, if (!r.matched) r.reason else "")
             }
-            "mountain" -> {
-                val (state, cue) = fallback.update(currentPose, frame)
-                val matched = state != CoachState.CORRECTION
-                PoseDetectionMappingResult(
-                    matched = matched,
-                    state = if (matched) expectedState else state,
-                    cue = cue,
-                    reason = if (!matched) cue else ""
-                )
-            }
+            "mountain",
+            "warrior_1",
+            "warrior_2",
+            "downward_dog",
+            "child_pose",
+            "pigeon" -> fallbackMapping(fallback, currentPose, frame, expectedState)
             else -> error("No detection mapper registered for poseId=$poseId detect=${detect.jsonKey}")
         }
+    }
+
+    private fun fallbackMapping(
+        fallback: PoseStateMachine,
+        currentPose: YogaPose,
+        frame: PoseDetectionResult,
+        expectedState: CoachState
+    ): PoseDetectionMappingResult {
+        val (state, cue) = fallback.update(currentPose, frame)
+        val matched = state != CoachState.CORRECTION
+        return PoseDetectionMappingResult(
+            matched = matched,
+            state = if (matched) expectedState else state,
+            cue = cue,
+            reason = if (!matched) cue else ""
+        )
     }
 }

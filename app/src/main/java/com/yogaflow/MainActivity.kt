@@ -26,7 +26,6 @@ import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
-import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
 import com.yogaflow.avatar.AvatarIntent
 import com.yogaflow.coach.AvatarCoachStateMapper
 import com.yogaflow.coach.CoachCueController
@@ -158,6 +157,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
     private lateinit var godotAvatarBridge: GodotAvatarBridge
     private lateinit var llmInteractionDb: LlmInteractionDb
     private lateinit var sessionHistoryDb: SessionHistoryDb
+    private var godotSurfaceView: android.view.SurfaceView? = null
     private val demoHandler = Handler(Looper.getMainLooper())
     private val demoActions = listOf("hold_mountain", "hold_forward_fold", "hold_squat", "hold_twist")
     private var demoActionIndex = 0
@@ -194,8 +194,10 @@ class MainActivity : AppCompatActivity(), GodotHost {
             android.os.Handler(mainLooper).postDelayed({
                 val surfaceView = findSurfaceViewInHierarchy(virtualCoachView)
                 if (surfaceView != null) {
+                    godotSurfaceView = surfaceView
                     surfaceView.setZOrderOnTop(true)
                     surfaceView.holder.setFormat(android.graphics.PixelFormat.TRANSLUCENT)
+                    surfaceView.visibility = virtualCoachView.visibility
                     Log.i("YogaFlow", "Godot SurfaceView transparent configured")
                 } else {
                     Log.w("YogaFlow", "Godot SurfaceView not found")
@@ -216,7 +218,11 @@ class MainActivity : AppCompatActivity(), GodotHost {
     private val requestCameraPermission = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
-        if (granted) startCamera() else coachText.text = "Camera permission is required."
+        if (granted && cameraSetupEnabled) {
+            startCamera()
+        } else if (!granted) {
+            coachText.text = "Camera permission is required."
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -367,7 +373,6 @@ class MainActivity : AppCompatActivity(), GodotHost {
         bindSkinSelector()
         loadDiscoveredPlaylist(openClassView = false)
         applyCameraSetupEnabled(false)
-        requestCameraIfNeeded()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -532,7 +537,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
 
     private fun applyCameraSetupEnabled(enabled: Boolean) {
         cameraSetupEnabled = enabled
-        cameraToggleButton.text = "Camera"
+        cameraToggleButton.text = if (enabled) "Camera: ON" else "Camera: OFF"
         if (enabled) {
             cameraSetupController.reset()
             cameraReady = false
@@ -546,7 +551,9 @@ class MainActivity : AppCompatActivity(), GodotHost {
             updateVirtualCoachFromCurrentStep()
             cameraSetupStatus.text = "Checking body framing..."
             coachText.text = "請先完成相機設定。"
+            requestCameraIfNeeded()
         } else {
+            cameraPipeline.stop()
             cameraSetupController.reset()
             cameraReady = false
             cameraReadySince = 0L
@@ -659,7 +666,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
         isDemoMode = true
         showClass()
         overlayView.visibility = View.INVISIBLE
-        virtualCoachView.visibility = View.VISIBLE
+        setVirtualCoachVisibility(View.VISIBLE)
         startDemoCycle()
     }
 
@@ -668,7 +675,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
         overridePosition: Pair<Float, Float>?
     ) {
         runOnUiThread {
-            virtualCoachView.visibility = View.VISIBLE
+            setVirtualCoachVisibility(View.VISIBLE)
             godotAvatarBridge.send(
                 PoseCoachFrame(
                     timestampMs = System.currentTimeMillis(),
@@ -704,6 +711,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
     }
 
     internal fun requestCameraIfNeeded() {
+        if (!cameraSetupEnabled) return
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
             startCamera()
         } else {
@@ -713,23 +721,25 @@ class MainActivity : AppCompatActivity(), GodotHost {
 
     private fun handlePoseFrame(frame: PoseDetectionResult) {
         overlayView.setLandmarks(frame.imageLandmarks, frame.imageWidth, frame.imageHeight)
-        if (sessionState == SessionState.RUNNING && currentPose != null) {
-            overlayView.setJointStatus(stateMachine.getJointStatus(currentPose!!, frame))
-            overlayView.setJointCorrections(stateMachine.getJointCorrections(currentPose!!, frame))
+        if (sessionState == SessionState.RUNNING && isCurrentFlowInitialized()) {
+            overlayView.setJointStatus(stateMachine.getJointStatus(currentPose, frame))
+            overlayView.setJointCorrections(stateMachine.getJointCorrections(currentPose, frame))
         } else {
             overlayView.setJointStatus(emptyMap())
             overlayView.setJointCorrections(emptyMap())
         }
         if (isDemoMode) return
         if (!isCurrentFlowInitialized()) {
-            virtualCoachView.visibility = View.INVISIBLE
+            setVirtualCoachVisibility(View.INVISIBLE)
             return
         }
-        updateVirtualCoachBounds(frame.imageLandmarks)
         updateVirtualCoachFromCurrentStep()
 
         if (cameraSetupDisabledForDevelopment && sessionState != SessionState.COMPLETED) {
-            bypassCameraSetupForDevelopment()
+            if (sessionState != SessionState.RUNNING) {
+                markCameraReadyForDevelopment()
+                return
+            }
             liveCoachSessionController.handleReadyPoseFrame(frame, currentFlow, currentPose)
             return
         }
@@ -749,7 +759,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
         startButton.visibility = View.VISIBLE
         cameraSetupPanel.visibility = View.GONE
         overlayView.setFramingStatus(null)
-        virtualCoachView.visibility = View.VISIBLE
+        setVirtualCoachVisibility(View.VISIBLE)
         coachCueController.reset()
         sessionStartTimeMs = System.currentTimeMillis()
         sessionCorrectionCount = 0
@@ -757,8 +767,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
         updateUi(animated = false)
     }
 
-    private fun bypassCameraSetupForDevelopment() {
-        if (sessionState == SessionState.RUNNING) return
+    private fun markCameraReadyForDevelopment() {
         cameraReady = true
         cameraReadySince = System.currentTimeMillis()
         autoStartedCurrentSetup = true
@@ -766,12 +775,8 @@ class MainActivity : AppCompatActivity(), GodotHost {
         startButton.alpha = 1f
         startButton.visibility = View.VISIBLE
         cameraSetupPanel.visibility = View.GONE
-        virtualCoachView.visibility = View.VISIBLE
-        sessionState = SessionState.RUNNING
-        coachCueController.reset()
-        sessionStartTimeMs = System.currentTimeMillis()
-        sessionCorrectionCount = 0
-        sessionStepsCompleted = 0
+        updateVirtualCoachFromCurrentStep()
+        coachText.text = "Development: camera setup bypassed. Tap Start to begin."
         updateUi(animated = false)
     }
 
@@ -793,7 +798,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
         for ((delay, action) in steps) {
             handler.postDelayed({
                 android.util.Log.i("YogaFlow", "AvatarSelfTest: sending $action")
-                virtualCoachView.visibility = android.view.View.VISIBLE
+                setVirtualCoachVisibility(android.view.View.VISIBLE)
                 godotAvatarBridge.send(buildSelfTestFrame(action), force = true)
             }, delay)
         }
@@ -826,7 +831,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
                 if (!isDemoMode) return
                 val action = demoActions[demoActionIndex % demoActions.size]
                 demoActionIndex += 1
-                virtualCoachView.visibility = View.VISIBLE
+                setVirtualCoachVisibility(View.VISIBLE)
                 godotAvatarBridge.send(buildSelfTestFrame(action), force = true)
                 demoHandler.postDelayed(this, 3000L)
             }
@@ -877,7 +882,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
         if (next == null) {
             sessionState = SessionState.COMPLETED
             coachText.text = text
-            virtualCoachView.visibility = View.INVISIBLE
+            setVirtualCoachVisibility(View.INVISIBLE)
             updateUi(animated = true)
             showCompletionOverlay()
             return
@@ -1123,14 +1128,14 @@ class MainActivity : AppCompatActivity(), GodotHost {
         val shouldShowCoach = detect.isNotBlank() &&
             state != CoachState.SETUP &&
             sessionState != SessionState.COMPLETED
-        virtualCoachView.visibility = if (shouldShowCoach) View.VISIBLE else View.INVISIBLE
+        setVirtualCoachVisibility(if (shouldShowCoach) View.VISIBLE else View.INVISIBLE)
     }
 
     private fun updateVirtualCoach(frame: PoseCoachFrame) {
         val shouldShowCoach = frame.stepId.isNotBlank() &&
             frame.avatar.action.isNotBlank() &&
             sessionState != SessionState.COMPLETED
-        virtualCoachView.visibility = if (shouldShowCoach) View.VISIBLE else View.INVISIBLE
+        setVirtualCoachVisibility(if (shouldShowCoach) View.VISIBLE else View.INVISIBLE)
     }
 
     private fun buildPoseCoachFrame(
@@ -1211,23 +1216,22 @@ class MainActivity : AppCompatActivity(), GodotHost {
         return if (isEmpty()) null else average()
     }
 
-    private fun updateVirtualCoachBounds(landmarks: List<NormalizedLandmark>) {
-        // Full-screen fusion: Godot handles its own layout
-    }
-
-    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
-
     fun updateVirtualCoachFromCurrentStep() {
         if (!isCurrentFlowInitialized()) {
-            virtualCoachView.visibility = View.INVISIBLE
+            setVirtualCoachVisibility(View.INVISIBLE)
             return
         }
         val step = currentFlow.steps.getOrNull(flowEngine.currentStepNumber() - 1)
         if (step == null || sessionState == SessionState.COMPLETED) {
-            virtualCoachView.visibility = View.INVISIBLE
+            setVirtualCoachVisibility(View.INVISIBLE)
             return
         }
         updateVirtualCoach(step.detect.jsonKey, step.state)
+    }
+
+    private fun setVirtualCoachVisibility(visibility: Int) {
+        virtualCoachView.visibility = visibility
+        godotSurfaceView?.visibility = visibility
     }
 
     private fun toggleSessionRecording() {
@@ -1290,9 +1294,6 @@ class MainActivity : AppCompatActivity(), GodotHost {
     companion object {
         const val TUNING_SLIDER_MAX = 1000
         private const val CAMERA_AUTO_START_STABLE_MS = 600L
-        private const val VIRTUAL_COACH_ASPECT_RATIO = 0.72f
-        private const val VIRTUAL_COACH_HEIGHT_SCALE = 1.35f
-        private const val VIRTUAL_COACH_MAX_HEIGHT_FRACTION = 0.68f
         private const val DEV_PREFS = "development"
         private const val PREF_DISABLE_CAMERA_SETUP = "disableCameraSetup"
         private const val EXTRA_DISABLE_CAMERA_SETUP = "devDisableCameraSetup"
@@ -1302,6 +1303,5 @@ class MainActivity : AppCompatActivity(), GodotHost {
         private const val EXTRA_AVATAR_TARGET_X = "avatarTargetX"
         private const val EXTRA_AVATAR_TARGET_Y = "avatarTargetY"
         private const val EXTRA_AVATAR_CLEAR_OVERRIDE = "avatarClearOverride"
-        private val VIRTUAL_COACH_SCALE_INDICES = listOf(0, 11, 12, 23, 24, 25, 26, 27, 28)
     }
 }
