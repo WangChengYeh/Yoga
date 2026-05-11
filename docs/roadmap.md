@@ -1,176 +1,119 @@
-# Roadmap (Product-Level)
+# YogaFlow 3D Roadmap
 
 YogaFlow 3D has moved from a pose-detection demo into a product-level on-device AI coaching architecture.
 
----
+This file owns finished, unfinished, and future product work. Architecture details live in `docs/architecture.md`; verification details live in `docs/test-plan.md`.
 
-## Completed
+## Finished
 
-### Core System
-- CameraX + MediaPipe Pose
-- Flow DSL + parser
-- Pose state machine
-- Flow runtime engine
-- Flow playlist engine for multi-flow classes
-- Auto flow discovery from `assets/flows`
+### Core Runtime
 
-### Camera Pipeline
-- `CameraPosePipeline` modular camera layer
-- CameraX `RGBA_8888` deterministic image path
-- `STRATEGY_KEEP_ONLY_LATEST` backpressure control
-- Bitmap rotation before MediaPipe inference
-- Single `ImageProxy` ownership handled by `PoseHelper`
-- Camera lifecycle delegated out of `MainActivity`
+- CameraX + MediaPipe Pose pipeline.
+- `PoseDetectionResult` with 2D image landmarks, 3D world landmarks, image size, and mirroring metadata.
+- `PoseGeometry` 3D joint-angle calculation with 2D fallback.
+- Camera setup/onboarding gate before session start.
+- Manual camera toggle: camera setup stays idle until the user taps Camera ON.
+- Session lifecycle states: `IDLE`, `RUNNING`, `PAUSED`, `COMPLETED`.
+- Flow DSL v2 parser, JSON validator, typed `DetectKey`, runtime params, and flow validator.
+- Flow playlist engine for multi-flow classes.
+- Runtime override/tuning layer that does not mutate packaged Flow JSON.
+- Auto tuning advisor that suggests threshold changes from numeric fail reasons.
 
-### Pose / Geometry System
-- `PoseDetectionResult` data model
-  - 2D image landmarks
-  - 3D world landmarks
-  - image width / height
-- `PoseGeometry` 3D joint-angle calculation
-- 2D fallback with image width / height scaling
-- Angle confidence states:
-  - `HIGH_3D`
-  - `LOW_2D_FALLBACK`
-  - `INVALID`
-- Fixed the old 2D projection distortion issue for knee / hip angles
+### Detection And Coaching
 
-### Camera Coaching
-- `CameraFramingCoach`
-  - full-body framing
-  - too close / too far
-  - left / right offset
-  - top / bottom crop
-  - unknown / low visibility state
-- `ViewOrientation`
-  - front-facing detection
-  - off-axis detection
-  - too-rotated detection
-  - shoulder / hip depth-to-width ratio
+- Explicit detection routing via `PoseDetectionRouter`.
+- Mapper lifecycle ownership via `DetectionMapperSession`.
+- Pose-specific detection mappers for core poses, including strict mountain detection.
+- Coaching priority: camera framing, body orientation, then pose correction.
+- Coach cue pacing with minimum interval and same-cue suppression.
+- Rule-based fallback coach for reliable local operation.
+- Local LLM prompt builder and phrase polishing path.
+- TTS voice coaching.
+- `LlmInteractionDb` logging for prompt/response/timing.
 
-### App Orchestration
-- Complete `MainActivity` orchestration layer
-- Full wiring completed:
-  - `PoseHelper`
-  - `PoseDetectionResult`
-  - `CameraFramingCoach`
-  - `ViewOrientation`
-  - `PoseStateMachine`
-  - `PoseFlowEngine`
-  - `LlmCoach`
-  - `TTS`
-- Coaching priority implemented:
-  1. camera framing
-  2. body orientation
-  3. pose correction
-- Session lifecycle:
-  - `IDLE`
-  - `RUNNING`
-  - `PAUSED`
-  - `COMPLETED`
+### Camera And Visual Feedback
+
+- CameraX `RGBA_8888` deterministic image path.
+- `STRATEGY_KEEP_ONLY_LATEST` backpressure.
+- Bitmap rotation before MediaPipe inference.
+- Single `ImageProxy` ownership handled by `PoseHelper`.
+- `CameraFramingCoach` for too close, too far, offset, crop, unknown, and good states.
+- `ViewOrientation` front-facing/off-axis/too-rotated analysis.
+- `PoseOverlayView` skeleton overlay with FILL_CENTER coordinate mapping.
+- Visual body framing box overlay.
+- Joint angle deviation overlay and correction direction arrows.
 
 ### App / UX
-- Multi-course home UI
-- Course selection (Full / Stretch / Recovery / Strength categories)
-- Session control: Start / Pause / Restart
-- Flow index + step index
-- Progress bar
-- Countdown display
-- Countdown voice cue: 3, 2, 1
-- UI animations:
-  - progress
-  - countdown
-  - flow transition
-- 2D skeleton overlay with FILL_CENTER coordinate mapping (#65)
-- Visual body framing box overlay (green/red border via PoseOverlayView)
-- Voice pacing rules: 5s min between cues, 8s before same cue repeats
-- Full-screen landscape mode — `resizeableActivity=false`, immersive sticky (#73)
-- Manual camera toggle button (Camera: OFF/ON) — no auto-start (#70)
-- Home screen class filters: Stretch→forward_fold, Recovery→bridge+twist, Strength→squat (#74, #75)
-- Godot avatar corner PiP (110dp×196dp, bottom-right) — no camera overlap (#66)
-- Transparent Godot avatar composited over live camera via TextureView + setZOrderOnTop (#83)
-- Demo mode — avatar cycles poses without skeleton overlay (#90)
-- Debug/record buttons collapsed into ⋮ overflow row
-- Flow info panel repositioned to top-left; buttons reordered by user flow (#85, #84, #93)
-- Real course cover image (cover_beginner.jpg) replacing XML placeholder (#13)
 
-### AI / Voice
-- Local LLM coach via Gemma / MediaPipe GenAI
-- Rule-based fallback coach (active fallback — Gemma model requires manual device install, #79)
-- Famous model coach one-on-one persona in PromptBuilder (#89)
-- Coach phrase polishing
-- TTS voice coaching
-- `LlmInteractionDb` — SQLite logging of all LLM prompt/response pairs with timing (#69)
+- Multi-course home UI.
+- Course selection and category filters.
+- Session controls: Start, Pause, Restart.
+- Flow index, step index, progress bar, countdown, and countdown voice cue.
+- Full-screen landscape immersive mode.
+- Debug/record controls collapsed into overflow row.
+- Flow info panel repositioned for camera usability.
+- Session completion screen.
+- Session history with course names, weekly summary, dashboard, and per-course chart.
+- Real beginner course cover image and styled gradient covers for other categories.
 
-### Testing
-- Unit tests: avatar rig, bone names, scene wiring (#86)
-- Unit tests: MediaPipeAvatarMapper landmark bounds (#87)
+### Godot Avatar
+
+- Godot 4 avatar embedded as Android `GodotFragment`.
+- Corner PiP coach view: 110dp x 196dp, bottom-end.
+- Transparent Godot avatar composited over the camera layer.
+- Android-to-Godot local WebSocket bridge.
+- Semantic avatar commands through `PoseCoachFrame`.
+- Avatar auto-positioning to the opposite side of the detected human.
+- Avatar self-test and ADB developer controls.
+- Selectable coach skins.
+- Godot source script mirroring tests.
 
 ### Content
-- 15 flow JSON files in `assets/flows/` (01–15), dsl-v2, zh-TW, covering all 5 pose types (#58)
 
-### Documentation
-- README updated to reflect 3D pose + camera coaching architecture
-- `architecture.md` rewritten as product-level architecture with 3D + camera coaching diagram
-- `YogaFlow3D-Proposal.pdf` generated (#67, #88)
+- 20 packaged Flow DSL v2 files in `app/src/main/assets/flows/`.
+- Packaged cues are zh-TW.
+- Base pose coverage: mountain, forward_fold, twist, squat, bridge.
+- Expanded pose coverage: warrior_1, warrior_2, downward_dog, child_pose, pigeon.
+- Beginner, flexibility, recovery, and strength course categories.
 
----
+### Testing And Documentation
 
-## Completed (P0–P2 all shipped)
+- JVM tests for geometry, flow parsing, flow integration, routing, runtime flow completion, avatar contracts, cue pacing, phrase polishing, and prompt building.
+- Device build/install/launch/screenshot smoke path verified locally.
+- Architecture, flow DSL, avatar overlay, rig skeleton, test plan, proposal, pitch, environment setup, and project status docs exist.
 
-### P0: Device verification
-- ✔ Gradle build verified (JDK 17 via Homebrew)
-- ✔ MediaPipe pose detection running on device
-- ✔ CameraX RGBA pipeline confirmed
-- ✔ Gemma LLM issue documented and closed (#79); rule-based fallback active
-
-### P1: Product polish
-- ✔ Replace cover drawable with real generated course images (#13)
-- ✔ Add visual body framing box overlay
-- ✔ Add camera setup screen / toggle before class start (#70)
-- ✔ Add voice pacing rules (5s/8s intervals)
-- ✔ Add Godot 3D avatar coach overlay (GodotFragment + WebSocket IPC)
-- ✔ Avatar auto-positioning — moves to opposite side of detected human
-- ✔ Selectable coach skins (Classic, Nature, Ocean)
-- ✔ Joint angle deviation overlay — red/green visual feedback on skeleton (#94)
-- ✔ Session completion screen — post-session summary (duration, poses, correction count) (#95)
-- ✔ Session history — persist completion summaries to SQLite + history list overlay (#100, #102)
-- ✔ Styled gradient cover cards for Stretch, Recovery, Strength (#103)
-
-### P2: Content expansion
-- ✔ Expand flow library to 15 flows
-- ✔ Add pose-specific geometry rules for warrior_2, downward_dog, bridge, warrior_1, child_pose, pigeon, twist, mountain (#96, #98, #99)
-- ✔ Beginner / flexibility / recovery / strength categories on home screen
-
----
-
-## Completed (recent)
-- ✔ Record course name per session in SessionHistoryDb (#104)
-- ✔ Progress tracking dashboard — 統計 tab with summary + per-course bar chart (#106)
-- ✔ Correction direction arrows — amber bisector arrows on deviated joints (#107)
-- ✔ Geometry rules coverage audit (#108)
-- ✔ Weekly summary bar — 本週 N 堂 · time · streak in history list (#105)
-
-## Next Work
+## Active / Near-Term Work
 
 ### P1
-- Expand flow library from 15 → 30 flows (all categories)
-- ROM baseline — track each user's joint range of motion over time
+
+- Expand flow library from 20 to 30+ flows across all categories.
+- Add ROM baseline tracking for each user's joint range of motion over time.
+- Add Android UI tests for home navigation, course selection, camera toggle, Start/Pause/Restart, and completion.
+- Add CI that runs `assembleDebug` and JVM tests with JDK 17.
+- Add fixture-based tests for camera setup and session controller behavior.
 
 ### P2
-- Apple Fitness+ style home screen — carousel cards with course art
-- Bilateral balance analysis — compare left vs right side angles per pose
 
----
+- Apple Fitness+ style home screen with carousel cards and stronger course art presentation.
+- Bilateral balance analysis comparing left/right movement and stability.
+- Golden or screenshot regression checks for major layouts.
+- Godot bridge smoke tests that assert WebSocket startup and avatar command delivery.
+- Regression tests for session history persistence and dashboard calculations.
 
-## Future
+## Unfinished / Open Product Work
 
-- Personalized coaching (ROM baseline, fatigue sensing, bilateral balance analysis)
-- AI-generated flows
-- YouTube-aligned class generation — import video, extract coach skeleton, generate flow
-- 100+ flow library
-- Multi-model perception: Pose + Hand + Face
-- Native 3D coach model with full pose animations
-- Downloadable coach skin packs
-- Biomechanics scoring and goal gap analysis
-- Apple Fitness+ style course cards and carousel UI
+- Personalized coaching beyond phrase polishing and fixed rules.
+- Automatic ROM calibration and longitudinal mobility trends.
+- Fatigue sensing and adaptive rest/intensity management.
+- YouTube/teacher-video-to-flow authoring pipeline.
+- AI-generated flows with human review and Flow DSL validation.
+- Downloadable coach skin packs.
+- Larger 100+ flow library.
+- Multi-model perception: Pose + Hand + Face.
+- Biomechanics scoring and goal-gap analysis.
+
+## Operational Gaps
+
+- Gemma model installation remains a manual device setup step; fallback coaching remains the reliable default.
+- Full camera/pose verification still depends on physical device conditions and manual body positioning.
+- Some manual test steps still need automation before CI can cover full runtime behavior.

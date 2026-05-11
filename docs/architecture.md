@@ -513,7 +513,7 @@ COMPLETED
 Recommended ownership:
 
 ```text
-session/SessionState.kt
+app/src/main/java/com/yogaflow/SessionState.kt
 ```
 
 Reason:
@@ -525,72 +525,30 @@ Reason:
 Status:
 
 ```text
-SessionState is in session/SessionState.kt (extracted from MainActivity).
+SessionState is in `app/src/main/java/com/yogaflow/SessionState.kt` (extracted from MainActivity).
 ```
 
 ---
 
-## Current Capability
+## Implementation Status Pointer
+
+This architecture document describes system design and component responsibilities.
+
+Current shipped/unfinished product status is intentionally tracked elsewhere:
+
+- `docs/project-status.md` for the current one-page snapshot.
+- `docs/roadmap.md` for finished, active, unfinished, and future work.
+- `docs/test-plan.md` for verification commands and test gaps.
+
+Current architecture-level facts:
 
 ```text
-✔ Forward Fold
-✔ Twist
-✔ Squat
-✔ Bridge
-✔ Full beginner class (5 poses)
-✔ Flow JSON DSL v2
-✔ Strict DetectKey validation
-✔ RuntimeOverrideStore
-✔ RuntimeOverrideMerger
-✔ AutoTuningAdvisor
-✔ Numeric fail reasons
-✔ PoseDetectionRouter mapper dispatch
-✔ DetectionMapperSession mapper lifecycle owner
-✔ Debug overlay for angle / state / matched inspection
-✔ Runtime threshold tuning UI
-✔ Persistent user calibration with SharedPreferences
-✔ LLM + TTS coaching
-✔ Godot 3D Avatar coach overlay (GodotFragment + WebSocket IPC)
-✔ Avatar auto-positioning — moves to opposite side of detected human (screen_side)
-✔ Walk simulation poses in avatar self-test
-✔ Transparent Godot SurfaceView (camera feed visible through avatar layer)
-✔ SessionState extracted to session/SessionState.kt
-✔ CameraSetupController wired in MainActivity
+Flow JSON remains the lesson source of truth.
+Detection is routed through typed DetectKey values.
+Mapper state is owned per DetectionMapperSession.
+Runtime tuning is applied as an override layer, not by mutating packaged flows.
+Godot avatar rendering is an instructional overlay and does not drive lesson progression.
 ```
-
-Known gaps:
-
-```text
-△ Mountain still uses legacy PoseStateMachine fallback
-△ Teacher-video-to-flow pipeline is not fully automated
-```
-
----
-
-## Roadmap
-
-### Near-term
-
-- Add strict MountainDetectionMapper
-- Add Flow JSON CI validation
-- Add threshold reset button
-- Extract mapper interface (`PoseDetectionMapper`)
-
-### Perception Quality
-
-- Add variance-based stability scoring
-- Add replay for saved session recordings
-- Add auto calibration from observed range of motion
-- Add scoring system for pose quality
-
-### Product Expansion
-
-- Add more pose families
-- Add virtual coach overlay in the camera view
-- Improve coaching personalization
-- Add calibration profiles / per-user presets
-- Replace cover drawable with real generated images (#13)
-- Explore AI-assisted teacher-video-to-flow authoring
 
 ---
 
@@ -653,25 +611,17 @@ Changing skin must not change:
 
 ---
 
-## Recommended Next Architecture PRs
+## Architecture Work Items
 
-### PR 1: (Done) CameraSetupController wiring — completed
+Architecture work items that become product roadmap items should be tracked in `docs/roadmap.md`.
 
-### PR 2: (Done) Extract SessionState — completed, lives in session/SessionState.kt
+Current architecture maintenance priorities:
 
-### PR 3: Strict MountainDetectionMapper
-
-Scope:
-
-- implement mapper for mountain pose
-- remove final legacy `PoseStateMachine` fallback path
-
-### PR 4: Flow JSON CI
-
-Scope:
-
-- validate every `*.flow.json` in CI
-- reject unsupported detect keys / missing runtime params
+- Keep `MainActivity` as an Android shell for lifecycle, permissions, view binding, camera lifecycle, and callback wiring.
+- Keep camera setup, live session handling, detection mapping, flow runtime, and avatar bridge responsibilities separated.
+- Keep Godot script copies synchronized between `godot/scripts/*.gd` and `app/src/main/assets/scripts/*.gd`.
+- Keep Flow DSL validation strict enough that unsupported detect keys and missing runtime params fail in tests.
+- Prefer deterministic JVM tests for parser/router/runtime contracts and targeted device tests for camera/Godot behavior.
 
 ---
 

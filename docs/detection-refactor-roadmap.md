@@ -1,65 +1,39 @@
-# Detection Refactor Roadmap
+# Detection Refactor Status
 
-This document tracks the next detection-layer refactors after strict routing was enabled.
+This document is an archived status note for the detection-layer refactor. Active product roadmap items now live in `docs/roadmap.md`; architecture responsibilities live in `docs/architecture.md`.
 
 ## Current State
 
 - Flow JSON detect strings are parsed into `DetectKey`.
 - `PoseDetectionRouter` routes supported pose IDs to pose-specific detection mappers.
-- Unsupported pose IDs now fail fast instead of silently falling back.
-- Mountain still uses the legacy `PoseStateMachine` fallback path.
+- Unsupported pose IDs fail fast instead of silently falling back.
+- `DetectionMapperSession` owns mapper instances and reset lifecycle.
+- Mountain uses a strict `MountainDetectionMapper`; the old legacy fallback path has been removed for mountain.
+- Expanded poses that do not yet have strict geometric mappers still use the intentionally routed fallback behavior in `PoseDetectionRouter`.
+
+## Completed Refactor Phases
+
+### Phase 1: Centralize Mapper Reset Ownership
+
+`DetectionMapperSession` centralizes mapper lifecycle reset behavior.
+
+### Phase 2: Instance-Scope Mapper State
+
+Pose-specific mappers are class instances with smoothing and stability state scoped to the session owner.
+
+### Phase 3: Router Owns Mapper Instances
+
+`PoseDetectionRouter` is instance-based and receives mapper instances through construction.
+
+### Phase 4: Strict Mountain Mapper
+
+`MountainDetectionMapper` handles mountain detect keys explicitly instead of relying on the legacy `PoseStateMachine` path.
 
 ## Remaining Risks
 
-### Stateful singleton mappers
-
-Pose-specific mappers currently keep smoothing and stability-window state in singleton objects. This is acceptable for a single active session, but it makes state ownership implicit.
-
-Risks:
-
-- stale smoothing state after flow transitions
-- cross-flow state contamination
-- harder isolated tests
-- future multi-session incompatibility
-
-## Proposed Refactor Sequence
-
-### Phase 1: Centralize mapper reset ownership
-
-Create a small session owner for mapper lifecycle:
-
-```kotlin
-class DetectionMapperSession {
-    fun resetAll() {
-        ForwardFoldDetectionMapper.reset()
-        TwistDetectionMapper.reset()
-        SquatDetectionMapper.reset()
-        BridgeDetectionMapper.reset()
-    }
-}
-```
-
-Then route all reset calls through this class.
-
-Goal: make mapper session state explicit without changing detection behavior.
-
-### Phase 2: Instance-scope mapper state
-
-Convert mappers from singleton `object` to `class` instances owned by the detection session.
-
-Goal: make smoothing and stability windows private to one live coaching session.
-
-### Phase 3: Router owns mapper instances
-
-Convert `PoseDetectionRouter` from singleton-style usage into an instance with injected mappers.
-
-Goal: prepare for tests and future multi-session support.
-
-### Phase 4: Remove mountain fallback
-
-Add a strict mountain mapper and remove the remaining legacy fallback path.
-
-Goal: every Flow DSL pose should use explicit strict detection behavior.
+- Some expanded poses still route through fallback behavior until strict pose-specific mappers are implemented for each one.
+- Smoothing and stability-window behavior still need fixture-based regression tests for realistic frame sequences.
+- Future multi-session support should keep mapper state scoped per live session.
 
 ## Validation Goals
 
@@ -67,4 +41,5 @@ Goal: every Flow DSL pose should use explicit strict detection behavior.
 - Restart resets mapper state.
 - Unsupported pose IDs fail fast.
 - Mapper fail reasons remain numeric when available.
-- No change to existing Flow JSON semantics.
+- Packaged flow detect keys remain routable.
+- Existing Flow JSON semantics remain stable.
