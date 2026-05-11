@@ -20,4 +20,24 @@ class FlowParserTest {
             assertTrue(step.durationMs > 0)
         }
     }
+
+    @Test
+    fun parse_allPackagedFlows_returnsValidFlowShapes() {
+        val flowFiles = File("src/main/assets/flows")
+            .listFiles { file -> file.extension == "json" && file.name.endsWith(".flow.json") }
+            ?.sortedBy { it.name }
+            .orEmpty()
+
+        assertTrue("Expected packaged flow assets", flowFiles.isNotEmpty())
+        flowFiles.forEach { file ->
+            val flow = FlowParser.parse(file.readText())
+
+            assertFalse("Flow id is blank in ${file.name}", flow.id.isBlank())
+            assertTrue("No steps in ${file.name}", flow.steps.isNotEmpty())
+            flow.steps.forEach { step ->
+                assertFalse("Blank cue in ${file.name}", step.cue.isBlank())
+                assertTrue("Invalid duration in ${file.name}", step.durationMs > 0)
+            }
+        }
+    }
 }

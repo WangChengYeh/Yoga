@@ -66,28 +66,31 @@ internal fun MainActivity.restartCurrentPlaylist() {
 
 internal fun MainActivity.resetToCameraSetup(message: String) {
     resetCameraSetupController()
+    val bypassReady = cameraSetupEnabled && cameraSetupDisabledForDevelopment
     sessionState = SessionState.IDLE
-    cameraReady = cameraSetupDisabledForDevelopment
-    cameraReadySince = if (cameraSetupDisabledForDevelopment) System.currentTimeMillis() else 0L
-    autoStartedCurrentSetup = cameraSetupDisabledForDevelopment
-    startButton.isEnabled = cameraSetupDisabledForDevelopment
-    startButton.alpha = if (cameraSetupDisabledForDevelopment) 1f else 0.45f
-    startButton.visibility = android.view.View.GONE
-    beginSessionButton.isEnabled = false
-    beginSessionButton.alpha = 0.45f
-    cameraSetupPanel.visibility = if (cameraSetupDisabledForDevelopment) {
-        android.view.View.GONE
-    } else {
+    cameraReady = bypassReady
+    cameraReadySince = if (bypassReady) System.currentTimeMillis() else 0L
+    autoStartedCurrentSetup = bypassReady
+    startButton.isEnabled = bypassReady
+    startButton.alpha = if (bypassReady) 1f else 0.45f
+    startButton.visibility = android.view.View.VISIBLE
+    beginSessionButton.isEnabled = bypassReady
+    beginSessionButton.alpha = if (bypassReady) 1f else 0.45f
+    cameraSetupPanel.visibility = if (cameraSetupEnabled && !bypassReady) {
         android.view.View.VISIBLE
+    } else {
+        android.view.View.GONE
     }
     updateVirtualCoachFromCurrentStep()
-    cameraSetupStatus.text = if (cameraSetupDisabledForDevelopment) {
+    cameraSetupStatus.text = if (bypassReady) {
         "Development: camera setup bypassed"
     } else {
         "Checking body framing..."
     }
     lastCountdownText = ""
-    coachText.text = if (cameraSetupDisabledForDevelopment) {
+    coachText.text = if (!cameraSetupEnabled) {
+        "Camera setup is off. Tap Camera to enable."
+    } else if (bypassReady) {
         "Development: camera setup bypassed."
     } else {
         message
