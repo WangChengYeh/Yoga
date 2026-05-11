@@ -536,7 +536,7 @@ This architecture document describes system design and component responsibilitie
 
 Current shipped/unfinished product status is intentionally tracked elsewhere:
 
-- `docs/project-status.md` for the current one-page snapshot.
+- GitHub issue #118 for the current one-page snapshot, doc index, and verification baseline (replaces former `docs/project-status.md`).
 - `docs/roadmap.md` for finished, active, unfinished, and future work.
 - `docs/test-plan.md` for verification commands and test gaps.
 

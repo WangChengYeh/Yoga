@@ -318,7 +318,7 @@ Claude should ask agents to leave behind reusable scripts whenever they discover
 - Kotlin (main logic) + Godot (avatar rendering) + MediaPipe (pose detection)
 - Architecture: `docs/architecture.md`
 - Roadmap: `docs/roadmap.md`
-- Project status (one-pager): `docs/project-status.md`
+- Project status / doc index / verification baseline: GitHub issue #118 (replaces former `docs/project-status.md`)
 - Test plan / verification commands: `docs/test-plan.md`
 - Flow DSL v2: `docs/flow-dsl.md`
 - Avatar (design, architecture, rig, asset pipeline): `docs/avatar.md`

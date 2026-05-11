@@ -1,6 +1,6 @@
 # YogaFlow 3D Test Plan
 
-This file owns verification commands, device procedures, and test gaps. Product status lives in `docs/project-status.md`; finished/unfinished product work lives in `docs/roadmap.md`.
+This file owns verification commands, device procedures, and test gaps. Product status / doc index lives in GitHub issue #118 (replaces former `docs/project-status.md`); finished/unfinished product work lives in `docs/roadmap.md`.
 
 All local Gradle commands must use JDK 17:
 
