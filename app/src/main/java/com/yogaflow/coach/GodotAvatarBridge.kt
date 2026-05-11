@@ -19,6 +19,7 @@ class GodotAvatarBridge(
     private var connected = false
     private var closed = false
     private var reconnectScheduled = false
+    private var pendingJson: String? = null
     private val reconnectExecutor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
     private val client = OkHttpClient.Builder()
         .readTimeout(0, TimeUnit.MILLISECONDS)
@@ -30,11 +31,34 @@ class GodotAvatarBridge(
         val request = Request.Builder().url("ws://127.0.0.1:9090").build()
         webSocket = client.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: okhttp3.Response) {
+                var queued: String? = null
                 synchronized(this@GodotAvatarBridge) {
                     connected = true
                     reconnectScheduled = false
+                    queued = pendingJson
+                    pendingJson = null
                 }
                 Log.d(TAG, "Connected to Godot WebSocket")
+                queued?.let { queuedMessage ->
+                    val sent = webSocket.send(queuedMessage)
+                    if (sent) {
+                        if (isOverridePayload(queuedMessage)) {
+                            Log.i(TAG, "Flushed queued override payload to Godot")
+                        } else {
+                            Log.d(TAG, "Flushed queued payload to Godot")
+                        }
+                    } else {
+                        synchronized(this@GodotAvatarBridge) {
+                            pendingJson = queuedMessage
+                            connected = false
+                            if (this@GodotAvatarBridge.webSocket === webSocket) {
+                                this@GodotAvatarBridge.webSocket = null
+                            }
+                        }
+                        Log.w(TAG, "Failed to flush queued payload; scheduling reconnect")
+                        scheduleReconnect()
+                    }
+                }
             }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: okhttp3.Response?) {
@@ -86,13 +110,25 @@ class GodotAvatarBridge(
     private fun sendJson(jsonString: String) {
         val socket = webSocket
         if (!connected || socket == null) {
+            pendingJson = jsonString
+            if (isOverridePayload(jsonString)) {
+                Log.i(TAG, "Queued override payload (socket unavailable)")
+            }
             scheduleReconnect()
             return
         }
         if (!socket.send(jsonString)) {
+            pendingJson = jsonString
             connected = false
             webSocket = null
+            if (isOverridePayload(jsonString)) {
+                Log.w(TAG, "Send failed; re-queued override payload")
+            }
             scheduleReconnect()
+            return
+        }
+        if (isOverridePayload(jsonString)) {
+            Log.i(TAG, "Sent override payload to Godot")
         }
     }
 
@@ -121,5 +157,9 @@ class GodotAvatarBridge(
 
     private companion object {
         const val TAG = "GodotAvatarBridge"
+
+        private fun isOverridePayload(json: String): Boolean {
+            return json.contains("\"stepId\":\"adb_override\"") || json.contains("\"override_position\"")
+        }
     }
 }

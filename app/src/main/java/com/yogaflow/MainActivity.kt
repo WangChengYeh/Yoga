@@ -373,7 +373,15 @@ class MainActivity : AppCompatActivity(), GodotHost {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        Log.i("YogaFlow", "onNewIntent received: extras=${intent.extras?.keySet()?.joinToString() ?: "none"}")
         applyDevelopmentIntentFlags(intent)
+        val hasAvatarControlExtras =
+            intent.hasExtra(EXTRA_AVATAR_TARGET_X) ||
+            intent.hasExtra(EXTRA_AVATAR_TARGET_Y) ||
+            intent.getBooleanExtra(EXTRA_AVATAR_CLEAR_OVERRIDE, false)
+        if (hasAvatarControlExtras) {
+            return
+        }
         if (isCurrentFlowInitialized()) {
             resetToCameraSetup(
                 if (cameraSetupDisabledForDevelopment) {
@@ -388,6 +396,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
 
     override fun onResume() {
         super.onResume()
+        applyAvatarOverrideExtrasFromIntent(intent)
     }
 
     override fun onPause() {
@@ -598,7 +607,12 @@ class MainActivity : AppCompatActivity(), GodotHost {
     }
 
     private fun applyDevelopmentIntentFlags(intent: Intent?) {
-        if (!isDebuggableBuild() || intent == null) return
+        if (intent == null) return
+        if (!isDebuggableBuild()) {
+            Log.w("YogaFlow", "applyDevelopmentIntentFlags skipped: non-debuggable build")
+            return
+        }
+        Log.i("YogaFlow", "applyDevelopmentIntentFlags: extras=${intent.extras?.keySet()?.joinToString() ?: "none"}")
         when {
             intent.getBooleanExtra(EXTRA_DISABLE_CAMERA_SETUP, false) -> setDevelopmentCameraSetupDisabled(true)
             intent.getBooleanExtra(EXTRA_ENABLE_CAMERA_SETUP, false) -> setDevelopmentCameraSetupDisabled(false)
@@ -609,12 +623,19 @@ class MainActivity : AppCompatActivity(), GodotHost {
         if (intent.getBooleanExtra(EXTRA_DEMO_MODE, false)) {
             startDemoMode()
         }
+        applyAvatarOverrideExtrasFromIntent(intent)
+    }
+
+    private fun applyAvatarOverrideExtrasFromIntent(intent: Intent?) {
+        if (intent == null) return
         if (intent.getBooleanExtra(EXTRA_AVATAR_CLEAR_OVERRIDE, false)) {
             avatarPositionOverride = null
+            Log.i("YogaFlow", "ADB avatar override cleared")
             sendAvatarPositionOverrideFrame(
                 message = "ADB override cleared",
                 overridePosition = null
             )
+            intent.removeExtra(EXTRA_AVATAR_CLEAR_OVERRIDE)
         }
         val targetX = intent.getFloatExtra(EXTRA_AVATAR_TARGET_X, Float.NaN)
         val targetY = intent.getFloatExtra(EXTRA_AVATAR_TARGET_Y, Float.NaN)
@@ -622,12 +643,15 @@ class MainActivity : AppCompatActivity(), GodotHost {
             val x = if (targetX.isNaN()) avatarPositionOverride?.first ?: 0f else targetX
             val y = if (targetY.isNaN()) avatarPositionOverride?.second ?: 0f else targetY
             avatarPositionOverride = Pair(x, y)
+            Log.i("YogaFlow", "ADB avatar override set x=$x y=$y")
             avatarPositionOverride?.let { override ->
                 sendAvatarPositionOverrideFrame(
                     message = "ADB position override",
                     overridePosition = override
                 )
             }
+            intent.removeExtra(EXTRA_AVATAR_TARGET_X)
+            intent.removeExtra(EXTRA_AVATAR_TARGET_Y)
         }
     }
 

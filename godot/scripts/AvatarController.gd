@@ -5,6 +5,7 @@ extends Node3D
 @onready var skeleton: Skeleton3D = _find_first_node_of_type(self, "Skeleton3D") as Skeleton3D
 @onready var key_light: DirectionalLight3D = $KeyLight
 @onready var fill_light: OmniLight3D = $FillLight
+@onready var avatar_node: Node3D = $female_yoga_coach
 
 var current_action := ""
 var _base_position := Vector3.ZERO
@@ -26,9 +27,9 @@ var _semantic_offsets := {
 
 func _ready() -> void:
     print("AvatarController v3: semantic position/facing/scale support active")
-    _base_position = position
-    _base_rotation = rotation
-    _base_scale = scale
+    _base_position = avatar_node.position
+    _base_rotation = avatar_node.rotation
+    _base_scale = avatar_node.scale
     _setup_animations()
 
 func _setup_animations() -> void:
@@ -83,7 +84,7 @@ func move_avatar_to(position_name: String) -> void:
     var offset: Vector3 = _semantic_offsets.get(position_name, _semantic_offsets["demo_area"])
     var target = _base_position + offset
     var tween = create_tween()
-    tween.tween_property(self, "position", target, 0.35)
+    tween.tween_property(avatar_node, "position", target, 0.35)
 
 func apply_facing(facing: String) -> void:
     var target_y := _base_rotation.y
@@ -95,13 +96,13 @@ func apply_facing(facing: String) -> void:
         _:
             target_y = _base_rotation.y
     var tween = create_tween()
-    tween.tween_property(self, "rotation:y", target_y, 0.3)
+    tween.tween_property(avatar_node, "rotation:y", target_y, 0.3)
 
 func apply_scale(scale_value: float) -> void:
     var clamped = clamp(scale_value, 0.8, 1.2)
     var target = _base_scale * clamped
     var tween = create_tween()
-    tween.tween_property(self, "scale", target, 0.25)
+    tween.tween_property(avatar_node, "scale", target, 0.25)
 
 func set_override_position(world_x: float, world_y: float) -> void:
     _override_active = true
@@ -110,8 +111,9 @@ func set_override_position(world_x: float, world_y: float) -> void:
     # Treat override as absolute semantic scene position so -1.5/0/+1.5
     # reliably maps left/center/right regardless of current base anchor.
     var target = Vector3(world_x, _base_position.y + world_y, _base_position.z)
+    print("AvatarController override -> x=", world_x, " y=", world_y, " target=", target)
     var tween = create_tween()
-    tween.tween_property(self, "position", target, 0.35)
+    tween.tween_property(avatar_node, "position", target, 0.35)
 
 func clear_override_position() -> void:
     _override_active = false
@@ -193,8 +195,8 @@ func _try_play_animation(state_name: String) -> bool:
     return false
 
 func _apply_fallback_pose(state_name: String) -> void:
-    var target_rotation := rotation
-    var target_position := position
+    var target_rotation := avatar_node.rotation
+    var target_position := avatar_node.position
     match state_name:
         "forward_fold":
             target_rotation.x = deg_to_rad(-35.0)
@@ -222,8 +224,8 @@ func _apply_fallback_pose(state_name: String) -> void:
             target_position.y -= 0.04
             target_rotation.y += deg_to_rad(-15.0)
     var tween = create_tween().set_parallel(true)
-    tween.tween_property(self, "rotation", target_rotation, 0.5)
-    tween.tween_property(self, "position", target_position, 0.5)
+    tween.tween_property(avatar_node, "rotation", target_rotation, 0.5)
+    tween.tween_property(avatar_node, "position", target_position, 0.5)
 
 func _find_first_node_of_type(node: Node, type_name: String) -> Node:
     if node.is_class(type_name):
