@@ -422,22 +422,15 @@ Pitch theme:
 
 ## Roadmap
 
-Near-term engineering priorities:
+Near-term engineering work, vision items, and known gaps are tracked as GitHub issues:
 
-- restore full CameraSetupController wiring in MainActivity
-- add CI validation for all Flow JSON files
-- persist runtime overrides
-- improve mapper lifecycle tests
-- add strict MountainDetectionMapper
-- add variance-based tuning confidence
-- build a Flow Editor UI
-- explore AI-assisted teacher-video-to-flow authoring
-
-Tracked roadmap:
-
-```text
-docs/roadmap.md
+```bash
+gh issue list --repo WangChengYeh/Yoga --state open
+gh issue list --repo WangChengYeh/Yoga --state open --label P1
+gh issue list --repo WangChengYeh/Yoga --state open --label P2
 ```
+
+`docs/roadmap.md` is the shipped-capability inventory.
 
 ---
 
@@ -472,12 +465,7 @@ Core: CameraX + MediaPipe + Flow DSL + local coach loop
 Privacy: local-first
 ```
 
-Current known gaps:
-
-```text
-Gemma LLM model file is not bundled; rule-based fallback coach is the default.
-YouTube/teacher-video-to-flow authoring pipeline is not yet automated.
-```
+Known gaps are tracked as open GitHub issues — see the Roadmap section above.
 
 ---
 

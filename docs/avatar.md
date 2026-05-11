@@ -809,15 +809,8 @@ Shipped:
 - Mixamo-style skeleton standard defined; Ch47 GLB ships with the app
 - Programmatic `idle` and `forward_fold` animations in `AvatarController.gd`
 
-Open / next:
-
-- Replace Ch47 with a license-cleared, model-fit female yoga coach asset
-- Add prepared animations: `correct_knees`, `correct_hips`, `correct_spine`, `hold_squat`,
-  `hold_twist`, `idle_breathing`
-- Materialise `position` / `facing` / `scale` in the PoseCoachFrame contract
-- Implement `near_knees` / `near_hips` / `near_spine` correction positions in Godot
-- Optional IK / `avatarRig.hints` layer once high-level actions are stable
-- Per-bone correction highlight (currently severity-only material tint)
+Open / next: tracked in GitHub issues, not in this doc. Search open issues for avatar work
+(`gh issue list --repo WangChengYeh/Yoga --state open` and look for the avatar-related entries).
 
 ---
 

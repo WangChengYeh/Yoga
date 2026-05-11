@@ -2,7 +2,7 @@
 
 YogaFlow 3D has moved from a pose-detection demo into a product-level on-device AI coaching architecture.
 
-This file owns finished, unfinished, and future product work. Architecture details live in `docs/architecture.md`; verification details live in `docs/test-plan.md`.
+This file is the **shipped-capability inventory** — a record of what is already in production. Active, near-term, and unfinished work lives in GitHub issues (`gh issue list --repo WangChengYeh/Yoga --state open`). Architecture details live in `docs/architecture.md`; verification details live in `docs/test-plan.md`.
 
 ## Finished
 
@@ -82,38 +82,19 @@ This file owns finished, unfinished, and future product work. Architecture detai
 - Device build/install/launch/screenshot smoke path verified locally.
 - Architecture, flow DSL, avatar overlay, rig skeleton, test plan, proposal, environment setup, and project status docs exist.
 
-## Active / Near-Term Work
+## Active, Near-Term, and Unfinished Work
 
-### P1
+Tracked in GitHub issues only — this doc no longer mirrors a backlog.
 
-- Expand flow library from 20 to 30+ flows across all categories.
-- Add ROM baseline tracking for each user's joint range of motion over time.
-- Add Android UI tests for home navigation, course selection, camera toggle, Start/Pause/Restart, and completion.
-- Add CI that runs `assembleDebug` and JVM tests with JDK 17.
-- Add fixture-based tests for camera setup and session controller behavior.
+```bash
+GITHUB_TOKEN="" gh issue list --repo WangChengYeh/Yoga --state open --json number,title,labels
+```
 
-### P2
+Filter by label for priority:
 
-- Apple Fitness+ style home screen with carousel cards and stronger course art presentation.
-- Bilateral balance analysis comparing left/right movement and stability.
-- Golden or screenshot regression checks for major layouts.
-- Godot bridge smoke tests that assert WebSocket startup and avatar command delivery.
-- Regression tests for session history persistence and dashboard calculations.
+```bash
+gh issue list --repo WangChengYeh/Yoga --state open --label P1
+gh issue list --repo WangChengYeh/Yoga --state open --label P2
+```
 
-## Unfinished / Open Product Work
-
-- Personalized coaching beyond phrase polishing and fixed rules.
-- Automatic ROM calibration and longitudinal mobility trends.
-- Fatigue sensing and adaptive rest/intensity management.
-- YouTube/teacher-video-to-flow authoring pipeline.
-- AI-generated flows with human review and Flow DSL validation.
-- Downloadable coach skin packs.
-- Larger 100+ flow library.
-- Multi-model perception: Pose + Hand + Face.
-- Biomechanics scoring and goal-gap analysis.
-
-## Operational Gaps
-
-- Gemma model installation remains a manual device setup step; fallback coaching remains the reliable default.
-- Full camera/pose verification still depends on physical device conditions and manual body positioning.
-- Some manual test steps still need automation before CI can cover full runtime behavior.
+Unlabelled open issues are product-vision / backlog work without a current near-term plan.

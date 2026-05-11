@@ -272,15 +272,7 @@ YogaFlow 3D 的定位：
 - session history 與統計基礎功能
 - JVM integration tests for packaged flow/runtime contracts
 
-目前仍在進行或規劃：
-
-- flow library 擴充到 30+ flows
-- ROM baseline tracking
-- bilateral balance analysis
-- Apple Fitness+ style home screen polish
-- teacher-video-to-flow authoring pipeline
-- Android UI / screenshot / Godot bridge tests
-- CI validation for JDK 17 build and JVM tests
+目前仍在進行或規劃的工作以 GitHub Issues 為單一真相來源（`gh issue list --repo WangChengYeh/Yoga --state open`）。本文件僅維護產品願景與已交付能力，不再內嵌任務清單。
 
 ### 關鍵產品原則
 

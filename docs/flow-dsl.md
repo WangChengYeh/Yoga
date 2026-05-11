@@ -321,8 +321,6 @@ No silent fallback
 
 ## Roadmap
 
-```text
-constraint expressions
-flow editor
-runtime visualization
-```
+DSL evolution items are tracked in GitHub issues — search open issues for "Flow DSL". This doc
+describes the **current** schema and runtime contract; future additions land here only after
+they ship.

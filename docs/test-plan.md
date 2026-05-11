@@ -283,12 +283,7 @@ For full acceptance, also capture and inspect a timestamped screenshot using the
 
 ## 16. Current Test Gaps
 
-- Android UI tests for home navigation, camera toggle, Start/Pause/Restart, and completion.
-- Fixture-based instrumentation tests for CameraSetupController readiness behavior.
-- Screenshot/golden regression tests for common device sizes.
-- Godot bridge smoke tests that assert startup and command delivery.
-- Session history and statistics dashboard persistence tests.
-- CI workflow running JDK 17 `assembleDebug` and JVM tests.
+Tracked in GitHub issues — search open issues with the `test` label (or `gh issue list --label P1` / `P2`). This section used to maintain an inline list; it now drifts too easily and lives in the issue tracker instead.
 
 ## 17. Key Files For Debugging
 
