@@ -14,7 +14,6 @@ var _base_scale := Vector3.ONE
 var _override_active: bool = false
 var _override_x: float = 0.0
 var _override_y: float = 0.0
-var _override_x_gain: float = 3.0
 
 var _semantic_offsets := {
     "left_side": Vector3(-1.45, 0.0, 0.0),
@@ -28,8 +27,6 @@ var _semantic_offsets := {
 
 func _ready() -> void:
     print("AvatarController v3: semantic position/facing/scale support active")
-    # Keep the full avatar visible in fullscreen mode so horizontal movement is perceptible.
-    avatar_node.scale = avatar_node.scale * 0.45
     _base_position = avatar_node.position
     _base_rotation = avatar_node.rotation
     _base_scale = avatar_node.scale
@@ -120,9 +117,8 @@ func set_override_position(world_x: float, world_y: float) -> void:
     _override_y = world_y
     # Treat override as absolute semantic scene position so -1.5/0/+1.5
     # reliably maps left/center/right regardless of current base anchor.
-    var mapped_x = world_x * _override_x_gain
-    var target = Vector3(mapped_x, _base_position.y + world_y, _base_position.z)
-    print("AvatarController override -> x=", world_x, " mapped_x=", mapped_x, " y=", world_y, " target=", target)
+    var target = Vector3(world_x, _base_position.y + world_y, _base_position.z)
+    print("AvatarController override -> x=", world_x, " y=", world_y, " target=", target)
     var tween = create_tween()
     tween.tween_property(avatar_node, "position", target, 0.35)
 
