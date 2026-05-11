@@ -41,7 +41,7 @@ Every handoff prompt must include:
 
 **GDScript dual-file sync:** Any change to `godot/scripts/*.gd` MUST also be applied to `app/src/main/assets/scripts/*.gd`. Both copies must stay identical. The `.gd.remap` files point to `.gd` source (not `.gdc`), so the assets copy is what runs on device.
 
-**Godot avatar layout:** `virtualCoachView` (GodotFragment) is a `110dp × 196dp` corner PiP (`bottom|end`). Do NOT revert to `match_parent`. Avatar is centered in the PiP (`_side_x_offset = 0.0`).
+**Godot avatar layout:** `virtualCoachView` (GodotFragment) is a **full-screen transparent overlay** stacked on top of the camera preview and pose skeleton. The Android view itself never moves; the avatar Node3D inside Godot tweens between positions. Positioning has three precedence layers: `override_position {x, y}` raw world coords (latched) → `position` semantic shortcut → `demo_area` default. See `docs/avatar.md` §3, §5.
 
 **PoseOverlayView coordinate mapping:** Landmarks are mapped using FILL_CENTER transform (scale = max(scaleX, scaleY), centered offsets) based on `imageWidth`/`imageHeight` from `PoseDetectionResult`. Do not use raw `landmark.x() * viewWidth`.
 

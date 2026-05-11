@@ -10,7 +10,7 @@ Scope:
 2. Architecture & responsibility split
 3. Android screen composition
 4. PoseCoachFrame avatar contract
-5. Semantic positions & `screen_side` auto-avoidance (#54)
+5. Avatar positioning (full-screen overlay, free move, semantic shortcuts, ADB override)
 6. Avatar skeleton standard (Mixamo-style)
 7. MediaPipe-to-avatar mapping
 8. Blender → Godot asset pipeline
@@ -143,20 +143,15 @@ MainActivity root
   └─ Controls
 ```
 
-The `GodotFragment` may be full-screen or constrained to a stable region, but should not be
-animated every time the avatar changes position. Preferred first version:
+Current shipped layout: the `GodotFragment` covers the **full screen** as a transparent overlay
+on top of the camera preview and pose skeleton. The Android view is never animated; only the
+avatar Node3D inside Godot moves.
 
 ```text
-Godot avatar overlay = full-screen transparent or visually composited layer
-Avatar character     = movable Node3D / Control inside Godot
+Godot avatar overlay = full-screen transparent layer (match_parent)
+Avatar character     = movable Node3D inside Godot, tweened between positions
+Android view tree    = stable; camera preview + pose overlay underneath
 ```
-
-Current shipped layout (corner PiP):
-
-- `virtualCoachView` (GodotFragment) is a **110dp × 196dp** corner PiP
-- Gravity: `bottom|end`
-- Avatar centered inside the PiP (`_side_x_offset = 0.0`)
-- Do not revert to `match_parent` for this view
 
 ```text
 ┌────────────────────────┐
@@ -164,19 +159,29 @@ Current shipped layout (corner PiP):
 │   Camera View          │
 │   + user skeleton      │
 │                        │
-│              ┌───────┐ │
-│              │Godot  │ │
-│              │Coach  │ │
-│              │Avatar │ │
-│              └───────┘ │
+│      ┌──────┐          │  ← avatar is a Node3D placed anywhere
+│      │ 3D   │             in the full-screen Godot scene; it
+│      │Coach │             tweens from its current position to
+│      │      │             a target position over ~0.35s.
+│      └──────┘          │
+│                        │
 └────────────────────────┘
+   Full-screen Godot overlay (transparent), avatar moves inside it.
 ```
+
+The avatar is free to occupy any screen position. Movement from current to target is a Godot
+tween — `tween_property(avatar_node, "position", target, 0.35)` — so transitions are smooth
+regardless of where the avatar starts or ends.
+
+Historical note: an earlier version used a 110dp × 196dp corner PiP. That layout has been
+replaced by the full-screen overlay; the AGENTS.md / GEMINI.md PiP rule no longer applies.
 
 ---
 
 ## 4. PoseCoachFrame Avatar Contract
 
-The avatar payload carries semantic intent, not Android view coordinates.
+The avatar payload carries semantic intent (and optionally explicit world coordinates), not
+Android view coordinates.
 
 Current shipped schema:
 
@@ -202,7 +207,9 @@ Current shipped schema:
     "action": "hold_forward_fold",
     "emotion": "calm",
     "highlight": null,
-    "screen_side": "left"
+    "position": "left_side",
+    "facing": "user",
+    "scale": 1.0
   }
 }
 ```
@@ -211,26 +218,10 @@ Correction example:
 
 ```json
 {
-  "coach": {
-    "state": "needs_correction",
-    "error": "knees_bent",
-    "message": "我看到你的膝蓋有點彎，再打直一點點。",
-    "severity": 2
-  },
   "avatar": {
     "action": "correct_knees",
     "emotion": "focused",
     "highlight": "knees",
-    "screen_side": "left"
-  }
-}
-```
-
-Forward-looking fields (recommended but not required in v1):
-
-```json
-{
-  "avatar": {
     "position": "near_knees",
     "facing": "user",
     "scale": 1.0
@@ -238,19 +229,36 @@ Forward-looking fields (recommended but not required in v1):
 }
 ```
 
+Explicit override (ADB developer controls or any code path that needs a free target — bypasses
+the semantic name):
+
+```json
+{
+  "avatar": {
+    "action": "hold_mountain",
+    "position": "demo_area",
+    "override_position": { "x": -1.5, "y": 0.0 }
+  }
+}
+```
+
 Field meaning:
 
-| Field         | Owner                              | Meaning                                                                |
-| ------------- | ---------------------------------- | ---------------------------------------------------------------------- |
-| `action`      | Kotlin decides, Godot executes     | Animation / behaviour state, e.g. `hold_forward_fold`, `correct_knees` |
-| `emotion`     | Kotlin decides, Godot executes     | Coach expression style: `calm`, `focused`, `encouraging`               |
-| `highlight`   | Kotlin decides, Godot executes     | Body area to mark, e.g. `knees`, `hips`, `spine`                       |
-| `screen_side` | Kotlin decides                     | `"left"` / `"right"` — opposite side of the user, see §5               |
-| `position`    | Kotlin decides intent, Godot maps  | Semantic stage position, e.g. `left_side`, `near_knees`                |
-| `facing`      | Kotlin decides intent, Godot maps  | Direction the avatar faces: `user`, `camera`, `demo`                   |
-| `scale`       | Kotlin may suggest, Godot clamps   | Relative visual size inside the overlay                                |
+| Field               | Owner                              | Meaning                                                                                                                                              |
+| ------------------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `action`            | Kotlin decides, Godot executes     | Animation / behaviour state, e.g. `hold_forward_fold`, `correct_knees`                                                                               |
+| `emotion`           | Kotlin decides, Godot executes     | Coach expression style: `calm`, `focused`, `encouraging`                                                                                             |
+| `highlight`         | Kotlin decides, Godot executes     | Body area to mark, e.g. `knees`, `hips`, `spine`                                                                                                     |
+| `position`          | Kotlin decides intent, Godot maps  | Semantic shortcut name (`left_side`, `right_side`, `center`, `demo_area`, `near_knees`, `near_hips`, `near_spine`). Resolves to a Vector3 offset.   |
+| `override_position` | Kotlin (or ADB) sets explicit `{x, y}` world floats | Free target position. When present, supersedes `position` and `screen_side`. Latched until an explicit clear frame. |
+| `facing`            | Kotlin decides intent, Godot maps  | Direction the avatar faces: `user`, `left_side`, `right_side`                                                                                        |
+| `scale`             | Kotlin may suggest, Godot clamps   | Relative visual size; Godot clamps to `[0.8, 1.2]`                                                                                                   |
 
-Suggested Kotlin model for the intent layer:
+`screen_side` (an earlier discrete `"left"` / `"right"` field) has been removed. The same intent
+is now expressed by setting `position` to `left_side` / `right_side` directly, or by emitting an
+explicit `override_position`.
+
+Suggested Kotlin model:
 
 ```kotlin
 data class AvatarIntent(
@@ -258,6 +266,7 @@ data class AvatarIntent(
     val emotion: String = "calm",
     val highlight: String? = null,
     val position: String = "demo_area",
+    val overridePosition: Pair<Float, Float>? = null,
     val facing: String = "user",
     val scale: Float = 1.0f
 )
@@ -283,90 +292,114 @@ godotFragmentView.translationX = x
 godotFragmentView.translationY = y
 ```
 
+Even though the Godot overlay is full-screen, the Android view stays put. Avatar movement
+happens inside the Godot scene only.
+
 ---
 
-## 5. Semantic Positions & `screen_side` Auto-avoidance (#54)
+## 5. Avatar Positioning
 
-Use named positions first. Do not start with raw screen coordinates.
+The Godot overlay is full-screen. The avatar can occupy any screen position. Movement from the
+current position to a target position is a smooth tween — every position change goes through
+`tween_property(avatar_node, "position", target, 0.35)`, so transitions look natural regardless
+of where the avatar starts or ends.
 
-Initial supported positions:
+There are three layers of positioning, in order of precedence:
 
 ```text
-left_side
-right_side
-center
-demo_area
-near_knees
-near_hips
-near_spine
+override_position (raw {x, y} world coords) ← highest precedence, latched
+  ↓ when absent
+position (semantic name from a fixed shortcut table)
+  ↓
+demo_area default
 ```
 
-| Position     | Intended use                                                            |
-| ------------ | ----------------------------------------------------------------------- |
-| `left_side`  | Coach stands beside the user without blocking the pose overlay          |
-| `right_side` | Alternative side placement when the user occupies the left side         |
-| `center`     | Brief full-body demonstration                                           |
-| `demo_area`  | Default avatar demonstration area                                       |
-| `near_knees` | Correction focused on knee alignment                                    |
-| `near_hips`  | Correction focused on hip hinge / pelvis movement                       |
-| `near_spine` | Correction focused on back or torso alignment                           |
+### 5.1 Free move from any current to any target
 
-Godot owns the mapping from these names to actual scene coordinates:
+The primitive is `set_override_position(world_x, world_y)`. It accepts arbitrary world
+coordinates and tweens the avatar from wherever it currently is to the requested target.
 
 ```gdscript
-func move_avatar_to(position_name: String) -> void:
-    match position_name:
-        "left_side":   avatar.position = Vector3(-1.2, 0.0, 0.0)
-        "right_side":  avatar.position = Vector3( 1.2, 0.0, 0.0)
-        "center":      avatar.position = Vector3( 0.0, 0.0, 0.0)
-        "demo_area":   avatar.position = Vector3( 1.0, 0.0, 0.0)
-        "near_knees":  avatar.position = Vector3( 0.8,-0.5, 0.0)
-        "near_hips":   avatar.position = Vector3( 0.8, 0.1, 0.0)
-        "near_spine":  avatar.position = Vector3( 0.8, 0.5, 0.0)
-        _:             avatar.position = Vector3( 1.0, 0.0, 0.0)
+func set_override_position(world_x: float, world_y: float) -> void:
+    _override_active = true
+    _override_x = world_x
+    _override_y = world_y
+    var target = Vector3(world_x, _base_position.y + world_y, _base_position.z)
+    var tween = create_tween()
+    tween.tween_property(avatar_node, "position", target, 0.35)
 ```
 
-### `screen_side` — automatic avoidance
+Once an override is set, it stays latched across subsequent frames until an explicit clear
+frame arrives (`stepId == "adb_override"` with no `override_position` field). This keeps the
+avatar where the developer / coach asked it to go, instead of being snapped back by every new
+pose-coach frame.
 
-Before #54 the avatar overlapped the user's body. Each `PoseCoachFrame.avatar` now carries
-`screen_side` (`"left"` or `"right"`); Godot places the avatar on the opposite side of the
-detected user.
+ADB developer entry points (also documented in `docs/test-plan.md` §14):
 
-Android:
+```bash
+adb shell am start -n com.yogaflow/.MainActivity \
+  --ef avatarTargetX -1.5 \
+  --ef avatarTargetY  0.0
+adb shell am start -n com.yogaflow/.MainActivity --ez avatarClearOverride true
+```
+
+`avatarTargetX` / `avatarTargetY` get marshalled into an `override_position` field on the next
+PoseCoachFrame. `avatarClearOverride true` emits the clear frame and returns the avatar to
+semantic positioning.
+
+### 5.2 Semantic shortcuts
+
+For common stage placements, Kotlin sends `avatar.position = "<name>"` and Godot looks up an
+offset from a fixed table:
+
+```gdscript
+var _semantic_offsets := {
+    "left_side":   Vector3(-1.45, 0.00, 0.00),
+    "right_side":  Vector3( 1.45, 0.00, 0.00),
+    "center":      Vector3( 0.00, 0.00, 0.00),
+    "demo_area":   Vector3( 0.00, 0.00, 0.00),
+    "near_knees":  Vector3( 0.00,-0.35, 0.32),
+    "near_hips":   Vector3( 0.00,-0.14, 0.24),
+    "near_spine":  Vector3( 0.00, 0.08, 0.18)
+}
+
+func move_avatar_to(position_name: String) -> void:
+    var offset: Vector3 = _semantic_offsets.get(position_name, _semantic_offsets["demo_area"])
+    var target = _base_position + offset
+    var tween = create_tween()
+    tween.tween_property(avatar_node, "position", target, 0.35)
+```
+
+| Name         | Intent                                                                |
+| ------------ | --------------------------------------------------------------------- |
+| `left_side`  | Coach stands beside the user on the left of the screen                |
+| `right_side` | Coach stands beside the user on the right of the screen               |
+| `center`     | Brief full-body demonstration in the middle of the stage              |
+| `demo_area`  | Default demonstration position (currently identical to `center`)      |
+| `near_knees` | Correction focused on knee alignment — drops avatar slightly forward  |
+| `near_hips`  | Correction focused on hip hinge / pelvis movement                     |
+| `near_spine` | Correction focused on back or torso alignment                         |
+
+Positive x is screen-right in Godot 3D coordinates. The semantic offset table is tunable in
+`AvatarController.gd::_semantic_offsets`. Tune there if visual composition needs to change.
+
+### 5.3 Choosing a side automatically
+
+The high-level coach logic in Kotlin picks `left_side` or `right_side` based on where the user
+is in the frame so the avatar steps aside instead of overlapping the user. This is just an
+ordinary `position` value — there is no separate `screen_side` field anymore. Example:
 
 ```kotlin
-private fun humanScreenSide(frame: PoseDetectionResult): String {
-    // PoseHelper already flipped x for the front camera, so this is already screen-space.
+private fun avatarOppositeSide(frame: PoseDetectionResult): String {
     val screenX = frame.imageLandmarks.getOrNull(0)?.x()   // landmark 0 = nose
         ?: ((frame.imageLandmarks.getOrNull(11)?.x() ?: 0.5f) +
             (frame.imageLandmarks.getOrNull(12)?.x() ?: 0.5f)) / 2f
-    // user on the left → avatar goes right; user on the right → avatar goes left
-    return if (screenX < 0.5f) "right" else "left"
+    return if (screenX < 0.5f) "right_side" else "left_side"
 }
 ```
 
-The returned value is the **avatar's target side**, not where the user is.
-
-Godot:
-
-```gdscript
-var _side_x_offset: float = 0.4
-
-func apply_screen_side(side: String) -> void:
-    match side:
-        "left":  _side_x_offset = -0.6
-        "right": _side_x_offset =  0.6
-        _:       _side_x_offset =  0.0
-    var tween = create_tween()
-    tween.tween_property(self, "position:x",
-        _base_position.x + _side_x_offset, 0.4)
-```
-
-Positive x is screen-right in Godot 3D coordinates. Current offset is ±1.4 Godot units; tune in
-`apply_screen_side()` if more separation is needed.
-
-Known limitation: when the user spans the full frame (forward fold, prone poses) some overlap on
-either side is acceptable.
+Known limitation: when the user spans the full frame (deep forward fold, prone poses) some
+overlap is unavoidable on either side. Acceptable for v1.
 
 ---
 
@@ -659,31 +692,48 @@ godot/
 ### `AvatarController.gd` surface
 
 ```text
-play_action(action)         — pose animation / fallback tween
-apply_screen_side(side)     — move avatar to opposite side of human (§5)
-apply_highlight(bone, sev)  — visual correction feedback
-apply_skin(name)            — Classic / Nature / Ocean lighting
+play_action(action)                      — pose animation / fallback tween
+move_avatar_to(position_name)            — tween to a semantic shortcut offset
+set_override_position(world_x, world_y)  — tween to an arbitrary world coord (latches)
+clear_override_position()                — release the latch; semantic positioning resumes
+apply_facing(facing)                     — yaw the avatar toward a side / the user
+apply_scale(scale_value)                 — uniform scale, clamped to [0.8, 1.2]
+apply_highlight(bone, sev)               — visual correction feedback
+apply_skin(name)                         — Classic / Nature / Ocean lighting
 ```
 
-Suggested skeleton:
+Shipped frame handler (simplified):
 
 ```gdscript
-extends Node3D
-
-@onready var animation_tree: AnimationTree = $AnimationTree
-@onready var skeleton: Skeleton3D = $CoachAvatar/Armature/Skeleton3D
-
-var current_action := ""
-
 func apply_pose_coach_frame(frame: Dictionary) -> void:
-    var avatar = frame.get("avatar", {})
-    var coach  = frame.get("coach", {})
+    var avatar  = frame.get("avatar", {})
+    var coach   = frame.get("coach", {})
+    var step_id = str(frame.get("stepId", ""))
 
-    play_action(avatar.get("action", "hold_mountain"))
+    var override_pos = avatar.get("override_position", null)
+    if override_pos != null:
+        set_override_position(float(override_pos.get("x", 0.0)),
+                              float(override_pos.get("y", 0.0)))
+    else:
+        # Latch semantics: keep the override active across normal frames.
+        # Only an explicit clear frame (stepId == "adb_override" with no
+        # override_position) returns the avatar to semantic positioning.
+        if _override_active:
+            if step_id == "adb_override":
+                clear_override_position()
+                move_avatar_to(str(avatar.get("position", "demo_area")))
+        else:
+            move_avatar_to(str(avatar.get("position", "demo_area")))
+
+    apply_facing(str(avatar.get("facing", "user")))
+    apply_scale(float(avatar.get("scale", 1.0)))
+    play_action(str(avatar.get("action", "hold_mountain")))
     apply_highlight(avatar.get("highlight", null), coach.get("severity", 0))
-    apply_breathing(frame)
-    apply_screen_side(avatar.get("screen_side", null))
+```
 
+Action dispatch:
+
+```gdscript
 func play_action(action: String) -> void:
     if action == current_action: return
     current_action = action
@@ -695,15 +745,6 @@ func play_action(action: String) -> void:
         "hold_squat":        _set_animation_state("squat")
         "hold_twist":        _set_animation_state("twist")
         _:                   _set_animation_state("idle")
-
-func _set_animation_state(state_name: String) -> void:
-    pass # wire to AnimationTree state machine
-
-func apply_highlight(highlight, severity: int) -> void:
-    pass # simple material tint / marker mesh / outline
-
-func apply_breathing(frame: Dictionary) -> void:
-    pass # subtle torso / shoulder motion in hold states
 ```
 
 ### `MixamoBoneMap.gd`
@@ -780,15 +821,16 @@ fun onPoseDetected(landmarks: PoseLandmarks) {
 }
 ```
 
-Godot-side per-frame handler (sketch):
+Godot-side per-frame handler (sketch — see §10 for the shipped version):
 
 ```gdscript
 func on_pose_coach_frame(frame):
-    avatar_controller.play_action(frame.avatar.action)
-    avatar_controller.apply_micro_motion(frame.pose)
-    avatar_controller.set_highlight(frame.avatar.highlight, frame.coach.severity)
-    avatar_controller.apply_screen_side(frame.avatar.screen_side)
+    avatar_controller.apply_pose_coach_frame(frame)
 ```
+
+`apply_pose_coach_frame` is the single entry point on the Godot side. It owns dispatch to
+`set_override_position` / `move_avatar_to`, `apply_facing`, `apply_scale`, `play_action`, and
+`apply_highlight` based on the payload.
 
 ---
 
@@ -797,12 +839,18 @@ func on_pose_coach_frame(frame):
 Shipped:
 
 - Godot 4 avatar embedded as Android `GodotFragment`
-- Corner PiP overlay (110dp × 196dp, bottom-end)
-- Transparent Godot avatar composited over the camera layer
+- Full-screen transparent Godot overlay composited over the camera and pose skeleton layers
+- Avatar tweens smoothly from any current position to any target position
+  (`tween_property(avatar_node, "position", target, 0.35)`)
+- Three positioning layers: explicit `override_position {x, y}` (latched), `position` semantic
+  shortcut name, and a `demo_area` default
+- ADB developer controls — `avatarTargetX` / `avatarTargetY` floats and `avatarClearOverride`
+  bool — for free-target placement and reset
 - Android↔Godot local WebSocket bridge (`127.0.0.1:9090`)
-- `PoseCoachFrame` JSON contract with `action`, `emotion`, `highlight`, `screen_side`
-- `humanScreenSide()` per-frame, opposite-side auto-positioning
-- `AvatarController.gd`: `play_action`, `apply_screen_side`, `apply_highlight`, `apply_skin`
+- `PoseCoachFrame` JSON contract with `action`, `emotion`, `highlight`, `position`,
+  `override_position`, `facing`, `scale`
+- `AvatarController.gd` API: `play_action`, `move_avatar_to`, `set_override_position`,
+  `clear_override_position`, `apply_facing`, `apply_scale`, `apply_highlight`, `apply_skin`
 - Avatar self-test and ADB developer controls (see `docs/test-plan.md` §8–§9, §14)
 - Selectable coach skins (Classic / Nature / Ocean)
 - `GodotScriptAssetSyncTest.kt` to enforce dual-file sync

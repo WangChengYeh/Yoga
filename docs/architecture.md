@@ -55,7 +55,7 @@ Stability Window (~300ms)
   ↓
 PoseFlowEngine (Event)
   ↓
-LLM Coach / Fallback        PoseCoachFrame JSON (screen_side + action + highlight)
+LLM Coach / Fallback        PoseCoachFrame JSON (action + highlight + position / override_position)
   ↓          ↓                          ↓
 TTS Voice  LlmInteractionDb      Godot Avatar (WebSocket → AvatarController.gd)
            (SQLite: prompt/response/timing, #69)
@@ -565,11 +565,17 @@ Godot 4 (GodotFragment embedded in FragmentContainerView)
 AvatarCoachOverlay.gd  ←  WebSocket server
   ↓
 AvatarController.gd
-  ├─ play_action(action)        — pose animation / fallback tween
-  ├─ apply_screen_side(side)    — move avatar to opposite side of human
-  ├─ apply_highlight(bone, sev) — visual correction feedback
-  └─ apply_skin(name)           — Classic / Nature / Ocean lighting
+  ├─ play_action(action)                     — pose animation / fallback tween
+  ├─ move_avatar_to(position_name)           — tween to a semantic offset
+  ├─ set_override_position(world_x, world_y) — tween to an arbitrary world coord (latched)
+  ├─ apply_facing(facing)                    — yaw toward user / side
+  ├─ apply_scale(scale_value)                — clamped to [0.8, 1.2]
+  ├─ apply_highlight(bone, sev)              — visual correction feedback
+  └─ apply_skin(name)                        — Classic / Nature / Ocean lighting
 ```
+
+The Godot overlay is full-screen and transparent; the avatar Node3D inside it tweens smoothly
+from its current position to a target position over ~0.35s.
 
 PoseCoachFrame avatar object (current schema):
 
@@ -578,11 +584,17 @@ PoseCoachFrame avatar object (current schema):
   "action": "hold_forward_fold",
   "emotion": "calm",
   "highlight": null,
-  "screen_side": "left"
+  "position": "left_side",
+  "facing": "user",
+  "scale": 1.0,
+  "override_position": null
 }
 ```
 
-`screen_side` is computed per-frame by `humanScreenSide()` in Kotlin: returns the OPPOSITE side of where the human body center is detected, so the avatar always steps aside. See `docs/avatar.md` for full details.
+Three layers of positioning, in order of precedence: `override_position` (raw `{x, y}` world
+coords, latched until explicitly cleared) → `position` (semantic shortcut name) → `demo_area`
+default. Kotlin picks `left_side` / `right_side` based on the user's screen position so the
+avatar steps aside. See `docs/avatar.md` §5 for full details and the semantic offset table.
 
 GDScript deployment note: Godot compiles `.gd` source to `.gdc` bytecode during export. The bytecode in `app/src/main/assets/scripts/*.gdc` must be kept in sync with the source in `godot/scripts/`. Currently the `.gd.remap` files point directly to the source `.gd` files to avoid stale-bytecode bugs; this means any Godot export must also update the remap files.
 

@@ -59,14 +59,19 @@ This file is the **shipped-capability inventory** — a record of what is alread
 ### Godot Avatar
 
 - Godot 4 avatar embedded as Android `GodotFragment`.
-- Corner PiP coach view: 110dp x 196dp, bottom-end.
-- Transparent Godot avatar composited over the camera layer.
-- Android-to-Godot local WebSocket bridge.
-- Semantic avatar commands through `PoseCoachFrame`.
-- Avatar auto-positioning to the opposite side of the detected human.
-- Avatar self-test and ADB developer controls.
-- Selectable coach skins.
-- Godot source script mirroring tests.
+- Full-screen transparent Godot overlay composited over the camera and pose skeleton layers.
+- Avatar Node3D moves freely inside the Godot scene: smooth tween from any current position
+  to any target position over ~0.35s.
+- Three positioning layers in PoseCoachFrame: `override_position {x, y}` raw world coords
+  (latched), `position` semantic shortcut name, and a `demo_area` default.
+- Auto-positioning: Kotlin picks `left_side` / `right_side` based on the user's screen
+  position so the avatar steps aside.
+- Android-to-Godot local WebSocket bridge (`127.0.0.1:9090`).
+- ADB developer controls for free-target placement (`avatarTargetX` / `avatarTargetY` /
+  `avatarClearOverride`).
+- Avatar self-test loop.
+- Selectable coach skins (Classic / Nature / Ocean).
+- Godot source script mirroring tests (`GodotScriptAssetSyncTest.kt`).
 
 ### Content
 
