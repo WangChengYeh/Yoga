@@ -80,7 +80,7 @@ This file owns finished, unfinished, and future product work. Architecture detai
 
 - JVM tests for geometry, flow parsing, flow integration, routing, runtime flow completion, avatar contracts, cue pacing, phrase polishing, and prompt building.
 - Device build/install/launch/screenshot smoke path verified locally.
-- Architecture, flow DSL, avatar overlay, rig skeleton, test plan, proposal, pitch, environment setup, and project status docs exist.
+- Architecture, flow DSL, avatar overlay, rig skeleton, test plan, proposal, environment setup, and project status docs exist.
 
 ## Active / Near-Term Work
 

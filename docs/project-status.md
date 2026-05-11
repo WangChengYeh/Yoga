@@ -13,7 +13,7 @@ This file is the short status hub for the project. Detailed information is parti
 - `docs/avatar-overlay-architecture.md`: Android/Godot avatar overlay layout and positioning contract.
 - `docs/avatar-rig-skeleton.md`: avatar rig, bone mapping, and Blender-to-Godot pipeline.
 - `docs/project-environment-setup.md`: local multi-agent and tmux workspace setup.
-- `docs/pitch.md` and `docs/Proposal.md`: product/story/business-facing material.
+- `docs/Proposal.md`: consolidated product, pitch, story, and business-facing material.
 
 ## Current Snapshot
 

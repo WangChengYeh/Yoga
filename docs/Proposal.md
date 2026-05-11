@@ -16,6 +16,7 @@
 高品質的私人教練每小時收費昂貴且需配合預約，難以滿足隨時隨地練習的需求。
 
 ### 核心痛點：自學者的視覺盲區
+自學者最大的問題不是不努力，而是缺少即時、可視化、可量化的回饋。傳統影片只能示範「應該怎麼做」，卻無法指出「你現在差在哪裡」。
 
 ---
 
@@ -23,7 +24,7 @@
 
 **「看見」看不見的角度**
 
-系統自動計算教練影片中的「標準角度」與使用者「當前角度」的毫秒級差異。
+YogaFlow 3D 透過手機鏡頭分析使用者姿勢，將身體動作轉換為可量化的關節角度與骨架狀態。系統可以比較標準姿勢角度與使用者當前角度，並用畫面與語音給出即時回饋。
 
 - **紅區警示**：當關節偏離超過閾值
 - **動態引導**：箭頭指示動作修正方向
@@ -78,6 +79,16 @@ Gemma LLM on-device (語言層)
 TTS + 3D Avatar Coach (輸出)
 ```
 
+### Flow DSL 驅動課程
+
+YogaFlow 3D 的課程不是由 LLM 隨機生成，而是由結構化 Flow JSON 定義：
+
+```text
+setup → movement → hold → correction → transition
+```
+
+每一步都可以指定教練提示語、偵測條件、關節角度門檻、穩定時間與修正語句。系統根據偵測結果決定目前步驟是否完成、是否需要修正、是否可以進入下一步。LLM 只負責語氣潤飾，不負責改變課程順序。
+
 ---
 
 ## 6. 極致隱私：數據的主權在您
@@ -89,6 +100,8 @@ TTS + 3D Avatar Coach (輸出)
 - 分析後即刻銷毀原始影像
 - 完全不需要昂貴的雲端訂閱
 - 在飛航模式下也能完美運行
+
+居家練習發生在高度私密的空間，AI 教練必須尊重資料主權。YogaFlow 3D 的產品原則是不販售使用者影像資料，不把私人身體資料變成雲端黑箱。
 
 ---
 
@@ -210,15 +223,75 @@ YogaFlow 3D 的核心 App 採免費模式，讓使用者不付費也能使用完
 | 隱私數據安全性 | 需上傳雲端 | 無數據記錄 | **100% 本地存儲** |
 | 單次練習成本 | 低 | 極高 | **免費核心功能 + 加值選購** |
 
+YogaFlow 3D 的定位：
+
+```text
+比影片 App 更懂你的身體
+比真人私教更容易取得
+比雲端 AI 更保護隱私
+```
+
 ---
 
 ## 12. 未來的無限可能
 
 從瑜珈出發，邁向物理治療、舞蹈教學與全方位運動復健市場。
 
+### 延伸場景
+
+- 物理治療
+- 運動復健
+- 舞蹈教學
+- 健身動作修正
+- 高齡活動度訓練
+- 運動員姿勢分析
+
+### 平台願景
+
+建立一套可程式化、可量化、可解釋的 AI 動作教練平台。
+
 ---
 
-## 13. Agentic AI 開發流程
+## 13. 現階段產品落地狀態與關鍵產品原則
+
+目前 repo 已具備：
+
+- Android app 架構
+- CameraX camera pipeline
+- MediaPipe pose integration
+- Flow JSON DSL v2
+- 20 個 packaged Flow DSL 課程
+- strict detection routing
+- pose-specific detection mappers
+- runtime tuning override
+- numeric fail reason
+- auto tuning suggestion
+- LLM-assisted coach cue
+- TTS voice output
+- Godot 3D Avatar coach overlay
+- session history 與統計基礎功能
+- JVM integration tests for packaged flow/runtime contracts
+
+目前仍在進行或規劃：
+
+- flow library 擴充到 30+ flows
+- ROM baseline tracking
+- bilateral balance analysis
+- Apple Fitness+ style home screen polish
+- teacher-video-to-flow authoring pipeline
+- Android UI / screenshot / Godot bridge tests
+- CI validation for JDK 17 build and JVM tests
+
+### 關鍵產品原則
+
+- **Flow JSON 是課程真相來源**：LLM 不應自由編排課程，不應新增影片中沒有的動作，也不應重排教學順序。
+- **動作必須可量化**：每個姿勢都應能被角度、穩定時間與偵測條件描述。
+- **回饋必須可解釋**：系統不只說「錯了」，也應說明哪個角度錯、差多少、應該往哪裡修。
+- **隱私是產品核心**：使用者的影像與身體資料不應成為雲端黑箱。
+
+---
+
+## 14. Agentic AI 開發流程
 
 本專案採用 PM、RD、AE 三角色的 Agentic AI 協作模式，讓產品規格、核心技術與應用落地可以並行推進。
 
@@ -253,6 +326,18 @@ PM 驗收體驗、重新排序需求
 ## 聯絡資訊
 
 - **GitHub**: [WangChengYeh/Yoga](https://github.com/WangChengYeh/Yoga)
+- **Pitch deck**: https://docs.google.com/presentation/d/1e0uUybgMie-YGJHSP8k9FjXeGxIeCdmMKvC8RVVI-nk/edit?usp=drivesdk
 - **Email**: contact@yogaflow3d.ai
 
 > 讓科技守護隱私，讓 AI 成就專業。
+
+---
+
+## 原始 Deck 圖片來源
+
+```text
+https://viso.ai/wp-content/uploads/2022/02/pose-estimation-human-ai-vision.png
+https://www.droid-life.com/wp-content/uploads/2024/12/AEKE-K1-1400x933.jpg
+https://www.mdpi.com/ai/ai-06-00180/article_deploy/html/images/ai-06-00180-g005.png
+https://pxl-tcdie.terminalfour.net/fit-in/855x9999/filters:no_upscale()/filters:format(webp)/filters:quality(100)/prod01/channel_3/media/tcd/engineering/images/App-KineMo-Screenshot.png
+```
