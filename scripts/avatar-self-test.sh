@@ -6,6 +6,8 @@ ACTIVITY="${PKG}/.MainActivity"
 ADB="${ADB:-adb}"
 ARTIFACTS="test-artifacts"
 VIDEO_REMOTE="/sdcard/Movies/avatar-demo.mp4"
+RECORD_SECS=12          # screenrecord --time-limit value
+RECORD_WAIT=$((RECORD_SECS + 2))  # extra buffer for the background process to finish
 
 mkdir -p "$ARTIFACTS"
 RECORD_FAILED=0
@@ -20,12 +22,12 @@ $ADB shell am start -n "$ACTIVITY" \
   --ez devDisableCameraSetup true \
   --ez demoMode true
 
-echo "[3/6] Recording 12-second demo video..."
+echo "[3/6] Recording ${RECORD_SECS}-second demo video..."
 $ADB shell mkdir -p /sdcard/Movies
 $ADB shell rm -f "$VIDEO_REMOTE"
-$ADB shell screenrecord --time-limit 12 "$VIDEO_REMOTE" &
+$ADB shell screenrecord --time-limit "$RECORD_SECS" "$VIDEO_REMOTE" &
 RECORD_PID=$!
-sleep 14
+sleep "$RECORD_WAIT"
 wait "$RECORD_PID" || true
 
 echo "[4/6] Pulling demo video artifact..."
@@ -52,9 +54,13 @@ fi
 
 echo "Video saved:      ${ARTIFACTS}/avatar-demo.mp4"
 echo "Screenshot saved: ${ARTIFACTS}/avatar-self-test.png"
-echo "PASS: Avatar self-test complete. Inspect artifacts to verify demo behavior."
+echo "PASS: Avatar self-test complete."
 echo
-echo "REVIEW CHECKLIST:"
+echo "HUMAN REVIEW REQUIRED — inspect artifacts:"
+echo "  Video:      ${ARTIFACTS}/avatar-demo.mp4"
+echo "  Screenshot: ${ARTIFACTS}/avatar-self-test.png"
+echo
+echo "CHECKLIST:"
 echo "- [ ] Avatar visible with no opaque gray background (transparent over camera)"
 echo "- [ ] All 4 poses animate: mountain, forward_fold, squat, twist"
 echo "- [ ] Motion is smooth (no jank/stutter)"

@@ -11,6 +11,7 @@ Usage:
 """
 
 import subprocess, sys, time, argparse, os, re, xml.etree.ElementTree as ET
+from typing import Optional
 from pathlib import Path
 
 PKG = "com.yogaflow"
@@ -48,7 +49,7 @@ def screenshot(name: str):
     log(f"  screenshot → {path}")
 
 
-def logcat_since(tag_filters: list[str], lines: int = 0) -> str:
+def logcat_since(tag_filters: list[str]) -> str:
     """Dump all buffered logcat (since last clear) filtered by tags (all levels)."""
     # Append :V to each tag so Verbose-level messages are not silently dropped
     tagged = [f"{t}:V" for t in tag_filters]
@@ -64,7 +65,7 @@ def screen_size() -> tuple[int, int]:
     return 1080, 1920
 
 
-def ui_dump() -> ET.Element | None:
+def ui_dump() -> "Optional[ET.Element]":
     try:
         shell("uiautomator dump /sdcard/_ui.xml", check=False)
         adb("pull", "/sdcard/_ui.xml", "/tmp/_yogaflow_ui.xml")
@@ -73,7 +74,7 @@ def ui_dump() -> ET.Element | None:
         return None
 
 
-def find_bounds(root: ET.Element, resource_id: str) -> tuple[int, int] | None:
+def find_bounds(root: ET.Element, resource_id: str) -> "Optional[tuple[int, int]]":
     """Return center (x, y) of a node by resource-id."""
     for node in root.iter("node"):
         if node.get("resource-id", "").endswith(resource_id):
@@ -158,7 +159,7 @@ def t_launch():
             "startClassButton not found — home screen did not render"
     else:
         log("  (uiautomator unavailable, using logcat check)")
-        logs = logcat_since(["ActivityTaskManager"], lines=20)
+        logs = logcat_since(["ActivityTaskManager"])
         assert "com.yogaflow" in logs, "App did not start per ActivityTaskManager"
 
 
@@ -186,13 +187,13 @@ def t_start_class():
 
 @test("no crash — FATAL EXCEPTION absent")
 def t_no_crash():
-    logs = logcat_since(["AndroidRuntime", "FATAL"], lines=100)
+    logs = logcat_since(["AndroidRuntime", "FATAL"])
     assert "FATAL EXCEPTION" not in logs, f"App crashed: {logs[:300]}"
 
 
 @test("Godot lifecycle — onResume forwarded")
 def t_godot_lifecycle():
-    logs = logcat_since(["Godot"], lines=200)
+    logs = logcat_since(["Godot"])
     assert "OnResume:" in logs, \
         "Godot onResume not received — lifecycle forwarding broken"
     assert "native layer initialization completed: true" in logs, \
@@ -209,7 +210,7 @@ def t_session_start():
     time.sleep(3)
     screenshot("03_session_running")
 
-    logs = logcat_since(["Godot", "AndroidRuntime"], lines=50)
+    logs = logcat_since(["Godot", "AndroidRuntime"])
     assert "FATAL EXCEPTION" not in logs, "Crash on session start"
 
 
@@ -229,20 +230,20 @@ def t_pause_resume():
     time.sleep(2)
     screenshot("05_resumed")
 
-    logs = logcat_since(["AndroidRuntime"], lines=50)
+    logs = logcat_since(["AndroidRuntime"])
     assert "FATAL EXCEPTION" not in logs, "Crash during pause/resume"
 
 
 @test("Godot bridge — connect attempted after session start")
 def t_bridge_connect():
-    logs = logcat_since(["GodotAvatarBridge", "OkHttp"], lines=200)
-    # Bridge connect is triggered in startSession(); check for WebSocket attempt
-    # Even a connection refused is fine — it means connect() was called
+    logs = logcat_since(["GodotAvatarBridge", "OkHttp"])
+    # Bridge connect is triggered in startSession(); a connection refused is fine —
+    # it still proves GodotAvatarBridge.connect() ran. Match only specific markers.
     connected = any(kw in logs for kw in [
-        "WebSocket", "ws://127.0.0.1", "onOpen", "onFailure", "connect"
+        "ws://127.0.0.1", "GodotAvatarBridge", "onOpen", "onFailure",
     ])
     assert connected, \
-        "No WebSocket activity found — GodotAvatarBridge.connect() may not have been called"
+        "No GodotAvatarBridge WebSocket activity — connect() may not have been called"
 
 
 @test("restart — app survives restart")
@@ -259,7 +260,7 @@ def t_restart():
     pid = shell(f"pidof {PKG}", check=False)
     assert pid.strip(), "App process died after restart"
 
-    logs = logcat_since(["AndroidRuntime"], lines=50)
+    logs = logcat_since(["AndroidRuntime"])
     assert "FATAL EXCEPTION" not in logs, "Crash on restart"
 
 

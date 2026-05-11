@@ -3,7 +3,7 @@
 # Issue #59
 set -euo pipefail
 
-ADB="${ADB:-/Users/wangchengye/Library/Android/sdk/platform-tools/adb}"
+ADB="${ADB:-adb}"
 PKG="com.yogaflow"
 ACTIVITY="$PKG/.MainActivity"
 ARTIFACTS_DIR="test-artifacts"
@@ -30,13 +30,8 @@ sleep 1
 echo "  Waiting 8s for Godot to init and WebSocket bridge to connect..."
 sleep 8
 
-# Tap Camera button to enable camera setup (Required per #70)
-# echo "  Tapping Camera button..."
-# "$ADB" shell input tap 200 1000
-# sleep 2
-
 # Move to far left
-echo "[2/6] Moving avatar to LEFT (-1.5)..."
+echo "[2/5] Moving avatar to LEFT (-1.5)..."
 "$ADB" shell am start -n "$ACTIVITY" --ef avatarTargetX -1.5 --ef avatarTargetY 0.0
 sleep "$WAIT"
 "$ADB" shell screencap -p /sdcard/avatar-left.png
@@ -45,7 +40,7 @@ sleep "$WAIT"
 echo "  → screenshot: $ARTIFACTS_DIR/avatar-left.png"
 
 # Move to far right
-echo "[3/6] Moving avatar to RIGHT (+1.5)..."
+echo "[3/5] Moving avatar to RIGHT (+1.5)..."
 "$ADB" shell am start -n "$ACTIVITY" --ef avatarTargetX 1.5 --ef avatarTargetY 0.0
 sleep "$WAIT"
 "$ADB" shell screencap -p /sdcard/avatar-right.png
@@ -53,17 +48,8 @@ sleep "$WAIT"
 "$ADB" shell rm /sdcard/avatar-right.png
 echo "  → screenshot: $ARTIFACTS_DIR/avatar-right.png"
 
-# Move back to left
-echo "[4/6] Returning to LEFT (-1.5)..."
-"$ADB" shell am start -n "$ACTIVITY" --ef avatarTargetX -1.5 --ef avatarTargetY 0.0
-sleep "$WAIT"
-"$ADB" shell screencap -p /sdcard/avatar-return-left.png
-"$ADB" pull /sdcard/avatar-return-left.png "$ARTIFACTS_DIR/avatar-return-left.png" >/dev/null
-"$ADB" shell rm /sdcard/avatar-return-left.png
-echo "  → screenshot: $ARTIFACTS_DIR/avatar-return-left.png"
-
 # Move to center
-echo "[5/6] Moving to CENTER (0.0)..."
+echo "[4/5] Moving to CENTER (0.0)..."
 "$ADB" shell am start -n "$ACTIVITY" --ef avatarTargetX 0.0 --ef avatarTargetY 0.0
 sleep "$WAIT"
 "$ADB" shell screencap -p /sdcard/avatar-center.png
@@ -72,7 +58,7 @@ sleep "$WAIT"
 echo "  → screenshot: $ARTIFACTS_DIR/avatar-center.png"
 
 # Clear override — resume auto-positioning
-echo "[6/6] Clearing override (resuming auto-positioning)..."
+echo "[5/5] Clearing override (resuming auto-positioning)..."
 "$ADB" shell am start -n "$ACTIVITY" --ez avatarClearOverride true
 sleep "$WAIT"
 "$ADB" shell screencap -p /sdcard/avatar-auto.png
