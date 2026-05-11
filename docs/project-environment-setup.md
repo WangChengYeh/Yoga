@@ -1,104 +1,201 @@
 # Project Environment Setup
 
-This guide standardizes a single tmux workspace for all agents:
-- Pane 1: Claude
-- Pane 2: Codex
-- Pane 3: Gemini
-- Pane 4: communication monitor (live data exchange view via script)
+This project uses **CLI_Cowork_Bridge (CCB)** as the multi-agent workspace. CCB launches the
+configured agents in a single command, owns the inter-agent control plane, and replaces the
+older manual tmux + `agent_comm_logger.py` + SQLite setup.
 
-The target layout is a 2x2 grid built with tmux vertical + horizontal splits.
+Upstream: <https://github.com/WangChengYeh/CLI_Cowork_Bridge>
+
+---
 
 ## Prerequisites
 
-- `tmux` installed
+- macOS / Linux shell
 - `claude`, `codex`, and `gemini` CLIs available on `PATH`
-- `python3` available (for `scripts/agent_comm_logger.py`)
-- Optional but recommended: `sqlite3` (for raw event stream in monitor pane)
-- Repo checked out at:
-  - `/Users/wangchengye/Documents/GitHub/Yoga`
+- Git checkout at `/Users/wangchengye/Documents/GitHub/Yoga`
+- Optional: `gh` for GitHub issue triage (used by Claude PM)
 
-## 1. Create the 4-pane tmux session
+---
 
-Run from repo root:
+## One-time install
 
 ```bash
-cd /Users/wangchengye/Documents/GitHub/Yoga
-
-SESSION=yoga-agents
-WINDOW=agents
-ROOT=/Users/wangchengye/Documents/GitHub/Yoga
-
-# Fresh session with one pane (pane 0)
-tmux new-session -d -s "$SESSION" -n "$WINDOW" -c "$ROOT"
-
-# Split into 4 panes: vertical + horizontal
-# Result:
-#   0 | 1
-#  ---+---
-#   2 | 3
-tmux split-window -h -t "$SESSION:$WINDOW.0" -c "$ROOT"
-tmux split-window -v -t "$SESSION:$WINDOW.0" -c "$ROOT"
-tmux split-window -v -t "$SESSION:$WINDOW.1" -c "$ROOT"
-
-# Optional: even sizing
-tmux select-layout -t "$SESSION:$WINDOW" tiled
-
-# Pane 0 = Claude
-tmux send-keys -t "$SESSION:$WINDOW.0" 'source sourceme && claude' C-m
-
-# Pane 1 = Codex
-tmux send-keys -t "$SESSION:$WINDOW.1" 'source sourceme && codex' C-m
-
-# Pane 2 = Gemini
-tmux send-keys -t "$SESSION:$WINDOW.2" 'source sourceme && gemini' C-m
-
-# Pane 3 = Communication monitor
-# Shows rolling stats and latest agent_comms rows from SQLite.
-tmux send-keys -t "$SESSION:$WINDOW.3" 'source sourceme && while true; do clear; date; echo "=== Agent Comms Stats (24h) ==="; python3 scripts/agent_comm_logger.py stats --days 1; echo; echo "=== Latest Exchanges ==="; sqlite3 -header -column logs/agent_comms.db "SELECT created_at, direction, from_agent, to_agent, session_id, issue_id, substr(message,1,100) AS message FROM agent_comms ORDER BY id DESC LIMIT 12;" 2>/dev/null || echo "No DB rows yet (or sqlite3 not installed)."; sleep 3; done' C-m
-
-# Attach
-tmux attach -t "$SESSION"
+git clone https://github.com/WangChengYeh/CLI_Cowork_Bridge.git
+cd CLI_Cowork_Bridge
+./install.sh install
+ccb update    # pull latest control-plane code
 ```
 
-## 2. How to use the communication pane
+`ccb` lands in `~/.local/bin/ccb`. Confirm with `which ccb`.
 
-Use `scripts/agent_comm_logger.py` to write send/receive events. Example:
+---
 
-```bash
-python3 scripts/agent_comm_logger.py send --from claude --to codex --session sess-20260509-01 --issue "#72" --message "Implement tmux 4-pane setup"
-python3 scripts/agent_comm_logger.py recv --from codex --to claude --session sess-20260509-01 --issue "#72" --message "Implemented and verified" --elapsed-ms 32000
+## Project config: `.ccb/ccb.config`
+
+The config is committed at the repo root. Current shape:
+
+```text
+it:gemini, pm:claude; rd:codex, ae:gemini
+
+[agents.it]
+model = "gemini-3.1-flash-lite-preview"
+[agents.pm]
+model = "claude-sonnet-4-6"
+[agents.rd]
+model = "gpt-5.3-codex"
+[agents.ae]
+model = "auto-gemini-3"
 ```
 
-Pane 4 updates automatically and displays:
-- 24h communication stats
-- Latest rows from `logs/agent_comms.db`
+Role mapping for YogaFlow 3D:
 
-## 3. Verification checklist
+| Role | Agent  | Responsibility                                                           |
+| ---- | ------ | ------------------------------------------------------------------------ |
+| `pm` | Claude | Triage GitHub issues, write prompts, review output, commit, manage releases |
+| `rd` | Codex  | Primary implementer — deep code changes, Gradle builds, adb device testing  |
+| `ae` | Gemini | Application-to-user integration, review, secondary implementer              |
+| `it` | Gemini | Integration testing / lightweight automation                                 |
 
-From any shell:
+`pm` (Claude) is the PM and does not implement directly — it delegates to `rd` and `ae`.
+
+To change a role assignment, edit `.ccb/ccb.config`, then run `ccb -n` to rebuild the runtime.
+
+---
+
+## Start / stop
 
 ```bash
-tmux ls
-tmux list-panes -t yoga-agents:agents -F '#{pane_index} #{pane_current_command}'
-tmux capture-pane -pt yoga-agents:agents.3 -S -80 | tail -n 60
+ccb           # launch all agents defined in .ccb/ccb.config
+ccb -s        # safe start — disable CLI auto-permission override
+ccb -n        # rebuild runtime (keeps ccb.config), then start fresh
+ccb kill      # stop the project's background runtime
+ccb kill -f   # force cleanup of project-owned runtime residue
+```
+
+Runtime state lives under `.ccb/` (`ccbd/`, `room/`, `runtime-daemon.json`). These directories
+are gitignored — do not commit them.
+
+---
+
+## Delegation commands
+
+From inside Claude Code (PM):
+
+```text
+/ask <role> <message>     # send a task to another agent via skill
+/ping <role|ccbd>         # inspect control-plane health
+/pend <role|job_id>       # inspect mailbox / job replies
+```
+
+Equivalent shell form:
+
+```bash
+ccb ask <role> [from <sender>] <message>
+ccb ping <role|ccbd>
+ccb pend <role|job_id> [N]
+ccb watch <role|job_id>
+```
+
+Async guardrail: when an `ask` returns `[CCB_ASYNC_SUBMITTED`, reply with one line
+(`<Provider> processing...`) and end the turn — do not poll. CCB delivers the result back as a
+hook in a later turn.
+
+Typical PM delegations in this project:
+
+```text
+/ask rd <implementation task>       # → Codex implements
+/ask ae <review or continuation>    # → Gemini reviews / continues
+```
+
+Handoff example: when Codex hits rate limit, Claude PM sends
+`/ask ae continue: <what Codex did> / <what remains>`.
+
+---
+
+## Diagnostics
+
+```bash
+ccb ps                    # list active agent processes
+ccb logs <role>           # tail an agent's log stream
+ccb doctor                # environment self-check (paths, providers, daemon)
+ccb daemon status         # control-plane daemon status
+ccb daemon metrics        # daemon metrics
+ccb version               # show installed version
+```
+
+Inspect mailbox content interactively:
+
+```bash
+ccb pend <role>           # peek latest replies
+ccb watch <role>          # live-tail replies
+```
+
+---
+
+## iMessage channel (optional)
+
+The user receives mobile pings through CCB's iMessage bridge:
+
+```bash
+ccb imessage send <message>
+ccb imessage doctor
+ccb imessage watch
+```
+
+Access policy for incoming iMessages is managed by the `/imessage:access` skill — the user
+runs it locally. Never approve a pairing on someone else's behalf.
+
+---
+
+## Fallback when CCB is unavailable
+
+If `ccb` is not running, fall back to direct tool invocation:
+
+| Target | Direct fallback |
+| ------ | ---------------- |
+| Codex  | `codex:rescue` skill (Agent tool, `subagent_type: codex:codex-rescue`) |
+| Gemini | `mcp__gemini__gemini_run` MCP tool |
+
+These bypass CCB's control plane (no shared mailbox, no `/pend`), so use them only when CCB is
+down. Restore CCB with `ccb` (or `ccb -n` if the runtime is stuck).
+
+Codex companion script (patched for `danger-full-access` sandbox so it can run Gradle/adb):
+
+```text
+~/.claude/plugins/cache/openai-codex/codex/1.0.4/scripts/codex-companion.mjs
+```
+
+If the plugin updates and resets the patch, re-apply:
+
+```bash
+sed -i '' 's/"workspace-write"/"danger-full-access"/' \
+  ~/.claude/plugins/cache/openai-codex/codex/1.0.4/scripts/codex-companion.mjs
+```
+
+---
+
+## Verification checklist
+
+After `ccb` boots:
+
+```bash
+ccb ps               # all four roles (pm, rd, ae, it) running
+ccb ping ccbd        # daemon healthy
+ccb ping rd          # codex reachable
+ccb ping ae          # gemini reachable
 ```
 
 Expected:
-- Session `yoga-agents` exists.
-- Four panes exist in window `agents`.
-- Pane 0/1/2 run `claude`, `codex`, `gemini`.
-- Pane 3 shows rolling communication output (stats and latest exchanges).
 
-## 4. Reattach later
+- All four agent processes listed in `ccb ps`.
+- `ccb ping ccbd` returns OK.
+- `ccb ping rd` / `ccb ping ae` return OK and report the configured model.
 
-```bash
-tmux attach -t yoga-agents
-```
+---
 
-## 5. Reset session (if layout is broken)
+## Legacy setup (removed)
 
-```bash
-tmux kill-session -t yoga-agents
-```
-
-Then rerun section 1.
+The previous tmux 4-pane + `scripts/agent_comm_logger.py` + `logs/agent_comms.db` setup is no
+longer used. CCB owns the multi-agent runtime, control plane, and inter-agent messaging end to
+end. If you find references to `yoga-agents` tmux sessions or the SQLite comms log in old
+commits, they predate the CCB migration.
