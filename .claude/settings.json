@@ -37,25 +37,5 @@
       }
     }
   },
-  "skipDangerousModePermissionPrompt": true,
-  "hooks": {
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash scripts/claude-stop-hook.sh"
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "/Users/wangchengye/miniforge3/bin/python3 /Users/wangchengye/Documents/GitHub/CLI_Cowork_Bridge/bin/ccb-provider-finish-hook --provider claude --completion-dir /Users/wangchengye/Documents/GitHub/Yoga/.ccb/agents/pm/provider-runtime/claude/completion --agent-name pm --workspace /Users/wangchengye/Documents/GitHub/Yoga"
-          }
-        ]
-      }
-    ]
-  }
+  "skipDangerousModePermissionPrompt": true
 }
