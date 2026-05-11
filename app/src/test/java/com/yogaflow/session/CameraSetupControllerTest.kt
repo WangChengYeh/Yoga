@@ -294,13 +294,19 @@ class CameraSetupControllerTest {
 
     @Test
     fun handleFrame_completedState_resetsReady() {
-        sessionState = SessionState.COMPLETED
         val controller = makeController(state = SessionState.IDLE, autoStart = false)
         val frame = PoseDetectionResult(
             imageLandmarks = goodFrameLandmarks(),
             worldLandmarks = frontalWorldLandmarks()
         )
 
+        // 1. Get to ready state first
+        sessionState = SessionState.IDLE
+        controller.handleFrame(frame)
+        assertTrue("Should be ready initially", capturedReady == true)
+
+        // 2. Transition to COMPLETED
+        sessionState = SessionState.COMPLETED
         val result = controller.handleFrame(frame)
 
         assertTrue("Should swallow frame in COMPLETED", result)
