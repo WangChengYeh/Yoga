@@ -346,7 +346,8 @@ def cmd_image(path: Path, ref_path: Optional[Path], annotate_out: Optional[Path]
         print(f"  Annotated:    {annotate_out}")
 
 
-def cmd_video(path: Path, annotate_out: Optional[Path]) -> None:
+def cmd_video(path: Path, annotate_out: Optional[Path]) -> bool:
+    """Returns True if motion was detected, False otherwise."""
     cap = cv2.VideoCapture(str(path))
     if not cap.isOpened():
         print(f"ERROR: cannot open video: {path}")
@@ -422,8 +423,8 @@ def cmd_video(path: Path, annotate_out: Optional[Path]) -> None:
         writer.release()
 
     if not positions:
-        print("  No motion detected — avatar may be static or not visible in this recording.")
-        return
+        print("  FAIL: no motion detected — avatar may be static or not visible in this recording.")
+        return False
 
     print(f"\n  {'Time(s)':>8}  {'X':>7}  {'Y':>7}  {'Side':>7}  {'Conf':>6}  {'Diff px':>9}")
     print(f"  {'':->8}  {'':->7}  {'':->7}  {'':->7}  {'':->6}  {'':->9}")
@@ -435,6 +436,9 @@ def cmd_video(path: Path, annotate_out: Optional[Path]) -> None:
 
     if annotate_out:
         print(f"  Annotated:   {annotate_out}")
+
+    print(f"  PASS: motion detected in {len(positions)} sampled frames")
+    return True
 
 
 def cmd_verify(artifacts_dir: Path, annotate: bool) -> bool:
@@ -656,7 +660,8 @@ def main() -> None:
             annotate_out = args.video.with_stem(args.video.stem + "-annotated")
         elif isinstance(args.annotate, Path):
             annotate_out = args.annotate
-        cmd_video(args.video, annotate_out)
+        ok = cmd_video(args.video, annotate_out)
+        sys.exit(0 if ok else 1)
 
     elif args.verify:
         ok = cmd_verify(args.verify, annotate=bool(args.annotate))

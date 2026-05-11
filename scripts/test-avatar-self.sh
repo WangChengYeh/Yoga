@@ -4,6 +4,7 @@ set -euo pipefail
 PKG="com.yogaflow"
 ACTIVITY="${PKG}/.MainActivity"
 ADB="${ADB:-adb}"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ARTIFACTS="test-artifacts"
 VIDEO_REMOTE="/sdcard/Movies/avatar-demo.mp4"
 RECORD_SECS=12          # screenrecord --time-limit value
@@ -36,6 +37,22 @@ if $ADB pull "$VIDEO_REMOTE" "${ARTIFACTS}/avatar-demo.mp4"; then
 else
   RECORD_FAILED=1
   echo "WARN: Unable to pull recorded demo video from device."
+fi
+
+echo "[4b/6] Analysing demo video for avatar motion..."
+VIDEO_ANALYSIS_OK=0
+if [ -f "${ARTIFACTS}/avatar-demo.mp4" ] && python3 -c "import cv2, numpy" 2>/dev/null; then
+  python3 "$SCRIPT_DIR/test-avatar-position.py" \
+    --video "${ARTIFACTS}/avatar-demo.mp4" \
+    --annotate "${ARTIFACTS}/avatar-demo-annotated.mp4" \
+    && VIDEO_ANALYSIS_OK=1 || true
+  if [ "$VIDEO_ANALYSIS_OK" -eq 1 ]; then
+    echo "  PASS: motion detected in demo video"
+  else
+    echo "  FAIL: no avatar motion detected — avatar may not be visible in recording"
+  fi
+else
+  echo "  SKIP: video not available or opencv-python not installed"
 fi
 
 echo "[5/6] Capturing final screenshot..."

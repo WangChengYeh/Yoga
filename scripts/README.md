@@ -5,7 +5,8 @@
 ### Full regression (Gradle + APK + on-device)
 
 Runs unit tests, builds the debug APK, installs it, checks the Godot bridge port,
-sweeps the avatar through positions, and verifies no crashes. Run from the repo root.
+sweeps the avatar through positions with automated position verification, and checks
+for crashes. Run from the repo root.
 
 ```bash
 scripts/test-regression.sh
@@ -13,6 +14,59 @@ scripts/test-regression.sh
 
 Requires an ADB-connected device. `JAVA_HOME` is auto-detected via Homebrew if not set.
 Override ADB path with `ADB=/path/to/adb scripts/test-regression.sh`.
+
+### Avatar position sweep + verification
+
+Sweeps the avatar LEFT → RIGHT → CENTER → clear-override, then runs
+`test-avatar-position.py --verify` on the captured screenshots and `--logcat`
+for ground-truth ordering. Exits non-zero if verification fails.
+
+```bash
+scripts/test-avatar-movement.sh           # default 2-second wait per position
+WAIT=4 scripts/test-avatar-movement.sh   # slower on laggy devices
+```
+
+Artifacts: `test-artifacts/avatar-left.png`, `avatar-right.png`, `avatar-center.png`, `avatar-auto.png`.
+
+### Avatar position detection (CV + logcat)
+
+Extracts and verifies avatar position from screen captures. Requires `pip install opencv-python numpy`.
+
+```bash
+# Verify regression artifacts (screenshot diff + logcat ordering)
+python3 scripts/test-avatar-position.py --verify test-artifacts/
+
+# Read avatar position commands from live ADB logcat (most reliable)
+python3 scripts/test-avatar-position.py --logcat
+
+# Analyse a screen recording for avatar motion (background subtraction)
+python3 scripts/test-avatar-position.py --video test-artifacts/avatar-demo.mp4
+
+# Analyse a single screenshot (blob detection, less reliable on home screen)
+python3 scripts/test-avatar-position.py --image test-artifacts/avatar-left.png
+
+# Diff-based detection between two screenshots
+python3 scripts/test-avatar-position.py --image avatar-left.png --ref avatar-center.png
+
+# Save annotated output alongside any mode
+python3 scripts/test-avatar-position.py --image avatar-left.png --annotate
+```
+
+**Known limitation**: `adb shell screencap` does not composite the Godot SurfaceView layer
+on most devices, so pixel-diff checks are automatically skipped when images are identical.
+The logcat corroboration (ground truth) and video analysis are not affected.
+
+### Avatar self-test (demo video + screenshot + motion analysis)
+
+Installs APK, launches in demo mode, records a 12-second video, runs CV motion analysis
+on it, captures a screenshot, and dumps the UI hierarchy. Artifacts land in `test-artifacts/`.
+
+```bash
+scripts/test-avatar-self.sh
+```
+
+Automatically calls `test-avatar-position.py --video` after pulling the recording.
+The video checklist still requires human review for visual quality.
 
 ### ADB integration test suite
 
@@ -23,29 +77,6 @@ python3 scripts/test-integration.py                # build + install + run
 python3 scripts/test-integration.py --skip-install # skip build (APK already installed)
 python3 scripts/test-integration.py --screenshots  # save a PNG per test step to test-artifacts/
 ```
-
-### Avatar self-test (demo video + screenshot)
-
-Installs APK, launches in demo mode, records a 12-second video, captures a screenshot,
-and dumps the UI hierarchy. Artifacts land in `test-artifacts/`.
-
-```bash
-scripts/test-avatar-self.sh
-```
-
-**Human review required** — open `test-artifacts/avatar-self-test.png` and
-`test-artifacts/avatar-demo.mp4` and check the printed checklist.
-
-### Avatar position sweep
-
-Sweeps the avatar LEFT → RIGHT → CENTER → clear-override, capturing a screenshot at each stop.
-
-```bash
-scripts/test-avatar-movement.sh           # default 2-second wait per position
-WAIT=4 scripts/test-avatar-movement.sh   # slower on laggy devices
-```
-
-Artifacts: `test-artifacts/avatar-left.png`, `avatar-right.png`, `avatar-center.png`, `avatar-auto.png`.
 
 ## Agent Communication Logger
 

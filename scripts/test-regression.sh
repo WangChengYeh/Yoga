@@ -38,8 +38,14 @@ sleep 10
 BRIDGE_UP=$({ "$ADB" shell cat /proc/net/tcp6 2>/dev/null; "$ADB" shell cat /proc/net/tcp 2>/dev/null; } | awk '{print $2}' | grep -ci "2382" || true)
 if [ "$BRIDGE_UP" -gt 0 ]; then echo "  PASS: port 9090 (0x2382) listening"; else echo "  FAIL: port 9090 not found"; fi
 
-echo "=== Step 5: Avatar position sweep ==="
-bash "$SCRIPT_DIR/test-avatar-movement.sh"
+echo "=== Step 5: Avatar position sweep + verification ==="
+AVATAR_OK=0
+bash "$SCRIPT_DIR/test-avatar-movement.sh" && AVATAR_OK=1 || true
+if [ "$AVATAR_OK" -eq 1 ]; then
+  echo "  PASS: avatar position verified"
+else
+  echo "  FAIL: avatar position verification failed — see output above"
+fi
 
 echo "=== Step 6: Screenshot size check ==="
 # 10 KB minimum — a truly blank/black PNG is ~3–5 KB; any real UI frame with content exceeds 10 KB.
