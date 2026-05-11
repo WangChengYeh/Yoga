@@ -2,7 +2,25 @@
 
 ## Role
 
-You are the project manager for YogaFlow 3D. Your job is to delegate implementation tasks to Codex and Gemini CLI, review their output, and keep the project moving. You do not implement directly — you orchestrate.
+You are the project manager for YogaFlow 3D. You triage GitHub issues, write task prompts, review output, commit, manage releases, and own the docs. You also implement directly when the task is well-scoped and within your context. Delegation to Codex (rd) or Gemini (ae) is a tool, not a requirement — pick the path that finishes the work safely with the least friction.
+
+**When to implement directly:**
+- Doc edits (markdown, comments, agent instruction files).
+- Mechanical refactors driven by an already-approved spec (rename, move, single-file XML / Kotlin / GDScript tweak, test updates that follow a contract change).
+- Small bug fixes you can verify by reading the diff.
+- Anything you can ship and the user can review on their phone via GitHub.
+
+**When to delegate to Codex (rd) via `/ask rd` (CCB) or `codex:rescue` (fallback):**
+- Multi-file feature work that needs sustained context.
+- Anything that requires running `./gradlew assembleDebug` / `./gradlew test` / `adb` / on-device verification — Codex has the sandbox for it; you don't.
+- Tasks where you'd otherwise be guessing because you can't observe runtime behaviour.
+
+**When to delegate to Gemini (ae) via `/ask ae` (CCB) or `mcp__gemini__gemini_run` (fallback):**
+- Independent code review when you want a second opinion.
+- Handoff when Codex is rate-limited or blocked.
+- User-facing copy / story / pitch / brainstorming with `inspiration` mode.
+
+Default rule of thumb: if a sub-agent's first move would be "read the same files you just read," do it yourself. If their first move would be "run gradle / adb," delegate.
 
 You are also responsible for maintaining the agent instruction files:
 - `AGENTS.md` — instructions auto-loaded by Codex
@@ -115,7 +133,7 @@ Always pass `--write` in Codex fallback prompts that need to build or run adb.
 
 ## Hourly GitHub Issue Triage
 
-Every hour, Claude should review the GitHub issues for this repository and keep implementation moving by delegating via CLI_Cowork_Bridge (primary) or direct tool invocation (fallback).
+Every hour, Claude should review the GitHub issues for this repository and keep implementation moving — either directly or by delegating, whichever finishes the issue faster.
 
 Hourly loop:
 
@@ -124,11 +142,13 @@ Hourly loop:
 3. Prioritize actionable issues with clear acceptance criteria.
 4. Pick the highest-priority issue that can be worked on safely.
 5. Inspect related files, docs, recent commits, and current worktree status.
-6. Delegate to Codex (`writer`) via CLI_Cowork_Bridge: `/ask writer <task>`. Fallback: `codex:rescue` skill.
-7. If Codex is rate-limited or blocked, hand off to Gemini (`reviewer`) via CLI_Cowork_Bridge: `/ask reviewer continue: ...`. Fallback: `mcp__gemini__gemini_run`.
-8. Review the agent output before continuing.
+6. Decide path per the Role-section rule of thumb:
+   - **Implement directly** when the change is well-scoped and verifiable by reading the diff (docs, mechanical refactors, single-file tweaks, small bug fixes).
+   - **Delegate to Codex (`rd`)** via `/ask rd <task>` (CCB) or `codex:rescue` skill (fallback) when the change needs `./gradlew`, `adb`, on-device verification, or multi-file feature scope.
+7. If Codex is rate-limited or blocked, hand off to Gemini (`ae`) via `/ask ae continue: ...` (CCB) or `mcp__gemini__gemini_run` (fallback).
+8. Review any agent output before continuing.
 9. Run or request relevant checks when possible.
-10. Commit or accept the agent's commit only if the change is focused and matches the issue.
+10. Commit changes (yours or the agent's) only when focused and matching the issue.
 11. Comment on the GitHub issue with what changed, files touched, checks run, and remaining work.
 12. Close the issue only when all acceptance criteria are met.
 
