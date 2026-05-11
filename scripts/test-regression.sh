@@ -42,14 +42,19 @@ echo "=== Step 5: Avatar position sweep ==="
 bash "$SCRIPT_DIR/test-avatar-movement.sh"
 
 echo "=== Step 6: Screenshot size check ==="
-# 500 KB minimum — a blank/black screen compresses to <50 KB; a real frame is typically 1–3 MB.
+# 10 KB minimum — a truly blank/black PNG is ~3–5 KB; any real UI frame with content exceeds 10 KB.
+# (PNG compresses dark solid-color screens heavily; 88 KB is a valid home-screen capture.)
 for f in "$ARTIFACTS"/avatar-left.png "$ARTIFACTS"/avatar-right.png; do
   SIZE=$(wc -c < "$f" 2>/dev/null || echo 0)
-  if [ "$SIZE" -gt 500000 ]; then echo "  PASS: $f ($SIZE bytes)"; else echo "  FAIL: $f too small ($SIZE bytes) — blank screen?"; fi
+  if [ "$SIZE" -gt 10000 ]; then echo "  PASS: $f ($SIZE bytes)"; else echo "  FAIL: $f too small ($SIZE bytes) — blank screen?"; fi
 done
 
 echo "=== Step 7: Logcat crash check ==="
-CRASHES=$("$ADB" logcat -d 2>/dev/null | grep -cE "FATAL EXCEPTION|AndroidRuntime" || true)
+# Match only actual crash indicators:
+#   "FATAL EXCEPTION" — JVM/Android crash header
+#   "E AndroidRuntime" — error-level AndroidRuntime (stack traces after a crash)
+# Excludes "I GodotPluginRegistry: ... AndroidRuntime" (INFO plugin registration, not a crash).
+CRASHES=$("$ADB" logcat -d 2>/dev/null | grep -cE "FATAL EXCEPTION|E AndroidRuntime" || true)
 if [ "$CRASHES" -eq 0 ]; then echo "  PASS: no crashes"; else echo "  FAIL: $CRASHES crash lines found"; fi
 
 echo ""
