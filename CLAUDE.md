@@ -56,11 +56,11 @@ git push origin main   # ← NEVER skip this
 
 The project runs on **CLI_Cowork_Bridge** (WangChengYeh/CLI_Cowork_Bridge) as the primary multi-agent workspace.
 
-### Roles (unchanged)
+### Roles
 | Agent | CLI_Cowork_Bridge role | Responsibility |
 |-------|----------|----------------|
 | **Claude Code** | PM (orchestrator, outside CLI_Cowork_Bridge) | Triage issues, write prompts, review output, commit, manage releases |
-| **Codex** | `RD` | Primary implementer — deep code changes, Gradle builds, adb device testing |
+| **Codex** | `RD` | Deep code changes, Gradle builds, adb device testing |
 | **Gemini** | `AE` | Application to user and find out issues |
 
 ### CLI_Cowork_Bridge setup (one-time)
@@ -116,8 +116,6 @@ Always pass `--write` in Codex fallback prompts that need to build or run adb.
 ## Hourly GitHub Issue Triage
 
 Every hour, Claude should review the GitHub issues for this repository and keep implementation moving by delegating via CLI_Cowork_Bridge (primary) or direct tool invocation (fallback).
-
-Claude should not implement directly. Claude should triage, decide the next task, prepare a clear prompt, invoke the appropriate agent, review the result, and manage handoff.
 
 Hourly loop:
 
