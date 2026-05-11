@@ -592,7 +592,7 @@ PoseCoachFrame avatar object (current schema):
 }
 ```
 
-`screen_side` is computed per-frame by `humanScreenSide()` in Kotlin: returns the OPPOSITE side of where the human body center is detected, so the avatar always steps aside. See `docs/godot-avatar-coach-overlay.md` for full details.
+`screen_side` is computed per-frame by `humanScreenSide()` in Kotlin: returns the OPPOSITE side of where the human body center is detected, so the avatar always steps aside. See `docs/avatar.md` for full details.
 
 GDScript deployment note: Godot compiles `.gd` source to `.gdc` bytecode during export. The bytecode in `app/src/main/assets/scripts/*.gdc` must be kept in sync with the source in `godot/scripts/`. Currently the `.gd.remap` files point directly to the source `.gd` files to avoid stale-bytecode bugs; this means any Godot export must also update the remap files.
 

@@ -1,6 +1,10 @@
 # YogaFlow 3D Project Status
 
-Last updated: 2026-05-12 (docs re-org: removed `project-plan.md`, `flow-format.md`, `detection-refactor-roadmap.md`; their content lives in `Proposal.md`, `flow-dsl.md`, `roadmap.md`, and `architecture.md`)
+Last updated: 2026-05-12
+
+Recent doc re-orgs:
+- removed `project-plan.md`, `flow-format.md`, `detection-refactor-roadmap.md` (content lives in `Proposal.md`, `flow-dsl.md`, `roadmap.md`, and `architecture.md`)
+- merged `avatar-notes.md`, `avatar-overlay-architecture.md`, `avatar-rig-skeleton.md`, and `godot-avatar-coach-overlay.md` into a single `docs/avatar.md`
 
 ## Purpose
 
@@ -10,10 +14,7 @@ This file is the short status hub for the project. Detailed information is parti
 - `docs/roadmap.md`: finished work, unfinished work, and future product direction.
 - `docs/test-plan.md`: build, unit, integration, device, screenshot, and regression verification.
 - `docs/flow-dsl.md`: Flow DSL v2 schema and runtime validation rules.
-- `docs/avatar-overlay-architecture.md`: Android/Godot avatar overlay layout and positioning contract.
-- `docs/godot-avatar-coach-overlay.md`: avatar coach product design direction.
-- `docs/avatar-rig-skeleton.md`: avatar rig, bone mapping, and Blender-to-Godot pipeline.
-- `docs/avatar-notes.md`: avatar source asset, materials, and licensing notes.
+- `docs/avatar.md`: consolidated avatar reference — product direction, overlay architecture, PoseCoachFrame contract, `screen_side` auto-avoidance, Mixamo-style skeleton, MediaPipe mapping, Blender→Godot pipeline, source asset / licensing notes, and Godot implementation.
 - `docs/project-environment-setup.md`: local multi-agent and tmux workspace setup.
 - `docs/Proposal.md`: consolidated product, pitch, story, and business-facing material.
 

@@ -321,8 +321,6 @@ Claude should ask agents to leave behind reusable scripts whenever they discover
 - Project status (one-pager): `docs/project-status.md`
 - Test plan / verification commands: `docs/test-plan.md`
 - Flow DSL v2: `docs/flow-dsl.md`
-- Avatar overlay architecture: `docs/avatar-overlay-architecture.md`
-- Avatar design direction: `docs/godot-avatar-coach-overlay.md`
-- Avatar rig / asset pipeline: `docs/avatar-rig-skeleton.md`, `docs/avatar-notes.md`
+- Avatar (design, architecture, rig, asset pipeline): `docs/avatar.md`
 - Product proposal / pitch: `docs/Proposal.md`
 - Environment / tmux multi-agent setup: `docs/project-environment-setup.md`
