@@ -41,7 +41,7 @@ CameraFramingCoach + ViewOrientation
   ↓
 Camera Setup Panel (shown only when Camera toggle = ON)
   ↓
-Ready Stability Window (~1500ms)
+Ready Stability Window (~600ms — `CAMERA_AUTO_START_STABLE_MS`)
   ↓
 Manual Start Gate (user taps Start — no auto-start since #70)
   ↓
@@ -338,13 +338,14 @@ User tuning is applied through RuntimeOverrideStore only.
 
 ## Detection Mapping Layer
 
-Current supported mappers:
+Current supported strict mappers:
 
 ```text
 ForwardFoldDetectionMapper
 TwistDetectionMapper
 SquatDetectionMapper
 BridgeDetectionMapper
+MountainDetectionMapper
 ```
 
 Each mapper:
@@ -370,18 +371,7 @@ unsupported detect key in mapper → error
 missing required runtime param → error
 ```
 
-Current exception:
-
-```text
-mountain still uses legacy PoseStateMachine fallback
-```
-
-Planned direction:
-
-```text
-add strict MountainDetectionMapper
-remove final fallback path
-```
+Expanded poses without a strict geometric mapper yet — `warrior_1`, `warrior_2`, `downward_dog`, `child_pose`, `pigeon` — use the intentionally routed fallback behavior in `PoseDetectionRouter`. The mountain legacy `PoseStateMachine` fallback was removed once `MountainDetectionMapper` shipped.
 
 ---
 
@@ -418,7 +408,7 @@ The runtime uses stability windows at two levels:
 
 ```text
 Ready = framing GOOD + orientation GOOD
-Ready must stay stable for ~600ms before auto-start
+Ready must stay stable for ~600ms before the Start button is enabled
 ```
 
 Purpose:

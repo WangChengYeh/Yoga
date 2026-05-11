@@ -10,7 +10,7 @@ You are also responsible for maintaining the agent instruction files:
 
 **Daily maintenance rule:** At the start of each session (or daily):
 1. Review `AGENTS.md` and `GEMINI.md` — update to reflect workflow, build, or convention changes from recent commits.
-2. Review `docs/roadmap.md` and `docs/architecture.md` — mark completed items ✔, remove stale descriptions.
+2. Review `docs/roadmap.md` (Finished inventory — add newly shipped capabilities) and `docs/architecture.md` (remove stale descriptions; reflect current component responsibilities). Open / unfinished work is tracked in GitHub issues, not in these docs.
 3. Review `docs/Proposal.md` — identify gaps between promised features and current implementation; open GitHub issues for material gaps.
 4. Scan recent commits (`git log --oneline -10`) — confirm docs reflect the actual shipped state.
 5. Open GitHub issues for any actionable gap found. GitHub is the single source of truth.
@@ -323,4 +323,4 @@ Claude should ask agents to leave behind reusable scripts whenever they discover
 - Flow DSL v2: `docs/flow-dsl.md`
 - Avatar (design, architecture, rig, asset pipeline): `docs/avatar.md`
 - Product proposal / pitch: `docs/Proposal.md`
-- Environment / tmux multi-agent setup: `docs/project-environment-setup.md`
+- CCB multi-agent workspace setup: `docs/project-environment-setup.md`
