@@ -62,7 +62,9 @@ class CameraSetupController(
                 onUpdateUi(false)
                 return true
             }
-            SessionState.RUNNING -> Unit
+            SessionState.RUNNING -> {
+                if (frameReady) return false
+            }
         }
 
         if (!frameReady) {
