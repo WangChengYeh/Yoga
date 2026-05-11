@@ -353,22 +353,6 @@ class PoseStateMachine {
                 }
             }
 
-            "mountain" -> {
-                val leftKnee = PoseGeometry.angle(frame, 23, 25, 27)
-                val leftPosture = PoseGeometry.angle(frame, 11, 23, 25)
-                if (leftKnee.confidence == PoseGeometry.Confidence.INVALID) {
-                    CoachState.CORRECTION to "請讓全身進入畫面，確認雙腿可見。"
-                } else {
-                    val prefix = confidencePrefix(leftKnee.confidence)
-                    when {
-                        leftKnee.degrees < 160 -> CoachState.CORRECTION to "${prefix}膝蓋打直，雙腿完全伸展。"
-                        leftPosture.confidence != PoseGeometry.Confidence.INVALID && leftPosture.degrees < 160 ->
-                            CoachState.CORRECTION to "${prefix}站直，骨盆不要前傾。"
-                        else -> CoachState.HOLD to "${prefix}山式到位，脊椎向上延伸，均勻呼吸。"
-                    }
-                }
-            }
-
             else -> CoachState.HOLD to "維持姿勢"
         }
     }

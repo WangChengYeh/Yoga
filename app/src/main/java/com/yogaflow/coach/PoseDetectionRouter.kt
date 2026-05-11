@@ -9,7 +9,8 @@ class PoseDetectionRouter(
     private val forwardFoldDetectionMapper: ForwardFoldDetectionMapper = ForwardFoldDetectionMapper(),
     private val twistDetectionMapper: TwistDetectionMapper = TwistDetectionMapper(),
     private val squatDetectionMapper: SquatDetectionMapper = SquatDetectionMapper(),
-    private val bridgeDetectionMapper: BridgeDetectionMapper = BridgeDetectionMapper()
+    private val bridgeDetectionMapper: BridgeDetectionMapper = BridgeDetectionMapper(),
+    private val mountainDetectionMapper: MountainDetectionMapper = MountainDetectionMapper()
 ) {
 
     fun evaluate(
@@ -39,7 +40,10 @@ class PoseDetectionRouter(
                 val r = bridgeDetectionMapper.evaluate(detect, frame, params)
                 PoseDetectionMappingResult(r.matched, r.state, r.cue, if (!r.matched) r.reason else "")
             }
-            "mountain",
+            "mountain" -> {
+                val r = mountainDetectionMapper.evaluate(detect, frame, params)
+                PoseDetectionMappingResult(r.matched, r.state, r.cue, if (!r.matched) r.reason else "")
+            }
             "warrior_1",
             "warrior_2",
             "downward_dog",

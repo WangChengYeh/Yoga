@@ -4,13 +4,15 @@ class DetectionMapperSession(
     private val forwardFoldDetectionMapper: ForwardFoldDetectionMapper = ForwardFoldDetectionMapper(),
     private val twistDetectionMapper: TwistDetectionMapper = TwistDetectionMapper(),
     private val squatDetectionMapper: SquatDetectionMapper = SquatDetectionMapper(),
-    private val bridgeDetectionMapper: BridgeDetectionMapper = BridgeDetectionMapper()
+    private val bridgeDetectionMapper: BridgeDetectionMapper = BridgeDetectionMapper(),
+    private val mountainDetectionMapper: MountainDetectionMapper = MountainDetectionMapper()
 ) {
     val poseDetectionRouter: PoseDetectionRouter = PoseDetectionRouter(
         forwardFoldDetectionMapper = forwardFoldDetectionMapper,
         twistDetectionMapper = twistDetectionMapper,
         squatDetectionMapper = squatDetectionMapper,
-        bridgeDetectionMapper = bridgeDetectionMapper
+        bridgeDetectionMapper = bridgeDetectionMapper,
+        mountainDetectionMapper = mountainDetectionMapper
     )
 
     fun resetAll() {
@@ -18,5 +20,6 @@ class DetectionMapperSession(
         twistDetectionMapper.reset()
         squatDetectionMapper.reset()
         bridgeDetectionMapper.reset()
+        mountainDetectionMapper.reset()
     }
 }
