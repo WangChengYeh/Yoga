@@ -1,5 +1,6 @@
 package com.yogaflow.coach
 
+import com.yogaflow.avatar.AvatarIntent
 import org.json.JSONObject
 
 data class PoseMetrics(
@@ -30,32 +31,13 @@ data class CoachVisualState(
         .put("severity", severity)
 }
 
-data class AvatarCommand(
-    val action: String,
-    val emotion: String,
-    val highlight: String?,
-    val screenSide: String = "right",
-    val overridePosition: Pair<Float, Float>? = null
-) {
-    fun toJson(): JSONObject = JSONObject()
-        .put("action", action)
-        .put("emotion", emotion)
-        .putNullable("highlight", highlight)
-        .put("screen_side", screenSide)
-        .apply {
-            overridePosition?.let { (x, y) ->
-                put("override_position", JSONObject().put("x", x.toDouble()).put("y", y.toDouble()))
-            }
-        }
-}
-
 data class PoseCoachFrame(
     val timestampMs: Long,
     val stepId: String,
     val phase: String,
     val pose: PoseMetrics,
     val coach: CoachVisualState,
-    val avatar: AvatarCommand
+    val avatar: AvatarIntent
 ) {
     fun toJson(): JSONObject = JSONObject()
         .put("timestampMs", timestampMs)

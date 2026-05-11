@@ -27,7 +27,8 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
-import com.yogaflow.coach.AvatarCommand
+import com.yogaflow.avatar.AvatarIntent
+import com.yogaflow.coach.AvatarCoachStateMapper
 import com.yogaflow.coach.CoachCueController
 import com.yogaflow.coach.CoachSpeaker
 import com.yogaflow.coach.CoachState
@@ -163,6 +164,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
     private var demoRunnable: Runnable? = null
     private var pendingTtsReady: Boolean? = null
     private val stateMachine = PoseStateMachine()
+    private val avatarCoachStateMapper = AvatarCoachStateMapper()
     private val autoTuningAdvisor = AutoTuningAdvisor()
 
     override fun getActivity(): Activity = this
@@ -650,24 +652,18 @@ class MainActivity : AppCompatActivity(), GodotHost {
                     phase = "running",
                     pose = PoseMetrics(null, null, null, null, null),
                     coach = CoachVisualState("ok", null, message, 0),
-                    avatar = AvatarCommand(
+                    avatar = AvatarIntent(
                         action = "hold_mountain",
                         emotion = "calm",
                         highlight = null,
-                        screenSide = avatarScreenSideForOverride(overridePosition),
+                        position = "center",
+                        facing = "user",
+                        scale = 1.0f,
                         overridePosition = overridePosition
                     )
                 ),
                 force = true
             )
-        }
-    }
-
-    private fun avatarScreenSideForOverride(overridePosition: Pair<Float, Float>?): String {
-        return when {
-            overridePosition == null -> "right"
-            overridePosition.first < 0f -> "left"
-            else -> "right"
         }
     }
 
@@ -786,11 +782,13 @@ class MainActivity : AppCompatActivity(), GodotHost {
             phase = "running",
             pose = PoseMetrics(null, null, null, null, null),
             coach = CoachVisualState("ok", null, "Self-test: $action", 0),
-            avatar = AvatarCommand(
+            avatar = AvatarIntent(
                 action = action,
                 emotion = "calm",
                 highlight = null,
-                screenSide = avatarScreenSideForOverride(avatarPositionOverride),
+                position = "demo_area",
+                facing = "user",
+                scale = 1.0f,
                 overridePosition = avatarPositionOverride
             )
         )
@@ -1120,7 +1118,14 @@ class MainActivity : AppCompatActivity(), GodotHost {
     ): PoseCoachFrame {
         val step = currentFlow.steps.getOrNull(flowEngine.currentStepNumber() - 1)
         val coachState = if (matched && state != CoachState.CORRECTION) "ok" else "needs_correction"
-        val avatarCommand = buildAvatarCommand(detect, state, matched, failReason, humanScreenSide(frame), avatarPositionOverride)
+        val avatarCommand = avatarCoachStateMapper.map(
+            detect = detect,
+            state = state,
+            matched = matched,
+            failReason = failReason,
+            poseId = currentPose.id,
+            overridePosition = avatarPositionOverride
+        )
         return PoseCoachFrame(
             timestampMs = System.currentTimeMillis(),
             stepId = step?.detect?.jsonKey ?: detect,
@@ -1152,53 +1157,6 @@ class MainActivity : AppCompatActivity(), GodotHost {
         )
     }
 
-    private fun buildAvatarCommand(
-        detect: String,
-        state: CoachState,
-        matched: Boolean,
-        failReason: String,
-        screenSide: String = "right",
-        overridePosition: Pair<Float, Float>? = null
-    ): AvatarCommand {
-        val highlight = highlightFor(detect, failReason)
-        val action = when {
-            state == CoachState.CORRECTION && highlight == "knees" -> "correct_knees"
-            state == CoachState.CORRECTION && highlight == "hips" -> "correct_hips"
-            state == CoachState.CORRECTION && highlight == "spine" -> "correct_spine"
-            state == CoachState.CORRECTION -> "correct_alignment"
-            detect.contains("forward_fold") || currentPose.id == "forward_fold" -> "hold_forward_fold"
-            currentPose.id == "squat" -> "hold_squat"
-            currentPose.id == "twist" -> "hold_twist"
-            currentPose.id == "bridge" -> "hold_bridge"
-            state == CoachState.TRANSITION -> "controlled_transition"
-            else -> "hold_mountain"
-        }
-        val emotion = when {
-            state == CoachState.CORRECTION || !matched -> "focused"
-            state == CoachState.MOVEMENT || state == CoachState.TRANSITION -> "attentive"
-            else -> "calm"
-        }
-        return AvatarCommand(
-            action = action,
-            emotion = emotion,
-            highlight = highlight,
-            screenSide = screenSide,
-            overridePosition = overridePosition
-        )
-    }
-
-    private fun humanScreenSide(frame: PoseDetectionResult): String {
-        val nose = frame.imageLandmarks.getOrNull(0)
-        val ls = frame.imageLandmarks.getOrNull(11)
-        val rs = frame.imageLandmarks.getOrNull(12)
-        // PoseHelper already flips x for mirrored (front) camera, so landmarks are in screen coords
-        val screenX: Float = when {
-            nose != null -> nose.x()
-            ls != null && rs != null -> (ls.x() + rs.x()) / 2f
-            else -> return "right"
-        }
-        return if (screenX < 0.5f) "right" else "left"
-    }
 
     private fun severityFor(state: CoachState, matched: Boolean, failReason: String): Int {
         return when {
@@ -1206,19 +1164,6 @@ class MainActivity : AppCompatActivity(), GodotHost {
             failReason.contains("<") || failReason.contains(">") -> 2
             state == CoachState.CORRECTION -> 2
             else -> 1
-        }
-    }
-
-    private fun highlightFor(detect: String, failReason: String): String? {
-        val source = "$detect $failReason".lowercase(Locale.US)
-        return when {
-            source.contains("knee") -> "knees"
-            source.contains("hip") -> "hips"
-            source.contains("spine") || source.contains("back") -> "spine"
-            source.contains("shoulder") -> "shoulders"
-            source.contains("ankle") || source.contains("foot") -> "feet"
-            source.contains("twist") -> "shoulders"
-            else -> null
         }
     }
 

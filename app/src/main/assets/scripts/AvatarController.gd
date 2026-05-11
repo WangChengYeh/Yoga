@@ -10,13 +10,22 @@ var current_action := ""
 var _base_position := Vector3.ZERO
 var _base_rotation := Vector3.ZERO
 var _base_scale := Vector3.ONE
-var _side_x_offset: float = 0.0
 var _override_active: bool = false
 var _override_x: float = 0.0
 var _override_y: float = 0.0
 
+var _semantic_offsets := {
+    "left_side": Vector3(-0.18, 0.0, 0.0),
+    "right_side": Vector3(0.18, 0.0, 0.0),
+    "center": Vector3(0.0, 0.0, 0.0),
+    "demo_area": Vector3(0.0, 0.0, 0.0),
+    "near_knees": Vector3(0.0, -0.14, 0.12),
+    "near_hips": Vector3(0.0, -0.05, 0.10),
+    "near_spine": Vector3(0.0, 0.03, 0.08)
+}
+
 func _ready() -> void:
-    print("AvatarController v2: override_position support active")
+    print("AvatarController v3: semantic position/facing/scale support active")
     _base_position = position
     _base_rotation = rotation
     _base_scale = scale
@@ -54,22 +63,45 @@ func apply_pose_coach_frame(frame: Dictionary) -> void:
     var pose = frame.get("pose", {})
 
     var action = avatar.get("action", "hold_mountain")
-    var screen_side = avatar.get("screen_side", "right")
     var highlight = avatar.get("highlight", null)
     var severity = coach.get("severity", 0)
     var override_pos = avatar.get("override_position", null)
 
     if override_pos != null:
         set_override_position(float(override_pos.get("x", 0.0)), float(override_pos.get("y", 0.0)))
-        play_action(action)
-        apply_highlight(highlight, severity)
-        apply_pose_metrics(pose)
-        return
-    clear_override_position()
-    apply_screen_side(screen_side)
+    else:
+        clear_override_position()
+        move_avatar_to(str(avatar.get("position", "demo_area")))
+
+    apply_facing(str(avatar.get("facing", "user")))
+    apply_scale(float(avatar.get("scale", 1.0)))
     play_action(action)
     apply_highlight(highlight, severity)
     apply_pose_metrics(pose)
+
+func move_avatar_to(position_name: String) -> void:
+    var offset: Vector3 = _semantic_offsets.get(position_name, _semantic_offsets["demo_area"])
+    var target = _base_position + offset
+    var tween = create_tween()
+    tween.tween_property(self, "position", target, 0.35)
+
+func apply_facing(facing: String) -> void:
+    var target_y := _base_rotation.y
+    match facing:
+        "left_side":
+            target_y = _base_rotation.y + deg_to_rad(-18.0)
+        "right_side":
+            target_y = _base_rotation.y + deg_to_rad(18.0)
+        _:
+            target_y = _base_rotation.y
+    var tween = create_tween()
+    tween.tween_property(self, "rotation:y", target_y, 0.3)
+
+func apply_scale(scale_value: float) -> void:
+    var clamped = clamp(scale_value, 0.8, 1.2)
+    var target = _base_scale * clamped
+    var tween = create_tween()
+    tween.tween_property(self, "scale", target, 0.25)
 
 func set_override_position(world_x: float, world_y: float) -> void:
     _override_active = true
@@ -77,15 +109,10 @@ func set_override_position(world_x: float, world_y: float) -> void:
     _override_y = world_y
     var target = Vector3(_base_position.x + world_x, _base_position.y + world_y, _base_position.z)
     var tween = create_tween()
-    tween.tween_property(self, "position", target, 0.6)
+    tween.tween_property(self, "position", target, 0.35)
 
 func clear_override_position() -> void:
     _override_active = false
-
-func apply_screen_side(side: String) -> void:
-    _side_x_offset = 0.0
-    var tween = create_tween()
-    tween.tween_property(self, "position:x", _base_position.x, 0.4)
 
 func apply_skin(skin_name: String) -> void:
     match skin_name:
@@ -102,9 +129,6 @@ func apply_skin(skin_name: String) -> void:
 func apply_pose_metrics(pose: Dictionary) -> void:
     if skeleton == null:
         return
-    # Here we can apply IK or micro-adjustments based on real-time angles.
-    # For version 1, we ensure the wiring exists even if logic is minimal.
-    # Future: skeleton.set_bone_pose_rotation(...) or IK target updates.
     pass
 
 func play_action(action: String) -> void:
@@ -146,8 +170,6 @@ func apply_highlight(highlight, severity: int) -> void:
     var highlight_scale: float = clamp(float(severity) / 3.0, 0.0, 1.0)
     if highlight == null or highlight_scale <= 0.0:
         return
-    # Keep the first version non-invasive: visible action comes from pose changes,
-    # while future material or marker highlights can hook in here.
 
 func _try_play_animation(state_name: String) -> bool:
     if animation_player != null:
@@ -169,38 +191,34 @@ func _try_play_animation(state_name: String) -> bool:
     return false
 
 func _apply_fallback_pose(state_name: String) -> void:
-    var target_rotation := _base_rotation
-    var target_position := _base_position
-    target_position.x = _base_position.x + _side_x_offset
+    var target_rotation := rotation
+    var target_position := position
     match state_name:
         "forward_fold":
             target_rotation.x = deg_to_rad(-35.0)
-            target_position.y = _base_position.y - 0.10
+            target_position.y -= 0.10
         "correct_knees":
             target_rotation.x = deg_to_rad(-20.0)
             target_rotation.z = deg_to_rad(8.0)
         "correct_hips":
             target_rotation.x = deg_to_rad(-28.0)
-            target_position.z = _base_position.z + 0.08
+            target_position.z += 0.08
         "correct_spine":
             target_rotation.x = deg_to_rad(-12.0)
             target_rotation.z = deg_to_rad(-8.0)
         "squat":
-            target_position.y = _base_position.y - 0.22
+            target_position.y -= 0.22
             target_rotation.x = deg_to_rad(-18.0)
         "twist":
-            target_rotation.y = deg_to_rad(38.0)
+            target_rotation.y += deg_to_rad(38.0)
         "walk_step_left":
-            target_position.x = _base_position.x + _side_x_offset - 0.12
-            target_position.y = _base_position.y - 0.04
-            target_rotation.y = deg_to_rad(15.0)
+            target_position.x -= 0.12
+            target_position.y -= 0.04
+            target_rotation.y += deg_to_rad(15.0)
         "walk_step_right":
-            target_position.x = _base_position.x + _side_x_offset + 0.12
-            target_position.y = _base_position.y - 0.04
-            target_rotation.y = deg_to_rad(-15.0)
-        _:
-            target_rotation = _base_rotation
-            target_position = Vector3(_base_position.x + _side_x_offset, _base_position.y, _base_position.z)
+            target_position.x += 0.12
+            target_position.y -= 0.04
+            target_rotation.y += deg_to_rad(-15.0)
     var tween = create_tween().set_parallel(true)
     tween.tween_property(self, "rotation", target_rotation, 0.5)
     tween.tween_property(self, "position", target_position, 0.5)
