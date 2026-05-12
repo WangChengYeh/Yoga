@@ -67,6 +67,9 @@ object FlowJsonValidator {
         if (step.has("correction") && !isString(step, "correction")) {
             error("Invalid Flow JSON: $path.correction must be a string")
         }
+        if (step.has("avatar_action") && !isString(step, "avatar_action")) {
+            error("Invalid Flow JSON: $path.avatar_action must be a string")
+        }
 
         if (step.has("runtime")) {
             val runtime = step.optJSONObject("runtime")

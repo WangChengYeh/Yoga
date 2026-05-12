@@ -9,10 +9,11 @@ class AvatarCoachStateMapper {
         matched: Boolean,
         failReason: String,
         poseId: String?,
+        preferredAction: String? = null,
         overridePosition: Pair<Float, Float>? = null
     ): AvatarIntent {
         val highlight = highlightFor(detect, failReason)
-        val action = when {
+        val derivedAction = when {
             state == CoachState.CORRECTION && highlight == "knees" -> "correct_knees"
             state == CoachState.CORRECTION && highlight == "hips" -> "correct_hips"
             state == CoachState.CORRECTION && highlight == "spine" -> "correct_spine"
@@ -23,6 +24,11 @@ class AvatarCoachStateMapper {
             poseId == "bridge" -> "hold_bridge"
             state == CoachState.TRANSITION -> "controlled_transition"
             else -> "hold_mountain"
+        }
+        val preferred = preferredAction?.trim()?.takeIf { it.isNotEmpty() }
+        val action = when {
+            state == CoachState.CORRECTION -> derivedAction
+            else -> preferred ?: derivedAction
         }
         val emotion = when {
             state == CoachState.CORRECTION || !matched -> "focused"

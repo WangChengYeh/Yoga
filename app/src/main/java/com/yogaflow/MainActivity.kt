@@ -1153,6 +1153,7 @@ class MainActivity : AppCompatActivity(), GodotHost {
             matched = matched,
             failReason = failReason,
             poseId = currentPose.id,
+            preferredAction = step?.avatarAction,
             overridePosition = avatarPositionOverride
         )
         return PoseCoachFrame(

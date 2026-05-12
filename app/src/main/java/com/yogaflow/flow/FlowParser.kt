@@ -40,6 +40,7 @@ object FlowParser {
             cue = step.getString("cue"),
             detect = DetectKey.fromJsonKey(step.getString("detect")),
             correction = step.optString("correction", ""),
+            avatarAction = step.optString("avatar_action", "").ifBlank { null },
             params = params
         )
     }

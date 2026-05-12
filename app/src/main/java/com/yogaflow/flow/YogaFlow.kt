@@ -18,5 +18,6 @@ data class YogaFlowStep(
     val cue: String,
     val detect: DetectKey,
     val correction: String,
+    val avatarAction: String? = null,
     val params: RuntimeParams = RuntimeParams.EMPTY
 )

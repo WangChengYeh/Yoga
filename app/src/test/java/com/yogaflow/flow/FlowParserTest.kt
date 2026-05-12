@@ -40,4 +40,33 @@ class FlowParserTest {
             }
         }
     }
+    @Test
+    fun parse_avatarActionField_mapsIntoStep() {
+        val text = """
+            {
+              "flow": {
+                "id": "test_flow",
+                "name": "Test",
+                "pose": "mountain",
+                "language": "zh-TW",
+                "level": "beginner"
+              },
+              "steps": [
+                {
+                  "state": "HOLD",
+                  "durationMs": 1500,
+                  "cue": "測試",
+                  "detect": "mountain_hold",
+                  "avatar_action": "hold_mountain"
+                }
+              ],
+              "end": {"cue": "done"}
+            }
+        """.trimIndent()
+
+        val flow = FlowParser.parse(text)
+
+        assertTrue(flow.steps.first().avatarAction == "hold_mountain")
+    }
+
 }

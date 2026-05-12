@@ -16,6 +16,9 @@ var _override_x: float = 0.0
 var _override_y: float = 0.0
 var _override_x_gain: float = 3.0
 
+var _skin_profiles: Dictionary = {}
+var _default_skin: String = "classic"
+
 var _semantic_offsets := {
     "left_side": Vector3(-1.45, 0.0, 0.0),
     "right_side": Vector3(1.45, 0.0, 0.0),
@@ -34,6 +37,7 @@ func _ready() -> void:
     _base_rotation = avatar_node.rotation
     _base_scale = avatar_node.scale
     _setup_animations()
+    _load_skin_profiles()
 
 func _setup_animations() -> void:
     if animation_player == null:
@@ -129,17 +133,43 @@ func set_override_position(world_x: float, world_y: float) -> void:
 func clear_override_position() -> void:
     _override_active = false
 
+func _load_skin_profiles() -> void:
+    var file := FileAccess.open("res://skins/skin_profiles.json", FileAccess.READ)
+    if file == null:
+        push_warning("AvatarController: missing res://skins/skin_profiles.json, using built-in defaults")
+        _skin_profiles = {
+            "classic": {"key_light": [1.0, 1.0, 1.0], "fill_light": [1.0, 0.8, 0.5]},
+            "nature": {"key_light": [0.75, 1.0, 0.65], "fill_light": [0.55, 0.85, 0.45]},
+            "ocean": {"key_light": [0.65, 0.82, 1.0], "fill_light": [0.45, 0.65, 1.0]}
+        }
+        _default_skin = "classic"
+        return
+
+    var parsed = JSON.parse_string(file.get_as_text())
+    if typeof(parsed) != TYPE_DICTIONARY:
+        push_warning("AvatarController: invalid skin_profiles.json format, using built-in defaults")
+        _skin_profiles = {
+            "classic": {"key_light": [1.0, 1.0, 1.0], "fill_light": [1.0, 0.8, 0.5]},
+            "nature": {"key_light": [0.75, 1.0, 0.65], "fill_light": [0.55, 0.85, 0.45]},
+            "ocean": {"key_light": [0.65, 0.82, 1.0], "fill_light": [0.45, 0.65, 1.0]}
+        }
+        _default_skin = "classic"
+        return
+
+    _default_skin = str(parsed.get("default", "classic"))
+    _skin_profiles = parsed.get("skins", {})
+
 func apply_skin(skin_name: String) -> void:
-    match skin_name:
-        "nature":
-            key_light.light_color = Color(0.75, 1.0, 0.65)
-            fill_light.light_color = Color(0.55, 0.85, 0.45)
-        "ocean":
-            key_light.light_color = Color(0.65, 0.82, 1.0)
-            fill_light.light_color = Color(0.45, 0.65, 1.0)
-        _:
-            key_light.light_color = Color.WHITE
-            fill_light.light_color = Color(1.0, 0.80, 0.50)
+    var selected_name = skin_name
+    if !_skin_profiles.has(selected_name):
+        selected_name = _default_skin
+
+    var selected = _skin_profiles.get(selected_name, {})
+    var key = selected.get("key_light", [1.0, 1.0, 1.0])
+    var fill = selected.get("fill_light", [1.0, 0.8, 0.5])
+
+    key_light.light_color = Color(float(key[0]), float(key[1]), float(key[2]))
+    fill_light.light_color = Color(float(fill[0]), float(fill[1]), float(fill[2]))
 
 func apply_pose_metrics(pose: Dictionary) -> void:
     if skeleton == null:
