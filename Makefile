@@ -48,6 +48,7 @@ build-release:
 
 clean:
 	$(GRADLEW) clean
+	rm -f test-artifacts/*.png test-artifacts/*.mp4
 
 # ── JVM tests + CI gate ───────────────────────────────────────────────────────
 
@@ -88,7 +89,7 @@ test-avatar-self:
 
 # test-integration: script's --skip-install flag; we pre-install via make install.
 test-integration: install
-	python3 $(SCRIPTS)/test-integration.py --skip-install
+	uv run $(SCRIPTS)/test-integration.py --skip-install
 
 test-device: test-regression
 
@@ -96,13 +97,13 @@ test-all: test test-device
 
 # ── Avatar position detection ─────────────────────────────────────────────────
 
-# Requires: pip install opencv-python numpy
+# uv auto-installs opencv-python and numpy on first run.
 
 avatar-pos-verify:
-	python3 $(SCRIPTS)/test-avatar-position.py --verify test-artifacts/
+	uv run $(SCRIPTS)/test-avatar-position.py --verify test-artifacts/
 
 avatar-pos-logcat:
-	python3 $(SCRIPTS)/test-avatar-position.py --logcat
+	uv run $(SCRIPTS)/test-avatar-position.py --logcat
 
 # ── Release ───────────────────────────────────────────────────────────────────
 
@@ -153,7 +154,7 @@ help:
 	@echo "    test-integration   10-step ADB integration suite"
 	@echo "    test-all           JVM tests + on-device regression"
 	@echo ""
-	@echo "  Avatar position  (requires: pip install opencv-python numpy)"
+	@echo "  Avatar position  (uv auto-installs opencv-python + numpy)"
 	@echo "    avatar-pos-verify  Verify test-artifacts/ via diff + logcat"
 	@echo "    avatar-pos-logcat  Show live logcat avatar position commands"
 	@echo ""

@@ -30,26 +30,27 @@ Artifacts: `test-artifacts/avatar-left.png`, `avatar-right.png`, `avatar-center.
 
 ### Avatar position detection (CV + logcat)
 
-Extracts and verifies avatar position from screen captures. Requires `pip install opencv-python numpy`.
+Extracts and verifies avatar position from screen captures.
+`uv run` auto-installs `opencv-python` and `numpy` on first use — no manual `pip install` needed.
 
 ```bash
 # Verify regression artifacts (screenshot diff + logcat ordering)
-python3 scripts/test-avatar-position.py --verify test-artifacts/
+uv run scripts/test-avatar-position.py --verify test-artifacts/
 
 # Read avatar position commands from live ADB logcat (most reliable)
-python3 scripts/test-avatar-position.py --logcat
+uv run scripts/test-avatar-position.py --logcat
 
 # Analyse a screen recording for avatar motion (background subtraction)
-python3 scripts/test-avatar-position.py --video test-artifacts/avatar-demo.mp4
+uv run scripts/test-avatar-position.py --video test-artifacts/avatar-demo.mp4
 
 # Analyse a single screenshot (blob detection, less reliable on home screen)
-python3 scripts/test-avatar-position.py --image test-artifacts/avatar-left.png
+uv run scripts/test-avatar-position.py --image test-artifacts/avatar-left.png
 
 # Diff-based detection between two screenshots
-python3 scripts/test-avatar-position.py --image avatar-left.png --ref avatar-center.png
+uv run scripts/test-avatar-position.py --image avatar-left.png --ref avatar-center.png
 
 # Save annotated output alongside any mode
-python3 scripts/test-avatar-position.py --image avatar-left.png --annotate
+uv run scripts/test-avatar-position.py --image avatar-left.png --annotate
 ```
 
 **Known limitation**: `adb shell screencap` does not composite the Godot SurfaceView layer
@@ -70,12 +71,12 @@ The video checklist still requires human review for visual quality.
 
 ### ADB integration test suite
 
-Ten sequential UI tests: launch, class start, Godot lifecycle, bridge connect, pause/resume, restart.
+Eleven sequential UI tests: launch, class start, Godot lifecycle, bridge connect, pause/resume, avatar position sweep, restart.
 
 ```bash
-python3 scripts/test-integration.py                # build + install + run
-python3 scripts/test-integration.py --skip-install # skip build (APK already installed)
-python3 scripts/test-integration.py --screenshots  # save a PNG per test step to test-artifacts/
+uv run scripts/test-integration.py                # build + install + run
+uv run scripts/test-integration.py --skip-install # skip build (APK already installed)
+uv run scripts/test-integration.py --screenshots  # save a PNG per test step to test-artifacts/
 ```
 
 ## Agent Communication Logger
@@ -83,10 +84,10 @@ python3 scripts/test-integration.py --screenshots  # save a PNG per test step to
 Log Claude/Codex/Gemini agent communications to a local SQLite database (`logs/agent_comms.db`).
 
 ```bash
-python3 scripts/agent_comm_logger.py send   --from claude --to codex  --session sess-2026-05-08-01 --issue "#71" --message "Implement sqlite logger"
-python3 scripts/agent_comm_logger.py recv   --from codex  --to claude --session sess-2026-05-08-01 --issue "#71" --message "Implemented + verified" --elapsed-ms 45000
-python3 scripts/agent_comm_logger.py report --date 2026-05-08 --session sess-2026-05-08-01
-python3 scripts/agent_comm_logger.py stats  --days 7
+uv run scripts/agent_comm_logger.py send   --from claude --to codex  --session sess-2026-05-08-01 --issue "#71" --message "Implement sqlite logger"
+uv run scripts/agent_comm_logger.py recv   --from codex  --to claude --session sess-2026-05-08-01 --issue "#71" --message "Implemented + verified" --elapsed-ms 45000
+uv run scripts/agent_comm_logger.py report --date 2026-05-08 --session sess-2026-05-08-01
+uv run scripts/agent_comm_logger.py stats  --days 7
 ```
 
 ## Export SQLite Logs to CSV
@@ -94,7 +95,7 @@ python3 scripts/agent_comm_logger.py stats  --days 7
 Export the latest `X` rows from a SQLite table to CSV:
 
 ```bash
-python3 scripts/export_sqlite_logs_csv.py --limit 100
+uv run scripts/export_sqlite_logs_csv.py --limit 100
 ```
 
 Options:
@@ -111,7 +112,7 @@ Manual test:
 
 ```bash
 scripts/hook_event_logger.sh test_event "manual verification"
-python3 scripts/export_sqlite_logs_csv.py --table hook_events --limit 10 --out logs/hook_events_latest.csv
+uv run scripts/export_sqlite_logs_csv.py --table hook_events --limit 10 --out logs/hook_events_latest.csv
 ```
 
 ## Claude Rate-Limit Watchdog

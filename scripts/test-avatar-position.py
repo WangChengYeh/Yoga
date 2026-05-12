@@ -1,9 +1,16 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.9"
+# dependencies = [
+#   "opencv-python",
+#   "numpy",
+# ]
+# ///
 """
 test-avatar-position.py — Extract and verify avatar position from YogaFlow screen captures.
 
-Requirements:
-    pip install opencv-python numpy
+Run with:  uv run scripts/test-avatar-position.py <mode> [args]
+(uv auto-installs opencv-python and numpy on first run)
 
 Modes:
   --image PATH [--ref PATH] [--annotate OUT]
@@ -674,7 +681,7 @@ def main() -> None:
     if args.image or args.video or args.verify:
         if not _CV2_AVAILABLE:
             print("ERROR: opencv-python and numpy are required for image/video/verify modes.")
-            print("       pip install opencv-python numpy")
+            print("       uv run scripts/test-avatar-position.py  (auto-installs deps)")
             sys.exit(2)
 
     if args.image:

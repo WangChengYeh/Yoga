@@ -41,8 +41,8 @@ fi
 
 echo "[4b/6] Analysing demo video for avatar motion..."
 VIDEO_ANALYSIS_OK=0
-if [ -f "${ARTIFACTS}/avatar-demo.mp4" ] && python3 -c "import cv2, numpy" 2>/dev/null; then
-  python3 "$SCRIPT_DIR/test-avatar-position.py" \
+if [ -f "${ARTIFACTS}/avatar-demo.mp4" ]; then
+  uv run "$SCRIPT_DIR/test-avatar-position.py" \
     --video "${ARTIFACTS}/avatar-demo.mp4" \
     --annotate "${ARTIFACTS}/avatar-demo-annotated.mp4" \
     && VIDEO_ANALYSIS_OK=1 || true
@@ -52,7 +52,7 @@ if [ -f "${ARTIFACTS}/avatar-demo.mp4" ] && python3 -c "import cv2, numpy" 2>/de
     echo "  FAIL: no avatar motion detected — avatar may not be visible in recording"
   fi
 else
-  echo "  SKIP: video not available or opencv-python not installed"
+  echo "  SKIP: video not available"
 fi
 
 echo "[5/6] Capturing final screenshot..."

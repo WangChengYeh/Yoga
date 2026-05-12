@@ -274,7 +274,7 @@ def t_avatar_position():
     screenshot("07_avatar_center")
 
     r = subprocess.run(
-        [sys.executable, str(position_py), "--logcat"],
+        ["uv", "run", str(position_py), "--logcat"],
         capture_output=True, text=True,
     )
     if r.stdout:

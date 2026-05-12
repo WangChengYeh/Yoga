@@ -80,22 +80,12 @@ echo "=== Position verification ==="
 
 POSITION_PY="$SCRIPT_DIR/test-avatar-position.py"
 
-if ! python3 -c "import cv2, numpy" 2>/dev/null; then
-  echo "  WARN: opencv-python / numpy not installed — skipping pixel verification"
-  echo "        pip install opencv-python numpy"
-  # Fall back to logcat-only check
-  echo ""
-  echo "=== Logcat positions (ground truth) ==="
-  python3 "$POSITION_PY" --logcat
-  exit 0
-fi
-
 VERIFY_EXIT=0
-python3 "$POSITION_PY" --verify "$ARTIFACTS_DIR/" || VERIFY_EXIT=$?
+uv run "$POSITION_PY" --verify "$ARTIFACTS_DIR/" || VERIFY_EXIT=$?
 
 echo ""
 echo "=== Logcat positions (ground truth) ==="
-python3 "$POSITION_PY" --logcat
+uv run "$POSITION_PY" --logcat
 
 echo ""
 echo "=== Avatar movement test complete ==="
