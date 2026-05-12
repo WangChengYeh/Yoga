@@ -246,6 +246,45 @@ def t_bridge_connect():
         "No GodotAvatarBridge WebSocket activity — connect() may not have been called"
 
 
+@test("avatar position — LEFT→RIGHT→CENTER sweep verified via logcat")
+def t_avatar_position():
+    position_py = Path(__file__).parent / "test-avatar-position.py"
+
+    # Re-launch with avatarSelfTest so the bridge connects and avatar is visible
+    shell(f"am force-stop {PKG}", check=False)
+    time.sleep(1)
+    shell(f"am start -n {ACTIVITY} --ez devDisableCameraSetup true --ez avatarSelfTest true")
+    log("  Waiting 8s for Godot bridge to connect...")
+    time.sleep(8)
+
+    adb("logcat", "-c")  # isolate: only see commands from this sweep
+
+    log("  Sweeping LEFT (-1.5)...")
+    shell(f"am start -n {ACTIVITY} --ef avatarTargetX -1.5 --ef avatarTargetY 0.0")
+    time.sleep(2)
+
+    log("  Sweeping RIGHT (+1.5)...")
+    shell(f"am start -n {ACTIVITY} --ef avatarTargetX 1.5 --ef avatarTargetY 0.0")
+    time.sleep(2)
+
+    log("  Sweeping CENTER (0.0)...")
+    shell(f"am start -n {ACTIVITY} --ef avatarTargetX 0.0 --ef avatarTargetY 0.0")
+    time.sleep(2)
+
+    screenshot("07_avatar_center")
+
+    r = subprocess.run(
+        [sys.executable, str(position_py), "--logcat"],
+        capture_output=True, text=True,
+    )
+    if r.stdout:
+        log(r.stdout.rstrip())
+    if r.stderr:
+        log(r.stderr.rstrip())
+    assert r.returncode == 0, \
+        "test-avatar-position.py --logcat failed: expected LEFT before RIGHT in logcat"
+
+
 @test("restart — app survives restart")
 def t_restart():
     w, h = screen_size()
@@ -308,6 +347,7 @@ def main():
     t_session_start()
     t_pause_resume()
     t_bridge_connect()
+    t_avatar_position()
     t_restart()
 
     ok = print_summary()

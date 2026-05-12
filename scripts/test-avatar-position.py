@@ -39,8 +39,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-import cv2
-import numpy as np
+try:
+    import cv2
+    import numpy as np
+    _CV2_AVAILABLE = True
+except ImportError:
+    _CV2_AVAILABLE = False
 
 
 # ── Data types ────────────────────────────────────────────────────────────────
@@ -602,13 +606,19 @@ def cmd_verify(artifacts_dir: Path, annotate: bool) -> bool:
     return failed == 0
 
 
-def cmd_logcat() -> None:
+def cmd_logcat() -> bool:
+    """Parse buffered ADB logcat for avatar position commands.
+
+    Returns True if at least one LEFT and one RIGHT command are found and LEFT
+    precedes RIGHT (correct sweep ordering). Returns False otherwise so the
+    caller can propagate a non-zero exit code.
+    """
     print("Reading avatar position commands from ADB logcat...\n")
     positions = read_logcat_positions()
     if not positions:
         print("  No avatar position commands found.")
         print("  Run scripts/test-avatar-movement.sh and retry.")
-        return
+        return False
 
     print(f"  {'Timestamp':>23}  {'X':>7}  {'Y':>7}  {'Side':>7}")
     print(f"  {'':->23}  {'':->7}  {'':->7}  {'':->7}")
@@ -618,6 +628,21 @@ def cmd_logcat() -> None:
     xs = [lp.x for lp in positions]
     print(f"\n  {len(positions)} position commands found")
     print(f"  X range: {min(xs):+.2f} to {max(xs):+.2f}")
+
+    # Verify ordering: LEFT commanded before RIGHT
+    sides = [lp.side() for lp in positions]
+    if "LEFT" in sides and "RIGHT" in sides:
+        li = next(i for i, s in enumerate(sides) if s == "LEFT")
+        ri = next(i for i, s in enumerate(sides) if s == "RIGHT")
+        if li < ri:
+            print("  PASS  ordering: LEFT commanded before RIGHT")
+            return True
+        else:
+            print("  FAIL  ordering: expected LEFT before RIGHT")
+            return False
+    else:
+        print("  SKIP  ordering: need both LEFT and RIGHT in logcat")
+        return False
 
 
 # ── Entry point ────────────────────────────────────────────────────────────────
@@ -646,6 +671,12 @@ def main() -> None:
 
     args = parser.parse_args()
 
+    if args.image or args.video or args.verify:
+        if not _CV2_AVAILABLE:
+            print("ERROR: opencv-python and numpy are required for image/video/verify modes.")
+            print("       pip install opencv-python numpy")
+            sys.exit(2)
+
     if args.image:
         annotate_out = None
         if args.annotate is True:
@@ -668,7 +699,8 @@ def main() -> None:
         sys.exit(0 if ok else 1)
 
     elif args.logcat:
-        cmd_logcat()
+        ok = cmd_logcat()
+        sys.exit(0 if ok else 1)
 
 
 if __name__ == "__main__":
