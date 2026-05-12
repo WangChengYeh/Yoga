@@ -9,6 +9,7 @@ ACTIVITY="$PKG/.MainActivity"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ARTIFACTS_DIR="test-artifacts"
 WAIT="${WAIT:-2}"  # seconds between positions (override with WAIT=3 ./script.sh)
+POSITION_PY="$SCRIPT_DIR/test-avatar-position.py"
 
 mkdir -p "$ARTIFACTS_DIR"
 
@@ -34,41 +35,37 @@ sleep 8
 # Clear logcat so --logcat and --verify only see commands from this run
 "$ADB" logcat -c
 
+SWEEP_ERRORS=0
+
 # Move to far left
 echo "[2/5] Moving avatar to LEFT (-1.5)..."
 "$ADB" shell am start -n "$ACTIVITY" --ef avatarTargetX -1.5 --ef avatarTargetY 0.0
 sleep "$WAIT"
-"$ADB" shell screencap -p /sdcard/avatar-left.png
-"$ADB" pull /sdcard/avatar-left.png "$ARTIFACTS_DIR/avatar-left.png" >/dev/null
-"$ADB" shell rm /sdcard/avatar-left.png
-echo "  → screenshot: $ARTIFACTS_DIR/avatar-left.png"
+uv run "$POSITION_PY" --capture "$ARTIFACTS_DIR/avatar-left.png" \
+  --annotate "$ARTIFACTS_DIR/avatar-left-annotated.png" \
+  --expected-side LEFT || SWEEP_ERRORS=$((SWEEP_ERRORS + 1))
 
 # Move to far right
 echo "[3/5] Moving avatar to RIGHT (+1.5)..."
 "$ADB" shell am start -n "$ACTIVITY" --ef avatarTargetX 1.5 --ef avatarTargetY 0.0
 sleep "$WAIT"
-"$ADB" shell screencap -p /sdcard/avatar-right.png
-"$ADB" pull /sdcard/avatar-right.png "$ARTIFACTS_DIR/avatar-right.png" >/dev/null
-"$ADB" shell rm /sdcard/avatar-right.png
-echo "  → screenshot: $ARTIFACTS_DIR/avatar-right.png"
+uv run "$POSITION_PY" --capture "$ARTIFACTS_DIR/avatar-right.png" \
+  --annotate "$ARTIFACTS_DIR/avatar-right-annotated.png" \
+  --expected-side RIGHT || SWEEP_ERRORS=$((SWEEP_ERRORS + 1))
 
 # Move to center
 echo "[4/5] Moving to CENTER (0.0)..."
 "$ADB" shell am start -n "$ACTIVITY" --ef avatarTargetX 0.0 --ef avatarTargetY 0.0
 sleep "$WAIT"
-"$ADB" shell screencap -p /sdcard/avatar-center.png
-"$ADB" pull /sdcard/avatar-center.png "$ARTIFACTS_DIR/avatar-center.png" >/dev/null
-"$ADB" shell rm /sdcard/avatar-center.png
-echo "  → screenshot: $ARTIFACTS_DIR/avatar-center.png"
+uv run "$POSITION_PY" --capture "$ARTIFACTS_DIR/avatar-center.png" \
+  --annotate "$ARTIFACTS_DIR/avatar-center-annotated.png" \
+  --expected-side CENTER || SWEEP_ERRORS=$((SWEEP_ERRORS + 1))
 
 # Clear override — resume auto-positioning
 echo "[5/5] Clearing override (resuming auto-positioning)..."
 "$ADB" shell am start -n "$ACTIVITY" --ez avatarClearOverride true
 sleep "$WAIT"
-"$ADB" shell screencap -p /sdcard/avatar-auto.png
-"$ADB" pull /sdcard/avatar-auto.png "$ARTIFACTS_DIR/avatar-auto.png" >/dev/null
-"$ADB" shell rm /sdcard/avatar-auto.png
-echo "  → screenshot: $ARTIFACTS_DIR/avatar-auto.png"
+uv run "$POSITION_PY" --capture "$ARTIFACTS_DIR/avatar-auto.png"
 
 echo ""
 echo "Screenshots saved to $ARTIFACTS_DIR/:"
@@ -76,9 +73,7 @@ ls -lh "$ARTIFACTS_DIR"/avatar-*.png 2>/dev/null || true
 
 # ── Position verification ─────────────────────────────────────────────────────
 echo ""
-echo "=== Position verification ==="
-
-POSITION_PY="$SCRIPT_DIR/test-avatar-position.py"
+echo "=== Position verification (diff + ordering) ==="
 
 VERIFY_EXIT=0
 uv run "$POSITION_PY" --verify "$ARTIFACTS_DIR/" || VERIFY_EXIT=$?
@@ -89,4 +84,7 @@ uv run "$POSITION_PY" --logcat
 
 echo ""
 echo "=== Avatar movement test complete ==="
-exit $VERIFY_EXIT
+if [ "$SWEEP_ERRORS" -gt 0 ]; then
+  echo "  FAIL: $SWEEP_ERRORS position(s) did not match expected side"
+fi
+exit $((VERIFY_EXIT + SWEEP_ERRORS))

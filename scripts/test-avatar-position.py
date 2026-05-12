@@ -652,6 +652,78 @@ def cmd_logcat() -> bool:
         return False
 
 
+# ── Composited capture via screenrecord ───────────────────────────────────────
+
+def cmd_capture(output_path: Path, frame_at: float, annotate_out: Optional[Path],
+                expected_side: Optional[str] = None) -> None:
+    """Record 2 s via screenrecord (composites Godot SurfaceView), extract one frame,
+    save as PNG, and report the detected avatar position.
+
+    Unlike `adb shell screencap`, screenrecord captures all SurfaceView layers, so
+    the Godot avatar IS visible in the extracted frame.
+    """
+    import os
+    import tempfile
+
+    record_secs = max(int(frame_at) + 1, 2)
+    remote_vid = "/sdcard/_yogaflow_snap.mp4"
+
+    subprocess.run(["adb", "shell", "rm", "-f", remote_vid], capture_output=True)
+    print(f"  Recording {record_secs}s via screenrecord (composites Godot layer)...")
+    subprocess.run(
+        ["adb", "shell", "screenrecord", "--time-limit", str(record_secs), remote_vid],
+        capture_output=True,
+        timeout=record_secs + 8,
+    )
+
+    with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as f:
+        tmp_vid = f.name
+
+    r = subprocess.run(["adb", "pull", remote_vid, tmp_vid], capture_output=True, text=True)
+    subprocess.run(["adb", "shell", "rm", "-f", remote_vid], capture_output=True)
+
+    if r.returncode != 0:
+        print(f"  ERROR: adb pull failed — {r.stderr.strip()}")
+        sys.exit(1)
+
+    cap = cv2.VideoCapture(tmp_vid)
+    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+    target_frame = int(fps * frame_at)
+    cap.set(cv2.CAP_PROP_POS_FRAMES, target_frame)
+    ret, frame = cap.read()
+    cap.release()
+    os.unlink(tmp_vid)
+
+    if not ret:
+        print(f"  ERROR: could not extract frame at t={frame_at:.1f}s")
+        sys.exit(1)
+
+    output_path.parent.mkdir(exist_ok=True)
+    cv2.imwrite(str(output_path), frame)
+    h, w = frame.shape[:2]
+    print(f"  Saved:     {output_path}  ({w}x{h})")
+
+    det = detect_by_blob(frame)
+    print(f"  Detection: {det}")
+
+    if annotate_out:
+        cv2.imwrite(str(annotate_out), annotate_image(frame, det, output_path.stem))
+        print(f"  Annotated: {annotate_out}")
+
+    if expected_side:
+        detected = det.side()
+        if det.confidence < 0.1:
+            print(f"  FAIL  avatar not detected (confidence too low: {det.confidence:.2f})"
+                  f" — expected {expected_side}")
+            sys.exit(1)
+        elif detected == expected_side:
+            print(f"  PASS  avatar at {detected} (expected {expected_side})")
+        else:
+            print(f"  FAIL  avatar at {detected} but expected {expected_side}"
+                  f"  (x={det.x:.3f})")
+            sys.exit(1)
+
+
 # ── Entry point ────────────────────────────────────────────────────────────────
 
 def main() -> None:
@@ -662,6 +734,8 @@ def main() -> None:
              if "KNOWN LIMITATION" in __doc__ else "",
     )
     group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--capture", type=Path, metavar="PATH",
+                       help="Record via screenrecord, extract a frame, save as PNG + detect position")
     group.add_argument("--image", type=Path, metavar="PATH",
                        help="Analyse a single PNG screenshot")
     group.add_argument("--video", type=Path, metavar="PATH",
@@ -671,6 +745,10 @@ def main() -> None:
     group.add_argument("--logcat", action="store_true",
                        help="Parse live ADB logcat for avatar position commands")
 
+    parser.add_argument("--frame-at", type=float, default=1.0, metavar="SECS",
+                        help="Seconds into screenrecord to extract (--capture, default: 1.0)")
+    parser.add_argument("--expected-side", choices=["LEFT", "RIGHT", "CENTER"], metavar="SIDE",
+                        help="Assert detected side matches (--capture); exits 1 on mismatch")
     parser.add_argument("--ref", type=Path, metavar="PATH",
                         help="Reference image for diff-based detection (--image mode)")
     parser.add_argument("--annotate", type=Path, metavar="OUT", nargs="?", const=True,
@@ -678,13 +756,21 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    if args.image or args.video or args.verify:
+    if args.capture or args.image or args.video or args.verify:
         if not _CV2_AVAILABLE:
             print("ERROR: opencv-python and numpy are required for image/video/verify modes.")
             print("       uv run scripts/test-avatar-position.py  (auto-installs deps)")
             sys.exit(2)
 
-    if args.image:
+    if args.capture:
+        annotate_out = None
+        if args.annotate is True:
+            annotate_out = args.capture.with_stem(args.capture.stem + "-annotated")
+        elif isinstance(args.annotate, Path):
+            annotate_out = args.annotate
+        cmd_capture(args.capture, args.frame_at, annotate_out, args.expected_side)
+
+    elif args.image:
         annotate_out = None
         if args.annotate is True:
             annotate_out = args.image.with_stem(args.image.stem + "-annotated")
