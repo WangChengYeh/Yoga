@@ -15,6 +15,7 @@ PKG="com.yogaflow"
 ACTIVITY="$PKG/.MainActivity"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ARTIFACTS="test-artifacts"
+FAILURES=0
 
 mkdir -p "$ARTIFACTS"
 
@@ -36,15 +37,23 @@ echo "  Waiting 10s for Godot init..."
 sleep 10
 # 9090 decimal = 0x2382; /proc/net/tcp* encodes ports as uppercase hex in field 2 (local_address:port)
 BRIDGE_UP=$({ "$ADB" shell cat /proc/net/tcp6 2>/dev/null; "$ADB" shell cat /proc/net/tcp 2>/dev/null; } | awk '{print $2}' | grep -ci "2382" || true)
-if [ "$BRIDGE_UP" -gt 0 ]; then echo "  PASS: port 9090 (0x2382) listening"; else echo "  FAIL: port 9090 not found"; fi
+if [ "$BRIDGE_UP" -gt 0 ]; then
+  echo "  PASS: port 9090 (0x2382) listening"
+else
+  echo "  FAIL: port 9090 not found"
+  FAILURES=$((FAILURES + 1))
+fi
 
 echo "=== Step 5: Avatar position sweep + verification ==="
 AVATAR_OK=0
-bash "$SCRIPT_DIR/test-avatar-movement.sh" && AVATAR_OK=1 || true
+if bash "$SCRIPT_DIR/test-avatar-movement.sh"; then
+  AVATAR_OK=1
+fi
 if [ "$AVATAR_OK" -eq 1 ]; then
   echo "  PASS: avatar position verified"
 else
   echo "  FAIL: avatar position verification failed — see output above"
+  FAILURES=$((FAILURES + 1))
 fi
 
 echo "=== Step 6: Screenshot size check ==="
@@ -52,7 +61,12 @@ echo "=== Step 6: Screenshot size check ==="
 # (PNG compresses dark solid-color screens heavily; 88 KB is a valid home-screen capture.)
 for f in "$ARTIFACTS"/avatar-left.png "$ARTIFACTS"/avatar-right.png; do
   SIZE=$(wc -c < "$f" 2>/dev/null || echo 0)
-  if [ "$SIZE" -gt 10000 ]; then echo "  PASS: $f ($SIZE bytes)"; else echo "  FAIL: $f too small ($SIZE bytes) — blank screen?"; fi
+  if [ "$SIZE" -gt 10000 ]; then
+    echo "  PASS: $f ($SIZE bytes)"
+  else
+    echo "  FAIL: $f too small ($SIZE bytes) — blank screen?"
+    FAILURES=$((FAILURES + 1))
+  fi
 done
 
 echo "=== Step 7: Logcat crash check ==="
@@ -61,7 +75,18 @@ echo "=== Step 7: Logcat crash check ==="
 #   "E AndroidRuntime" — error-level AndroidRuntime (stack traces after a crash)
 # Excludes "I GodotPluginRegistry: ... AndroidRuntime" (INFO plugin registration, not a crash).
 CRASHES=$("$ADB" logcat -d 2>/dev/null | grep -cE "FATAL EXCEPTION|E AndroidRuntime" || true)
-if [ "$CRASHES" -eq 0 ]; then echo "  PASS: no crashes"; else echo "  FAIL: $CRASHES crash lines found"; fi
+if [ "$CRASHES" -eq 0 ]; then
+  echo "  PASS: no crashes"
+else
+  echo "  FAIL: $CRASHES crash lines found"
+  FAILURES=$((FAILURES + 1))
+fi
 
 echo ""
 echo "=== Regression complete ==="
+if [ "$FAILURES" -gt 0 ]; then
+  echo "FAIL: $FAILURES regression check(s) failed"
+  exit 1
+fi
+
+echo "PASS: all regression checks passed"
