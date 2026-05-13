@@ -32,6 +32,17 @@ sleep 1
 echo "  Waiting 8s for Godot to init and WebSocket bridge to connect..."
 sleep 8
 
+# Enter session mode so the avatar overlay is visible during capture
+echo "  Entering session mode (tapping startClassButton)..."
+W=$("$ADB" shell wm size | grep -oE '[0-9]+x[0-9]+' | cut -dx -f1)
+H=$("$ADB" shell wm size | grep -oE '[0-9]+x[0-9]+' | cut -dx -f2)
+# startClassButton sits at ~32% x, ~88% y (consistent with test-integration.py)
+BTN_X=$(( W * 32 / 100 ))
+BTN_Y=$(( H * 88 / 100 ))
+"$ADB" shell input tap "$BTN_X" "$BTN_Y"
+echo "  Waiting 5s for session + avatar to render..."
+sleep 5
+
 # Clear logcat so --logcat and --verify only see commands from this run
 "$ADB" logcat -c
 

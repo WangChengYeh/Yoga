@@ -656,7 +656,7 @@ def cmd_logcat() -> bool:
 
 def cmd_capture(output_path: Path, frame_at: float, annotate_out: Optional[Path],
                 expected_side: Optional[str] = None) -> None:
-    """Record 2 s via screenrecord (composites Godot SurfaceView), extract one frame,
+    """Record 3 s via screenrecord (composites Godot SurfaceView), extract one frame,
     save as PNG, and report the detected avatar position.
 
     Unlike `adb shell screencap`, screenrecord captures all SurfaceView layers, so
@@ -665,37 +665,62 @@ def cmd_capture(output_path: Path, frame_at: float, annotate_out: Optional[Path]
     import os
     import tempfile
 
-    record_secs = max(int(frame_at) + 1, 2)
+    record_secs = max(int(frame_at) + 2, 3)
     remote_vid = "/sdcard/_yogaflow_snap.mp4"
 
     subprocess.run(["adb", "shell", "rm", "-f", remote_vid], capture_output=True)
     print(f"  Recording {record_secs}s via screenrecord (composites Godot layer)...")
-    subprocess.run(
+    r = subprocess.run(
         ["adb", "shell", "screenrecord", "--time-limit", str(record_secs), remote_vid],
-        capture_output=True,
-        timeout=record_secs + 8,
+        capture_output=True, text=True,
+        timeout=record_secs + 10,
     )
+    if r.returncode != 0:
+        print(f"  ERROR: screenrecord failed (exit {r.returncode}): {r.stderr.strip()}")
+        sys.exit(1)
 
-    with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as f:
-        tmp_vid = f.name
+    tmp_fd, tmp_vid_str = tempfile.mkstemp(suffix=".mp4")
+    os.close(tmp_fd)
 
-    r = subprocess.run(["adb", "pull", remote_vid, tmp_vid], capture_output=True, text=True)
+    r = subprocess.run(["adb", "pull", remote_vid, tmp_vid_str], capture_output=True, text=True)
     subprocess.run(["adb", "shell", "rm", "-f", remote_vid], capture_output=True)
 
     if r.returncode != 0:
+        os.unlink(tmp_vid_str)
         print(f"  ERROR: adb pull failed — {r.stderr.strip()}")
         sys.exit(1)
 
-    cap = cv2.VideoCapture(tmp_vid)
-    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
-    target_frame = int(fps * frame_at)
-    cap.set(cv2.CAP_PROP_POS_FRAMES, target_frame)
-    ret, frame = cap.read()
-    cap.release()
-    os.unlink(tmp_vid)
+    file_size = os.path.getsize(tmp_vid_str)
+    print(f"  Video pulled: {file_size} bytes")
 
-    if not ret:
-        print(f"  ERROR: could not extract frame at t={frame_at:.1f}s")
+    cap = cv2.VideoCapture(tmp_vid_str)
+    if not cap.isOpened():
+        os.unlink(tmp_vid_str)
+        print(f"  ERROR: cv2 cannot open pulled video (corrupt?)")
+        sys.exit(1)
+
+    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    print(f"  Video info: {total_frames} frames @ {fps:.1f} fps")
+
+    # Sequential read — seeking via CAP_PROP_POS_FRAMES is unreliable on Android MP4s
+    target_ms = frame_at * 1000.0
+    grabbed: Optional[np.ndarray] = None
+    last_frame: Optional[np.ndarray] = None
+    while True:
+        ret, f = cap.read()
+        if not ret:
+            break
+        last_frame = f
+        if cap.get(cv2.CAP_PROP_POS_MSEC) >= target_ms:
+            grabbed = f
+            break
+    cap.release()
+    os.unlink(tmp_vid_str)
+
+    frame = grabbed if grabbed is not None else last_frame
+    if frame is None:
+        print(f"  ERROR: no readable frames in screenrecord")
         sys.exit(1)
 
     output_path.parent.mkdir(exist_ok=True)
