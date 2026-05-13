@@ -13,6 +13,56 @@ POSITION_PY="$SCRIPT_DIR/test-avatar-position.py"
 
 mkdir -p "$ARTIFACTS_DIR"
 
+find_resource_center() {
+  local resource_name="$1"
+  local tmp_xml
+  tmp_xml="$(mktemp)"
+  "$ADB" shell uiautomator dump /sdcard/_yogaflow_ui.xml >/dev/null 2>&1 || {
+    rm -f "$tmp_xml"
+    return 1
+  }
+  "$ADB" pull /sdcard/_yogaflow_ui.xml "$tmp_xml" >/dev/null 2>&1 || {
+    rm -f "$tmp_xml"
+    return 1
+  }
+  python3 - "$tmp_xml" "$resource_name" <<'PY'
+import re
+import sys
+import xml.etree.ElementTree as ET
+
+xml_path, resource_name = sys.argv[1], sys.argv[2]
+root = ET.parse(xml_path).getroot()
+for node in root.iter("node"):
+    resource_id = node.attrib.get("resource-id", "")
+    if not (resource_id == resource_name or resource_id.endswith("/" + resource_name)):
+        continue
+    bounds = [int(v) for v in re.findall(r"\d+", node.attrib.get("bounds", ""))]
+    if len(bounds) == 4:
+        print(f"{(bounds[0] + bounds[2]) // 2} {(bounds[1] + bounds[3]) // 2}")
+        sys.exit(0)
+sys.exit(1)
+PY
+  local status=$?
+  rm -f "$tmp_xml"
+  return "$status"
+}
+
+tap_resource() {
+  local resource_name="$1"
+  local label="$2"
+  local center
+  center="$(find_resource_center "$resource_name")" || {
+    echo "  FAIL: $label ($resource_name) not found in UI hierarchy"
+    return 1
+  }
+  echo "  Tapping $label at $center"
+  "$ADB" shell input tap $center
+}
+
+resource_exists() {
+  find_resource_center "$1" >/dev/null 2>&1
+}
+
 echo "=== Avatar movement test ==="
 
 # Wake device and dismiss keyguard / USB dialog
@@ -28,20 +78,32 @@ sleep 1
 echo "[1/5] Launching app (with avatarSelfTest to keep avatar visible)..."
 "$ADB" shell am force-stop "$PKG"
 sleep 1
-"$ADB" shell am start -n "$ACTIVITY" --ez devDisableCameraSetup true --ez avatarSelfTest true
+"$ADB" shell am start -n "$ACTIVITY" --ez devDisableCameraSetup true --ez avatarSelfTest true --ez demoMode true
 echo "  Waiting 8s for Godot to init and WebSocket bridge to connect..."
 sleep 8
 
-# Enter session mode so the avatar overlay is visible during capture
-echo "  Entering session mode (tapping startClassButton)..."
-W=$("$ADB" shell wm size | grep -oE '[0-9]+x[0-9]+' | cut -dx -f1)
-H=$("$ADB" shell wm size | grep -oE '[0-9]+x[0-9]+' | cut -dx -f2)
-# startClassButton sits at ~32% x, ~88% y (consistent with test-integration.py)
-BTN_X=$(( W * 32 / 100 ))
-BTN_Y=$(( H * 88 / 100 ))
-"$ADB" shell input tap "$BTN_X" "$BTN_Y"
-echo "  Waiting 5s for session + avatar to render..."
-sleep 5
+# Enter class/session UI so avatar captures cannot pass while still on the home course card.
+echo "  Entering class screen (tapping startClassButton by resource id if present)..."
+if resource_exists "startClassButton"; then
+  tap_resource "startClassButton" "startClassButton"
+  sleep 3
+fi
+
+if resource_exists "startClassButton"; then
+  echo "  FAIL: still on home/course screen after tapping startClassButton"
+  "$ADB" shell screencap -p /sdcard/_yogaflow_avatar_home_failure.png >/dev/null 2>&1 || true
+  "$ADB" pull /sdcard/_yogaflow_avatar_home_failure.png "$ARTIFACTS_DIR/avatar-home-failure.png" >/dev/null 2>&1 || true
+  exit 1
+fi
+
+if resource_exists "startButton"; then
+  echo "  Entering running session (tapping bottom startButton when available)..."
+  tap_resource "startButton" "startButton" || true
+  sleep 3
+fi
+
+echo "  Waiting 2s for class/session + avatar to render..."
+sleep 2
 
 # Clear logcat so --logcat and --verify only see commands from this run
 "$ADB" logcat -c

@@ -120,10 +120,10 @@ def screencap_check(img: np.ndarray) -> Tuple[bool, str]:
     # Sample the lower portion (expected teal/green in YogaFlow home screen)
     lower_region = img[h * 2 // 3:, :]
     lower_hsv = cv2.cvtColor(lower_region, cv2.COLOR_BGR2HSV)
-    # Teal: H=140-170, S>40, V>60
+    # Teal/green on OpenCV's 0-179 hue scale.
     teal_mask = cv2.inRange(lower_hsv,
-                            np.array([140, 40, 60]),
-                            np.array([170, 255, 255]))
+                            np.array([50, 40, 60]),
+                            np.array([95, 255, 255]))
     teal_ratio = teal_mask.sum() / (teal_mask.size * 255)
 
     # YogaFlow: dark upper + teal lower
@@ -135,6 +135,33 @@ def screencap_check(img: np.ndarray) -> Tuple[bool, str]:
     if upper_dark:
         return True, "dark background (possibly YogaFlow session screen)"
     return False, f"unexpected colours (upper mean BGR={upper_mean.round(1)}, teal_ratio={teal_ratio:.3f}) — may be launcher/lock screen"
+
+
+def looks_like_home_course_screen(img: np.ndarray) -> Tuple[bool, str]:
+    """Detect the YogaFlow home/course card so avatar tests cannot pass on the wrong screen."""
+    h, w = img.shape[:2]
+
+    # Home screen has a large teal/green course card in the lower third.
+    lower_region = img[h * 2 // 3:, :]
+    lower_hsv = cv2.cvtColor(lower_region, cv2.COLOR_BGR2HSV)
+    teal_mask = cv2.inRange(
+        lower_hsv,
+        np.array([50, 35, 70]),
+        np.array([95, 255, 255]),
+    )
+    teal_ratio = teal_mask.sum() / (teal_mask.size * 255)
+
+    # The beginner card START button sits in the left-middle area, away from
+    # the runtime bottom controls.
+    start_region = img[int(h * 0.45):int(h * 0.65), int(w * 0.03):int(w * 0.20)]
+    if start_region.size == 0:
+        return False, "empty START-button sample"
+    start_gray = cv2.cvtColor(start_region, cv2.COLOR_BGR2GRAY)
+    bright_ratio = float((start_gray > 185).sum()) / start_gray.size
+
+    is_home = teal_ratio > 0.18 and bright_ratio > 0.08
+    reason = f"home-card heuristics teal_ratio={teal_ratio:.3f}, start_bright_ratio={bright_ratio:.3f}"
+    return is_home, reason
 
 
 # ── Detection strategies ───────────────────────────────────────────────────────
@@ -485,11 +512,21 @@ def cmd_verify(artifacts_dir: Path, annotate: bool) -> bool:
     # ── Screencap layer check ──────────────────────────────────────────────────
     print("Screencap layer check:")
     any_app = False
+    home_screen_artifacts = []
     for name, img in imgs.items():
         ok, reason = screencap_check(img)
         print(f"  {name:8s}: {'OK  ' if ok else 'WARN'} {reason}")
+        is_home, home_reason = looks_like_home_course_screen(img)
+        if is_home:
+            home_screen_artifacts.append((name, home_reason))
         if ok:
             any_app = True
+
+    if home_screen_artifacts:
+        print()
+        for name, reason in home_screen_artifacts:
+            print(f"  FAIL: {name} capture is the home/course screen, not the avatar session screen ({reason})")
+        return False
 
     if not any_app:
         print()
@@ -684,11 +721,16 @@ def cmd_capture(output_path: Path, frame_at: float, annotate_out: Optional[Path]
 
     subprocess.run(["adb", "shell", "rm", "-f", remote_vid], capture_output=True)
     print(f"  Recording {record_secs}s via screenrecord (composites Godot layer)...")
-    r = subprocess.run(
-        ["adb", "shell", "screenrecord", "--time-limit", str(record_secs), remote_vid],
-        capture_output=True, text=True,
-        timeout=record_secs + 10,
-    )
+    try:
+        r = subprocess.run(
+            ["adb", "shell", "screenrecord", "--time-limit", str(record_secs), remote_vid],
+            capture_output=True, text=True,
+            timeout=record_secs + 10,
+        )
+    except subprocess.TimeoutExpired:
+        subprocess.run(["adb", "shell", "pkill", "-2", "screenrecord"], capture_output=True)
+        print(f"  ERROR: screenrecord timed out after {record_secs + 10}s")
+        sys.exit(1)
     if r.returncode != 0:
         print(f"  ERROR: screenrecord failed (exit {r.returncode}): {r.stderr.strip()}")
         sys.exit(1)
@@ -742,6 +784,11 @@ def cmd_capture(output_path: Path, frame_at: float, annotate_out: Optional[Path]
     h, w = frame.shape[:2]
     print(f"  Saved:     {output_path}  ({w}x{h})")
 
+    is_home, home_reason = looks_like_home_course_screen(frame)
+    if is_home:
+        print(f"  ERROR: captured home/course screen instead of avatar session screen ({home_reason})")
+        sys.exit(1)
+
     det = detect_by_blob(frame)
     print(f"  Detection: {det}")
 
@@ -752,8 +799,9 @@ def cmd_capture(output_path: Path, frame_at: float, annotate_out: Optional[Path]
     if expected_side:
         detected = det.side()
         if det.confidence < VISUAL_ASSERT_CONFIDENCE:
-            print(f"  SKIP  visual assertion: confidence too low ({det.confidence:.2f})"
-                  f" — expected {expected_side}; verify via diff/logcat.")
+            print(f"  FAIL  avatar not visually detected in screenrecord "
+                  f"(confidence too low: {det.confidence:.2f}) — expected {expected_side}")
+            sys.exit(1)
         elif detected == expected_side:
             print(f"  PASS  avatar at {detected} (expected {expected_side})")
         else:
